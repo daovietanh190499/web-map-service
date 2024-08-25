@@ -1,0 +1,103 @@
+version: "3"
+
+networks:
+  wms-network:
+    driver: "bridge"
+
+services:
+  wms-backend:
+    image: wms-backend:latest
+    restart: always
+    ports:
+    - 80:8000
+    expose:
+      - 80
+    env_file:
+    - ".env-prod"
+    command: [
+      "/bin/bash",
+      "-c",
+      "python manage.py collecstatic && python manage.py makemigrations && python manage.py migrate"
+    ]
+    networks:
+    - wms-network
+
+  wms-celery:
+    image: wms-backend:latest
+    restart: always
+    env_file:
+    - ".env-prod"
+    command: [
+      "/bin/bash",
+      "-c",
+      "python -m celery -A wms_project worker --loglevel info"
+    ]
+    networks:
+    - wms-network
+
+  wms-db:
+    image: postgis/postgis:latest
+    restart: always
+    env_file:
+      - ".env-prod"
+    ports:
+      - 5432:5432
+    expose:
+      - 5432
+    networks:
+    - wms-network
+
+  wms-minio:
+    image: quay.io/minio/minio
+    restart: always
+    command: server /data --console-address ":9001"
+    ports:
+      - 9000:9000
+      - 9001:9001
+    expose:
+      - 9000
+      - 9001
+    env_file:
+      - ".env-prod"
+    volumes:
+      - ./minio/data:/data
+    networks:
+    - wms-network
+  
+  wms-elasticsearch:
+    image: opensearchproject/opensearch:latest
+    restart: always
+    ports:
+      - 9200:9200
+      - 9600:9600
+    expose:
+      - 9200
+      - 9600
+    networks:
+    - wms-network
+    volumes:
+    - ./opensearch:/usr/share/opensearch/data
+
+  wms-elasticsearch-dashboards:
+    image: opensearchproject/opensearch-dashboards:latest
+    restart: always
+    ports:
+      - 5601:5601
+    expose:
+      - "5601"
+    environment:
+      OPENSEARCH_HOSTS: '["https://wms-elasticsearch:9200"]'
+    networks:
+      - wms-network
+
+  wms-redis:
+    image: redis:6.2-alpine
+    restart: always
+    ports:
+      - 6379:6379
+    expose:
+      - 6379
+    command: redis-server --save 20 1 /etc/redis/redis.conf
+    volumes:
+      - ./redis/redis-data:/data
+      - ./redis/redis.conf:/etc/redis/redis.conf

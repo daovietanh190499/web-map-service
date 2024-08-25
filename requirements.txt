@@ -1,0 +1,13 @@
+gunicorn
+uvicorn
+
+django
+django-environ
+djangorestframework
+django-elasticsearch-dsl
+
+boto3
+pytz
+psycopg2
+
+celery
