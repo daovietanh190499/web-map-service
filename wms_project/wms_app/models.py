@@ -1,12 +1,12 @@
 # wms_app/models.py
 
 from django.db import models
-from django.contrib.gis.db import models as gis_models
+# from django.contrib.gis.db import models as gis_models
 
 class Image(models.Model):
     datetime = models.DateTimeField()
     area = models.FloatField()
-    geolocation = gis_models.PointField()
+    # geolocation = gis_models.PointField()
     name = models.CharField(max_length=255)
     topic = models.CharField(max_length=255)
     source = models.CharField(max_length=255)

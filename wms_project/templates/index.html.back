@@ -7,7 +7,6 @@
     <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet">
-    <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @keyframes fadeInLeft {
             from {
@@ -22,25 +21,17 @@
         .fade-in-left {
             animation: fadeInLeft 0.3s ease-out;
         }
-        #sidebar {
-            transition: transform 0.3s ease-in-out;
-        }
-        #sidebar.hidden {
-            transform: translateX(-100%);
-        }
-        #timeline {
-            transition: left 0.3s ease-in-out;
-        }
     </style>
 </head>
 <body class="h-screen overflow-hidden">
     <div id="map" class="absolute inset-0 z-10"></div>
 
-    <div id="sidebar" class="absolute top-4 bottom-4 left-4 w-[350px] bg-white bg-opacity-90 rounded-lg shadow-md transition-all duration-300 ease-in-out z-50 flex flex-col">
-        <div id="search" class="p-4">
-            <input type="text" id="search-input" placeholder="Search images..." class="w-full p-2 border rounded">
-        </div>
-        <div id="sidebar-content" class="flex-grow overflow-y-auto p-4">
+    <div id="search" class="absolute top-4 left-4 w-[350px] z-50 bg-white bg-opacity-90 rounded-lg shadow-md transition-all duration-300 ease-in-out">
+        <input type="text" id="search-input" placeholder="Search images..." class="w-full p-2 border rounded">
+    </div>
+
+    <div id="sidebar" class="absolute top-[calc(4rem+1rem)] left-[-350px] w-[350px] h-[calc(100%-9rem-1rem)] ml-4 bg-white z-40 transition-all duration-300 ease-in-out shadow-md overflow-y-auto rounded-lg">
+        <div id="sidebar-content" class="p-4">
             <h2 class="text-xl font-bold mb-4">Upload Image</h2>
             <form id="upload-form">
                 <label for="image" class="block mt-4">Image:</label>
@@ -85,7 +76,7 @@
         </label>
     </div>
 
-    <div id="timeline" class="absolute bottom-4 left-[370px] right-4 h-40 bg-white bg-opacity-90 rounded-lg shadow-md z-40 transition-all duration-300"></div>
+    <div id="timeline" class="absolute bottom-4 left-96 right-4 h-40 bg-white bg-opacity-90 rounded-lg shadow-md z-40"></div>
 
     <div id="context-menu" class="hidden absolute bg-white border border-gray-300 shadow-md z-50">
         <ul class="list-none m-0 p-0">
@@ -119,7 +110,6 @@
             var contextMenu = document.getElementById('context-menu');
             var geolocationItem = document.getElementById('geolocation');
             var uploadImageItem = document.getElementById('upload-image');
-            var timeline = document.getElementById('timeline');
             var clickedLatLng;
             var uploadMarker;
 
@@ -190,7 +180,7 @@
                     map.setZoom(targetZoom);
 
                     // Show sidebar with animation
-                    sidebar.classList.remove('hidden');
+                    sidebar.style.left = '16px';
                     sidebar.classList.add('fade-in-left');
 
                     // Add pin marker at clicked location
@@ -198,30 +188,22 @@
                         map.removeLayer(uploadMarker);
                     }
                     uploadMarker = L.marker(clickedLatLng).addTo(map);
-
-                    // Adjust timeline
-                    timeline.classList.remove('left-4');
-                    timeline.classList.add('left-[370px]');
-
                 }
                 contextMenu.style.display = 'none';
             });
 
-            // Toggle sidebar
+            // Close sidebar when clicking outside
             document.addEventListener('click', function(event) {
                 var isClickInsideSidebar = sidebar.contains(event.target);
                 var isClickOnUploadItem = uploadImageItem.contains(event.target);
-                var isClickOnSearchInput = event.target.id === 'search-input';
-                if (!isClickInsideSidebar && !isClickOnUploadItem && !isClickOnSearchInput && !sidebar.classList.contains('hidden')) {
-                    sidebar.classList.add('hidden');
+                if (!isClickInsideSidebar && !isClickOnUploadItem && sidebar.style.left === '16px') {
+                    sidebar.style.left = '-350px';
+                    sidebar.classList.remove('fade-in-left');
                     // Remove the upload marker when closing sidebar
                     if (uploadMarker) {
                         map.removeLayer(uploadMarker);
                         uploadMarker = null;
                     }
-                    // Adjust timeline
-                    timeline.classList.add('left-4');
-                    timeline.classList.remove('left-[370px]')
                 }
             });
 
@@ -231,7 +213,8 @@
                 // Here you would typically send the form data to your server
                 console.log('Form submitted:', new FormData(uploadForm));
                 // For demonstration, we'll just log the form data and close the sidebar
-                sidebar.classList.add('hidden');
+                sidebar.style.left = '-350px';
+                sidebar.classList.remove('fade-in-left');
                 // Reset the form
                 uploadForm.reset();
                 // Remove the upload marker
@@ -239,9 +222,6 @@
                     map.removeLayer(uploadMarker);
                     uploadMarker = null;
                 }
-                // Adjust timeline
-                timeline.classList.add('left-4');
-                timeline.classList.remove('left-[370px]')
             });
 
             // Close layer menu when clicking outside

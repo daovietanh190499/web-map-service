@@ -62,6 +62,68 @@ class ImageViewSet(viewsets.ModelViewSet):
         except ClientError as e:
             return Response({'error': str(e)}, status=500)
 
+
+import os
+from django.http import HttpResponse, Http404
+from django.conf import settings
+from osgeo import gdal
+from PIL import Image
+import io
+
+# Set the path to your JP2 file
+JP2_FILE_PATH = os.path.join(settings.BASE_DIR, 'data/your_image.jp2')
+
+def generate_tile(request, z, x, y):
+    try:
+        # Open the JP2 file
+        dataset = gdal.Open(JP2_FILE_PATH)
+        if dataset is None:
+            raise Http404("JP2 file not found")
+
+        # Calculate the tile bounds
+        tile_size = 256
+        zoom = int(z)
+        x_tile = int(x)
+        y_tile = int(y)
+
+        # Get geographic bounds from the raster
+        width = dataset.RasterXSize
+        height = dataset.RasterYSize
+        geotransform = dataset.GetGeoTransform()
+
+        # Calculate pixel coordinates based on zoom and tile indices
+        scale = 2 ** zoom
+        x_min = (x_tile * tile_size) / scale
+        x_max = ((x_tile + 1) * tile_size) / scale
+        y_min = (y_tile * tile_size) / scale
+        y_max = ((y_tile + 1) * tile_size) / scale
+
+        # Read raster data in the requested area
+        gdal_translate = gdal.Translate(
+            '/vsimem/tile.png', dataset,
+            projWin=[x_min, y_max, x_max, y_min],
+            width=tile_size,
+            height=tile_size
+        )
+        
+        # Open and read the translated image
+        tile_data = gdal_translate.ReadAsArray()
+        if tile_data is None:
+            raise Http404("Failed to read tile data")
+
+        # Convert to a PIL Image and then to PNG
+        img = Image.fromarray(tile_data)
+        buffer = io.BytesIO()
+        img.save(buffer, format="PNG")
+        buffer.seek(0)
+
+        # Return image as HTTP response
+        return HttpResponse(buffer, content_type="image/png")
+
+    except Exception as e:
+        raise Http404(f"Tile generation error: {e}")
+
+
 class MaskViewSet(viewsets.ModelViewSet):
     queryset = Mask.objects.all()
     serializer_class = MaskSerializer
