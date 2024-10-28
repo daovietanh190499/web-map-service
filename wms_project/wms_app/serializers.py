@@ -1,14 +1,17 @@
 # wms_app/serializers.py
 
 from rest_framework import serializers
-from .models import Image, Mask
+from .models import Image
 
-class ImageSerializer(serializers.ModelSerializer):
+from rest_framework_gis.serializers import GeoFeatureModelSerializer
+
+class ImageSerializer(GeoFeatureModelSerializer):
     class Meta:
         model = Image
+        geo_field = 'geom'
+        bbox_geo_field = 'bbox_geom'
         fields = '__all__'
 
-class MaskSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Mask
-        fields = '__all__'
+class SearchGeometrySerializer(serializers.Serializer):
+    type = serializers.CharField()
+    coordinates = serializers.JSONField()

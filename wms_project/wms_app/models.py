@@ -1,18 +1,22 @@
 # wms_app/models.py
 
-from django.db import models
-# from django.contrib.gis.db import models as gis_models
+# from django.db import models
+from django.contrib.gis.db import models
+from datetime import datetime
 
-class Image(models.Model):
-    datetime = models.DateTimeField()
-    area = models.FloatField()
-    # geolocation = gis_models.PointField()
-    name = models.CharField(max_length=255)
-    topic = models.CharField(max_length=255)
-    source = models.CharField(max_length=255)
-    satellite_id = models.CharField(max_length=255)
-    image_url = models.URLField()
+class BaseModel(models.Model):
+    created_at = models.DateTimeField(default=datetime.now)
+    updated_at = models.DateTimeField(auto_now=True, null=True)
 
-class Mask(models.Model):
-    image = models.ForeignKey(Image, on_delete=models.CASCADE, related_name='masks')
-    mask_data = models.JSONField()
+class Image(BaseModel):
+    datetime = models.DateTimeField(null=True)
+    resolution = models.FloatField()
+    bands = models.IntegerField()
+    filename = models.CharField(max_length=255)
+    filepath = models.CharField(max_length=1000)
+    area = models.FloatField(null=True)
+    name = models.CharField(max_length=255, null=True)
+    topic = models.CharField(max_length=255, null=True)
+    source = models.CharField(max_length=255, null=True)
+    satellite_id = models.CharField(max_length=255, null=True)
+    geom = models.GeometryField(srid=4326, null=True)

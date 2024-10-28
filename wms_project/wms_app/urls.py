@@ -2,11 +2,11 @@
 
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import ImageViewSet, MaskViewSet
+from .views import ImageViewSet
+from . import views
 
 router = DefaultRouter()
 router.register(r'images', ImageViewSet)
-router.register(r'masks', MaskViewSet)
 
 urlpatterns = [
     path('', include(router.urls)),

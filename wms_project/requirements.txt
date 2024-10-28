@@ -11,3 +11,5 @@ pytz
 psycopg2
 
 celery
+
+Pillow
