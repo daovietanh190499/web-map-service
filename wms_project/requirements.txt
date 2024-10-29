@@ -4,11 +4,13 @@ uvicorn
 django
 django-environ
 djangorestframework
+djangorestframework-gis
 django-elasticsearch-dsl
 
 boto3
 pytz
 psycopg2
+rasterio
 
 celery
 

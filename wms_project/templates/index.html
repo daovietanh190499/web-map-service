@@ -28,8 +28,40 @@
         #sidebar.hidden {
             transform: translateX(-100%);
         }
-        #timeline {
-            transition: left 0.3s ease-in-out;
+
+        #search-sidebar {
+            transition: transform 0.3s ease-in-out;
+            height: 100vh;
+            width: 360px;
+        }
+        #search-sidebar.hidden {
+            transform: translateX(-100%);
+        }
+        .filter-section {
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .filter-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
+        .filter-content.expanded {
+            max-height: 500px; /* Adjust based on content */
+        }
+        .filter-header {
+            cursor: pointer;
+            padding: 1rem;
+            user-select: none;
+        }
+        .filter-header i {
+            transition: transform 0.3s ease;
+        }
+        .filter-header.expanded i {
+            transform: rotate(180deg);
+        }
+        .search-results-container {
+            height: calc(100vh - 120px); /* Adjust based on header height */
+            overflow-y: auto;
         }
     </style>
 </head>
@@ -38,10 +70,117 @@
 
     <div id="edit-map" class="absolute top-4 right-4 w-1/3 h-1/3 bg-white bg-opacity-90 rounded-lg shadow-md hidden"></div>
 
+    <div id="search-sidebar" class="absolute top-0 left-0 bg-white shadow-lg z-50 hidden">
+        <div class="h-full flex flex-col">
+            <!-- Header -->
+            <div class="p-4 border-b">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-xl font-bold">Search Images</h2>
+                    <div class="flex items-center gap-2">
+                        <button id="toggle-filters" class="text-gray-500 hover:text-gray-700">
+                            <i class="fas fa-filter"></i>
+                        </button>
+                        <button id="close-search" class="text-gray-500 hover:text-gray-700">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Collapsible Filters -->
+            <div id="filters-container" class="hidden">
+                <form id="search-form">
+                    <div class="filter-section">
+                        <div class="filter-header" data-target="date-filter">
+                            <div class="flex justify-between items-center">
+                                <span class="font-semibold">Date Range</span>
+                                <i class="fas fa-chevron-down"></i>
+                            </div>
+                        </div>
+                        <div id="date-filter" class="filter-content p-4">
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="block text-sm">Start Date</label>
+                                    <input type="datetime-local" name="start_date" class="w-full border rounded p-1">
+                                </div>
+                                <div>
+                                    <label class="block text-sm">End Date</label>
+                                    <input type="datetime-local" name="end_date" class="w-full border rounded p-1">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="filter-section">
+                        <div class="filter-header" data-target="resolution-filter">
+                            <div class="flex justify-between items-center">
+                                <span class="font-semibold">Resolution (meters)</span>
+                                <i class="fas fa-chevron-down"></i>
+                            </div>
+                        </div>
+                        <div id="resolution-filter" class="filter-content p-4">
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="block text-sm">Min</label>
+                                    <input type="number" step="0.1" name="resolution_min" class="w-full border rounded p-1">
+                                </div>
+                                <div>
+                                    <label class="block text-sm">Max</label>
+                                    <input type="number" step="0.1" name="resolution_max" class="w-full border rounded p-1">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="filter-section">
+                        <div class="filter-header" data-target="metadata-filter">
+                            <div class="flex justify-between items-center">
+                                <span class="font-semibold">Metadata</span>
+                                <i class="fas fa-chevron-down"></i>
+                            </div>
+                        </div>
+                        <div id="metadata-filter" class="filter-content p-4">
+                            <div class="space-y-2">
+                                <div>
+                                    <label class="block text-sm">Topic</label>
+                                    <input type="text" name="topic" class="w-full border rounded p-1">
+                                </div>
+                                <div>
+                                    <label class="block text-sm">Source</label>
+                                    <input type="text" name="source" class="w-full border rounded p-1">
+                                </div>
+                                <div>
+                                    <label class="block text-sm">Satellite ID</label>
+                                    <input type="text" name="satellite_id" class="w-full border rounded p-1">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="p-4">
+                        <button type="submit" class="w-full bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600">
+                            Apply Filters
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Search Results -->
+            <div class="search-results-container flex-grow p-4">
+                <div id="search-results" class="space-y-2">
+                    <!-- Results will be populated here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div id="map-controls" class="absolute bottom-48 right-4 flex flex-col bg-transparent z-40">
         <div id="zoom-in" class="w-10 h-10 bg-white border-2 border-gray-300 rounded mb-1 flex items-center justify-center cursor-pointer hover:bg-gray-100"><i class="fas fa-plus"></i></div>
         <div id="zoom-out" class="w-10 h-10 bg-white border-2 border-gray-300 rounded mb-1 flex items-center justify-center cursor-pointer hover:bg-gray-100"><i class="fas fa-minus"></i></div>
-        <div id="layer-select" class="w-10 h-10 bg-white border-2 border-gray-300 rounded flex items-center justify-center cursor-pointer hover:bg-gray-100"><i class="fas fa-layer-group"></i></div>
+        <div id="layer-select" class="w-10 h-10 bg-white border-2 border-gray-300 rounded mb-1 flex items-center justify-center cursor-pointer hover:bg-gray-100"><i class="fas fa-layer-group"></i></div>
+        <div id="search-control" class="w-10 h-10 bg-white border-2 border-gray-300 rounded mb-1 flex items-center justify-center cursor-pointer hover:bg-gray-100">
+            <i class="fas fa-search"></i>
+        </div>
     </div>
 
     <div id="layer-menu" class="absolute bottom-64 right-4 bg-white border-2 border-gray-300 rounded p-4 hidden z-50">
@@ -57,17 +196,9 @@
             <input type="checkbox" name="overlayLayer" value="markers"> Markers
         </label>
     </div>
-
-    <!-- <div id="timeline" class="absolute bottom-4 left-[370px] right-4 h-40 bg-white bg-opacity-90 rounded-lg shadow-md z-40 transition-all duration-300"></div>
-
-    <div id="context-menu" class="hidden absolute bg-white border border-gray-300 shadow-md z-50">
-        <ul class="list-none m-0 p-0">
-            <li id="geolocation" class="px-4 py-2 cursor-pointer hover:bg-gray-100"></li>
-            <li id="upload-image" class="px-4 py-2 cursor-pointer hover:bg-gray-100">Upload Image</li>
-        </ul>
-    </div> -->
-
+    
     <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             var map = L.map('map', {
@@ -129,98 +260,318 @@
                     map.removeLayer(markersLayer);
                 }
             });
+            var drawnItems = new L.FeatureGroup();
+            map.addLayer(drawnItems);
 
-            // Context menu
-            map.on('contextmenu', function(e) {
-                clickedLatLng = e.latlng;
-                var containerPoint = map.latLngToContainerPoint(e.latlng);
-                var x = containerPoint.x;
-                var y = containerPoint.y;
-
-                contextMenu.style.display = 'block';
-                contextMenu.style.left = x + 'px';
-                contextMenu.style.top = y + 'px';
-
-                geolocationItem.textContent = `Lat: ${e.latlng.lat.toFixed(6)}, Lng: ${e.latlng.lng.toFixed(6)}`;
-
-                e.originalEvent.preventDefault();
+            var drawControl = new L.Control.Draw({
+                draw: {
+                    polygon: {
+                        allowIntersection: false,
+                        drawError: {
+                            color: '#e1e100',
+                            timeout: 1000
+                        },
+                        shapeOptions: {
+                            color: '#3388ff'
+                        },
+                        showArea: true
+                    },
+                    polyline: false,
+                    circle: false,
+                    rectangle: false,
+                    circlemarker: false,
+                    marker: false
+                },
+                edit: {
+                    featureGroup: drawnItems,
+                    remove: true
+                }
             });
 
-            map.on('click', function() {
-                contextMenu.style.display = 'none';
-            }); 
+            var searchSidebar = document.getElementById('search-sidebar');
+            var searchControl = document.getElementById('search-control');
+            var closeSearch = document.getElementById('close-search');
+            var searchForm = document.getElementById('search-form');
+            var searchResults = document.getElementById('search-results');
+            var isDrawing = false;
 
-            uploadImageItem.addEventListener('click', function() {
-                if (clickedLatLng) {
-                    map.setView(clickedLatLng);
+            // Search control click handler
+            searchControl.addEventListener('click', function() {
+                if (!isDrawing) {
+                    isDrawing = true;
+                    map.addControl(drawControl);
+                    searchControl.style.backgroundColor = '#e2e8f0';
+                } else {
+                    isDrawing = false;
+                    map.removeControl(drawControl);
+                    searchControl.style.backgroundColor = '#ffffff';
+                }
+            });
 
-                    var targetScale = 500 / 100000;
-                    var targetZoom = Math.round(Math.log2(40075016.686 * Math.abs(Math.cos(clickedLatLng.lat * Math.PI/180)) / (256 * targetScale)));
+            // Draw event handlers
+            // map.on('draw:created', function(e) {
+            //     drawnItems.clearLayers();
+            //     drawnItems.addLayer(e.layer);
+            //     searchSidebar.classList.remove('hidden');
+            //     isDrawing = false;
+            //     map.removeControl(drawControl);
+            //     searchControl.style.backgroundColor = '#ffffff';
+            // });
 
-                    map.setZoom(targetZoom);
+            map.on('draw:created', function(e) {
+                drawnItems.clearLayers();
+                let layer = e.layer;
+                drawnItems.addLayer(layer);
+                
+                // Show search sidebar
+                document.getElementById('search-sidebar').classList.remove('hidden');
+                
+                // Perform initial search with drawn geometry
+                const bounds = layer.getBounds();
+                const searchArea = {
+                    north: bounds.getNorth(),
+                    south: bounds.getSouth(),
+                    east: bounds.getEast(),
+                    west: bounds.getWest()
+                };
+                
+                performSearch({
+                    bbox: searchArea,
+                    datetime: `${new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()}/${new Date().toISOString()}`
+                });
+            });
 
-                    // Show sidebar with animation
-                    sidebar.classList.remove('hidden');
-                    sidebar.classList.add('fade-in-left');
+            // Search function
+            async function performSearch(searchParams) {
+                try {
+                    // Show loading state
+                    const searchResults = document.getElementById('search-results');
+                    searchResults.innerHTML = `
+                        <div class="flex justify-center items-center py-4">
+                            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                        </div>
+                    `;
 
-                    // Add pin marker at clicked location
-                    if (uploadMarker) {
-                        map.removeLayer(uploadMarker);
+                    // Build STAC API search parameters
+                    const searchBody = {
+                        geometry: drawnItems.toGeoJSON().features[0].geometry,
+                        operation: 'intersects',
+                        datetime: searchParams.datetime,
+                        collections: ["sentinel-2-l2a"], // Default collection
+                        limit: 50
+                    };
+
+                    // Add additional parameters if provided
+                    if (searchParams.resolution) {
+                        searchBody.query = {
+                            "eo:gsd": {
+                                gte: parseFloat(searchParams.resolution.min) || 0,
+                                lte: parseFloat(searchParams.resolution.max) || 100
+                            }
+                        };
                     }
-                    uploadMarker = L.marker(clickedLatLng).addTo(map);
 
-                    // Adjust timeline
-                    timeline.classList.remove('left-4');
-                    timeline.classList.add('left-[370px]');
+                    // Make API request
+                    const response = await fetch('/api/images/search/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(searchBody)
+                    });
 
+                    if (!response.ok) throw new Error('Search request failed');
+                    
+                    const results = await response.json();
+                    displaySearchResults(results);
+                } catch (error) {
+                    console.error('Search error:', error);
+                    document.getElementById('search-results').innerHTML = `
+                        <div class="text-center text-red-500 py-4">
+                            Error performing search. Please try again.
+                        </div>
+                    `;
                 }
-                contextMenu.style.display = 'none';
-            });
+            }
 
-            // Toggle sidebar
-            document.addEventListener('click', function(event) {
-                var isClickInsideSidebar = sidebar.contains(event.target);
-                var isClickOnUploadItem = uploadImageItem.contains(event.target);
-                var isClickOnSearchInput = event.target.id === 'search-input';
-                if (!isClickInsideSidebar && !isClickOnUploadItem && !isClickOnSearchInput && !sidebar.classList.contains('hidden')) {
-                    sidebar.classList.add('hidden');
-                    // Remove the upload marker when closing sidebar
-                    if (uploadMarker) {
-                        map.removeLayer(uploadMarker);
-                        uploadMarker = null;
+            // Handle form submission for filtered search
+            document.getElementById('search-form').addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const formData = new FormData(e.target);
+                const bounds = drawnItems.getBounds();
+                
+                const searchParams = {
+                    bbox: {
+                        north: bounds.getNorth(),
+                        south: bounds.getSouth(),
+                        east: bounds.getEast(),
+                        west: bounds.getWest()
+                    },
+                    datetime: `${formData.get('start_date')}/${formData.get('end_date')}`,
+                    resolution: {
+                        min: formData.get('resolution_min'),
+                        max: formData.get('resolution_max')
                     }
-                    // Adjust timeline
-                    timeline.classList.add('left-4');
-                    timeline.classList.remove('left-[370px]')
+                };
+
+                performSearch(searchParams);
+            });
+
+            // Modified displaySearchResults function to match STAC API response
+            function displaySearchResults(results) {
+                const searchResults = document.getElementById('search-results');
+                searchResults.innerHTML = '';
+                
+                if (!results.features || results.features.length === 0) {
+                    searchResults.innerHTML = `
+                        <div class="text-center text-gray-500 py-4">
+                            No results found
+                        </div>
+                    `;
+                    return;
+                }
+
+                results.features.forEach(feature => {
+                    const result = document.createElement('div');
+                    result.className = 'bg-white border rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 mb-3';
+                    result.innerHTML = `
+                        <div class="p-3">
+                            <div class="font-semibold text-gray-800">${feature.id}</div>
+                            <div class="text-sm text-gray-600 mt-1">
+                                <div class="flex items-center gap-2">
+                                    <i class="far fa-calendar-alt w-4"></i>
+                                    ${new Date(feature.properties.datetime).toLocaleDateString()}
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <i class="fas fa-rulers w-4"></i>
+                                    ${feature.properties['eo:gsd']}m
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <i class="fas fa-cloud w-4"></i>
+                                    ${feature.properties['eo:cloud_cover']}%
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    result.addEventListener('click', () => {
+                        const bounds = L.geoJSON(feature.geometry).getBounds();
+                        map.fitBounds(bounds);
+                    });
+                    
+                    searchResults.appendChild(result);
+                });
+            }
+
+
+            const toggleFiltersBtn = document.getElementById('toggle-filters');
+            const filtersContainer = document.getElementById('filters-container');
+            
+            toggleFiltersBtn.addEventListener('click', function() {
+                filtersContainer.classList.toggle('hidden');
+            });
+
+            // Add collapsible functionality to filter sections
+            document.querySelectorAll('.filter-header').forEach(header => {
+                header.addEventListener('click', function() {
+                    const targetId = this.getAttribute('data-target');
+                    const content = document.getElementById(targetId);
+                    
+                    // Toggle expanded class
+                    content.classList.toggle('expanded');
+                    this.classList.toggle('expanded');
+                    
+                    // Close other sections
+                    document.querySelectorAll('.filter-content').forEach(el => {
+                        if (el.id !== targetId) {
+                            el.classList.remove('expanded');
+                            el.previousElementSibling.classList.remove('expanded');
+                        }
+                    });
+                });
+            });
+
+            // Modified displaySearchResults function to include more details
+            function displaySearchResults(results) {
+                searchResults.innerHTML = '';
+                if (results.features.length === 0) {
+                    searchResults.innerHTML = `
+                        <div class="text-center text-gray-500 py-4">
+                            No results found
+                        </div>
+                    `;
+                    return;
+                }
+
+                results.features.forEach(feature => {
+                    const result = document.createElement('div');
+                    result.className = 'bg-white border rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 mb-3';
+                    result.innerHTML = `
+                        <div class="p-3">
+                            <div class="font-semibold text-gray-800">${feature.properties.name || feature.properties.filename}</div>
+                            <div class="text-sm text-gray-600 mt-1">
+                                <div class="flex items-center gap-2">
+                                    <i class="far fa-calendar-alt w-4"></i>
+                                    ${new Date(feature.properties.datetime).toLocaleDateString()}
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <i class="fas fa-rulers w-4"></i>
+                                    ${feature.properties.resolution}m
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <i class="fas fa-satellite w-4"></i>
+                                    ${feature.properties.source || 'N/A'}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    result.addEventListener('click', () => {
+                        const bounds = L.geoJSON(feature.geometry).getBounds();
+                        map.fitBounds(bounds);
+                    });
+                    
+                    searchResults.appendChild(result);
+                });
+            }
+
+            // Close search sidebar
+            closeSearch.addEventListener('click', function() {
+                searchSidebar.classList.add('hidden');
+                drawnItems.clearLayers();
+            });
+
+            // Search form submission
+            searchForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                const formData = new FormData(searchForm);
+                const searchData = {
+                    geometry: drawnItems.toGeoJSON().features[0].geometry,
+                    operation: 'intersects'
+                };
+
+                // Add form fields to search data
+                formData.forEach((value, key) => {
+                    if (value) searchData[key] = value;
+                });
+
+                try {
+                    const response = await fetch('/api/images/search/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(searchData)
+                    });
+
+                    const results = await response.json();
+                    displaySearchResults(results);
+                } catch (error) {
+                    console.error('Error searching images:', error);
                 }
             });
 
-            // Handle form submission
-            uploadForm.addEventListener('submit', function(event) {
-                event.preventDefault();
-                // Here you would typically send the form data to your server
-                console.log('Form submitted:', new FormData(uploadForm));
-                // For demonstration, we'll just log the form data and close the sidebar
-                sidebar.classList.add('hidden');
-                // Reset the form
-                uploadForm.reset();
-                // Remove the upload marker
-                if (uploadMarker) {
-                    map.removeLayer(uploadMarker);
-                    uploadMarker = null;
-                }
-                // Adjust timeline
-                timeline.classList.add('left-4');
-                timeline.classList.remove('left-[370px]')
-            });
-
-            // Close layer menu when clicking outside
-            document.addEventListener('click', function(event) {
-                var isClickInside = layerMenu.contains(event.target) || layerSelectButton.contains(event.target);
-                if (!isClickInside) {
-                    layerMenu.style.display = 'none';
-                }
-            });
         });
     </script>
 </body>

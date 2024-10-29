@@ -5,7 +5,8 @@ from rest_framework.response import Response
 from django.contrib.gis.geos import GEOSGeometry
 from django.contrib.gis.db.models.functions import Intersection
 from .models import Image
-from .serializers import ImageSerializer, SearchGeometrySerializer
+from django.db.models import Q
+from .serializers import ImageSerializer, SearchGeometrySerializer, ImageFilterSerializer
 from osgeo import gdal, osr
 import json
 import os
@@ -16,6 +17,7 @@ from django.shortcuts import render
 from PIL import Image as PIL_Image
 import io
 from django.http import HttpResponse
+from wms_app.generate_tiles import Tiles
 
 def index(request):
     return render(request, 'index.html')
@@ -29,7 +31,6 @@ def index(request):
 #     vector_tile_fields = ('name',)
 #     vector_tile_geom_name = "geom"
 
-
 class ImageViewSet(viewsets.ModelViewSet):
     queryset = Image.objects.all()
     serializer_class = ImageSerializer
@@ -38,28 +39,30 @@ class ImageViewSet(viewsets.ModelViewSet):
     filter_backends = (InBBoxFilter,)
     bbox_filter_include_overlapping = True
 
+    img = rasterio.open("/home/coder/3D_Reconstruction/web-map-service/wms_project/data/Hanoi_20240810_S2.jp2")
+
     @action(detail=False, url_path='jp2/tiles/(?P<z>[0-9]+)/(?P<x>[0-9]+)/(?P<y>[0-9]+).png', methods=['GET'])
     def generate_tile(self, request, z, x, y):
-        from wms_app.generate_tiles import Tiles
-
-        img = rasterio.open("/home/coder/3D_Reconstruction/web-map-service/wms_project/data/Hanoi_20240810_L8.jp2")
-        tiled = Tiles(image=img, zooms=[int(z)], x=int(x), y=int(y), pixels=512, resampling="bilinear")
-        print(tiled.tiles.data.shape)
-        # tiled.write("tiles")
-
-        # Convert to a PIL Image and then to PNG
-        img = PIL_Image.fromarray(np.transpose(tiled.tiles.data, (1, 2, 0)))
         buffer = io.BytesIO()
+
+        if os.path.exists(f'tiles/image1/{str(z)}/{str(x)}/{str(y)}.png'):
+            img = PIL_Image.open(f'tiles/image1/{str(z)}/{str(x)}/{str(y)}.png')
+        else:
+            tiled = Tiles(image=self.img, zooms=[int(z)], x=int(x), y=int(y), pixels=256, resampling="bilinear")
+            img = PIL_Image.fromarray(np.transpose(tiled.tiles.data, (1, 2, 0)))
+            if not os.path.exists(f'tiles/image1/{str(z)}/{str(x)}'):
+                os.makedirs(f'tiles/image1/{str(z)}/{str(x)}')
+            img.save(f'tiles/image1/{str(z)}/{str(x)}/{str(y)}.png')
+        
         img.save(buffer, format="PNG")
         buffer.seek(0)
 
-        # Return image as HTTP response
         return HttpResponse(buffer, content_type="image/png")
 
     @action(detail=False, methods=['post'])
     def scan_folder(self, request):
         """Scan a folder for JP2 files and store their metadata"""
-        folder_path = request.data.get('folder_path')
+        folder_path = '/home/coder/3D_Reconstruction/web-map-service/wms_project/data/'
         if not folder_path:
             return Response(
                 {'error': 'folder_path is required'},
@@ -165,19 +168,19 @@ class ImageViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['post'])
     def spatial_query(self, request):
         """Advanced spatial query endpoint"""
-        search_geometry = GEOSGeometry(json.dumps(request.data.get('geometry')))
+        search_geometry = GEOSGeometry(json.dumps(request.data.get('geom')))
         spatial_op = request.data.get('operation', 'intersects')
         
         # Map of supported spatial operations
         spatial_ops = {
-            'intersects': 'geometry__intersects',
-            'contains': 'geometry__contains',
-            'crosses': 'geometry__crosses',
-            'disjoint': 'geometry__disjoint',
-            'equals': 'geometry__equals',
-            'overlaps': 'geometry__overlaps',
-            'touches': 'geometry__touches',
-            'within': 'geometry__within',
+            'intersects': 'geom__intersects',
+            'contains': 'geom__contains',
+            'crosses': 'geom__crosses',
+            'disjoint': 'geom__disjoint',
+            'equals': 'geom__equals',
+            'overlaps': 'geom__overlaps',
+            'touches': 'geom__touches',
+            'within': 'geom__within',
         }
         
         if spatial_op not in spatial_ops:
@@ -199,5 +202,61 @@ class ImageViewSet(viewsets.ModelViewSet):
 
         # Execute query
         results = Image.objects.filter(**filter_kwargs)
+        
+        return Response(ImageSerializer(results, many=True).data)
+
+    @action(detail=False, methods=['post'])
+    def search(self, request):
+        """Advanced search endpoint with multiple filters"""
+        serializer = ImageFilterSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        filters = Q()
+        data = serializer.validated_data
+
+        # Spatial filter
+        if 'geometry' in data:
+            search_geometry = GEOSGeometry(json.dumps(data['geometry']))
+            spatial_op = data.get('operation', 'intersects')
+            
+            spatial_ops = {
+                'intersects': 'geom__intersects',
+                'contains': 'geom__contains',
+                'crosses': 'geom__crosses',
+                'disjoint': 'geom__disjoint',
+                'equals': 'geom__equals',
+                'overlaps': 'geom__overlaps',
+                'touches': 'geom__touches',
+                'within': 'geom__within',
+            }
+            
+            if spatial_op not in spatial_ops:
+                return Response(
+                    {'error': f'Unsupported spatial operation. Supported operations: {", ".join(spatial_ops.keys())}'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            filters &= Q(**{spatial_ops[spatial_op]: search_geometry})
+
+        # Temporal filter
+        if 'start_date' in data:
+            filters &= Q(datetime__gte=data['start_date'])
+        if 'end_date' in data:
+            filters &= Q(datetime__lte=data['end_date'])
+
+        # Resolution filter
+        if 'resolution_min' in data:
+            filters &= Q(resolution__gte=data['resolution_min'])
+        if 'resolution_max' in data:
+            filters &= Q(resolution__lte=data['resolution_max'])
+
+        # Metadata filters
+        for field in ['topic', 'source', 'satellite_id']:
+            if field in data:
+                filters &= Q(**{field: data[field]})
+
+        # Execute query
+        results = Image.objects.filter(filters)
         
         return Response(ImageSerializer(results, many=True).data)

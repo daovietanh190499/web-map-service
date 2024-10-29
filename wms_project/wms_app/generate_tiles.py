@@ -203,7 +203,7 @@ class Tiles:
 
         if not isinstance(pixels, int):
             raise TypeError(f"pixels must be of type int, not {type(pixels).__name__}.")
-        if pixels not in (256, 512):
+        if pixels not in (128, 256, 512):
             raise ValueError(f"pixels must be 256 or 512, not {pixels}.")
         self.pixels = pixels
 
@@ -412,7 +412,7 @@ class Tiles:
         tile : _Tile
             _Tile object corresponding to a single XYZ tile.
         """
-        minx = self._origin * -1 + col * int(dims)
+        minx = self._origin * -1 + col * dims
         maxx = minx + dims
         maxy = self._origin - row * dims
         miny = maxy - dims

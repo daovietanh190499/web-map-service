@@ -44,6 +44,8 @@ INSTALLED_APPS = [
     "django.contrib.gis",
     'rest_framework',
     'rest_framework_gis',
+    'drf_spectacular',
+    'drf_spectacular_sidecar',
     'wms_app',
 ]
 
@@ -129,6 +131,19 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
+
+REST_FRAMEWORK = {
+    # YOUR SETTINGS
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+}
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'WMS API',
+    'DESCRIPTION': 'WMS GIS System',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    # OTHER SETTINGS
+}
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
