@@ -6,6 +6,8 @@ django-environ
 djangorestframework
 djangorestframework-gis
 django-elasticsearch-dsl
+drf-spectacular
+drf-spectacular-sidecar
 
 boto3
 pytz

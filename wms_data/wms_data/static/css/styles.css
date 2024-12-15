@@ -1,0 +1,30 @@
+/* static/css/styles.css */
+
+#map, #edit-map {
+    height: 400px;
+}
+
+.timeline-dot {
+    width: 10px;
+    height: 10px;
+    background-color: #3498db;
+    border-radius: 50%;
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+}
+
+#timeline {
+    position: relative;
+    height: 20px;
+    background-color: #ecf0f1;
+    margin-top: 20px;
+}
+
+.save-button {
+    padding: 5px;
+    background-color: white;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+}
