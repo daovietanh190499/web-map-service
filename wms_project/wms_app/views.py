@@ -22,15 +22,6 @@ from wms_app.generate_tiles import Tiles
 def index(request):
     return render(request, 'index.html')
 
-# from django.views.generic import ListView
-# from vectortiles.views import MVTView
-
-# class MaskView(MVTView, ListView):
-#     model = Mask
-#     vector_tile_layer_name = "mask"
-#     vector_tile_fields = ('name',)
-#     vector_tile_geom_name = "geom"
-
 class ImageViewSet(viewsets.ModelViewSet):
     queryset = Image.objects.all()
     serializer_class = ImageSerializer
@@ -39,20 +30,22 @@ class ImageViewSet(viewsets.ModelViewSet):
     filter_backends = (InBBoxFilter,)
     bbox_filter_include_overlapping = True
 
-    img = rasterio.open("/home/coder/web-map-service/wms_project/data/Hanoi_20240810_S2.jp2")
-
-    @action(detail=False, url_path='jp2/tiles/(?P<z>[0-9]+)/(?P<x>[0-9]+)/(?P<y>[0-9]+).png', methods=['GET'])
+    @action(detail=True, url_path='jp2/tiles/(?P<z>[0-9]+)/(?P<x>[0-9]+)/(?P<y>[0-9]+).png', methods=['GET'])
     def generate_tile(self, request, z, x, y):
+        
+        img_db = self.get_object()
+
         buffer = io.BytesIO()
 
-        if os.path.exists(f'tiles/image1/{str(z)}/{str(x)}/{str(y)}.png'):
-            img = PIL_Image.open(f'tiles/image1/{str(z)}/{str(x)}/{str(y)}.png')
+        if os.path.exists(f'tiles/{img_db.id}/{str(z)}/{str(x)}/{str(y)}.png'):
+            img = PIL_Image.open(f'tiles/{img_db.id}/{str(z)}/{str(x)}/{str(y)}.png')
         else:
-            tiled = Tiles(image=self.img, zooms=[int(z)], x=int(x), y=int(y), pixels=256, resampling="bilinear")
+            img = rasterio.open(os.path.join(img_db.file_path, img_db.file_name))
+            tiled = Tiles(image=img, zooms=[int(z)], x=int(x), y=int(y), pixels=256, resampling="bilinear")
             img = PIL_Image.fromarray(np.transpose(tiled.tiles.data, (1, 2, 0)))
-            if not os.path.exists(f'tiles/image1/{str(z)}/{str(x)}'):
-                os.makedirs(f'tiles/image1/{str(z)}/{str(x)}')
-            img.save(f'tiles/image1/{str(z)}/{str(x)}/{str(y)}.png')
+            if not os.path.exists(f'tiles/{img_db.id}/{str(z)}/{str(x)}'):
+                os.makedirs(f'tiles/{img_db.id}/{str(z)}/{str(x)}')
+            img.save(f'tiles/{img_db.id}/{str(z)}/{str(x)}/{str(y)}.png')
         
         img.save(buffer, format="PNG")
         buffer.seek(0)
