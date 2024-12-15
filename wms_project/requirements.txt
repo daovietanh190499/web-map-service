@@ -9,7 +9,7 @@ django-elasticsearch-dsl
 
 boto3
 pytz
-psycopg2
+psycopg2-binary
 rasterio
 
 celery

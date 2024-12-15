@@ -3,16 +3,25 @@ networks:
     driver: "bridge"
 
 services:
+  wms-registry:
+    image: registry:2
+    restart: always
+    environment:
+      REGISTRY_STORAGE_FILESYSTEM_ROOTDIRECTORY: /data
+    ports:
+      - 5000:5000
+    expose:
+      - 5000
+    volumes:
+      - ./wms_data/docker_registry:/data
+    networks:
+    - wms-network
 
-  wms-backend: &backend
+  wms-celery: &backend
     build:
       context: wms_project
       dockerfile: Dockerfile
     restart: always
-    ports:
-    - 80:8000
-    expose:
-      - 80
     environment:
       SECRET_KET: 'django-insecure-w7z4a$-zclzww3izii@a(53%_1i9gfg^y)k2ban+e0h!)d'
       DB_ENGINE: ${DB_ENGINE}
@@ -27,26 +36,30 @@ services:
       AWS_S3_ENDPOINT: ${AWS_S3_ENDPOINT}
       ELASTICSEARCH_HOST: ${ELASTICSEARCH_HOST}
       REDIS_HOST: ""
-    volumes:
-      - ./data/wms_data:/mnt/data
-    command: [
-      "/bin/bash",
-      "-c",
-      "python manage.py collecstatic && python manage.py makemigrations && python manage.py migrate && gunicorn"
-    ]
-    networks:
-    - wms-network
-
-  wms-celery:
-    << : *backend
-    restart: always
     command: [
       "/bin/bash",
       "-c",
       "python -m celery -A wms_project worker --loglevel info"
     ]
     volumes:
-      - ./data/wms_data:/mnt/data
+      - ./wms_data/wms_data:/mnt/data
+    networks:
+    - wms-network
+
+  wms-backend:
+    << : *backend
+    restart: always
+    ports:
+      - 80:8000
+    expose:
+      - 80
+    volumes:
+      - ./wms_data/wms_data:/mnt/data
+    command: [
+      "/bin/bash",
+      "-c",
+      "python manage.py collecstatic && python manage.py makemigrations && python manage.py migrate && gunicorn"
+    ]
     networks:
     - wms-network
 
@@ -63,7 +76,7 @@ services:
     expose:
       - 5432
     volumes:
-      - ./data/postgis:/var/lib/postgresql
+      - ./wms_data/postgis:/var/lib/postgresql
     networks:
     - wms-network
 
@@ -81,7 +94,7 @@ services:
       MINIO_ROOT_USER: "wms-minio"
       MINIO_ROOT_PASSWORD: "wms-minio-123!@"
     volumes:
-      - ./data/minio:/data
+      - ./wms_data/minio:/data
     networks:
     - wms-network
   
@@ -101,7 +114,7 @@ services:
     networks:
     - wms-network
     volumes:
-    - ./data/opensearch:/usr/share/opensearch/data
+    - ./wms_data/opensearch:/usr/share/opensearch/data
 
   wms-elasticsearch-dashboards:
     image: opensearchproject/opensearch-dashboards:latest
@@ -109,7 +122,7 @@ services:
     ports:
       - 5601:5601
     expose:
-      - "5601"
+      - 5601
     environment:
       OPENSEARCH_HOSTS: '["https://wms-elasticsearch:9200"]'
     networks:
@@ -124,5 +137,5 @@ services:
       - 6379
     command: redis-server --save 20 1 /etc/redis/redis.conf
     volumes:
-      - ./data/redis/data:/data
-      - ./data/redis/redis.conf:/etc/redis/redis.conf
+      - ./wms_data/redis/data:/data
+      - ./wms_data/redis/redis.conf:/etc/redis/redis.conf
