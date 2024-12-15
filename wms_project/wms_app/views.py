@@ -55,7 +55,7 @@ class ImageViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['post'])
     def scan_folder(self, request):
         """Scan a folder for JP2 files and store their metadata"""
-        folder_path = '/home/coder/web-map-service/wms_project/data/'
+        folder_path = '/mnt/data/'
         if not folder_path:
             return Response(
                 {'error': 'folder_path is required'},
