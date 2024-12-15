@@ -42,7 +42,7 @@ services:
       "python -m celery -A wms_project worker --loglevel info"
     ]
     volumes:
-      - ./wms_data/wms_data:/mnt/data
+      - ./wms_data/wms_data/data:/mnt/data
     networks:
     - wms-network
 
@@ -55,7 +55,7 @@ services:
       - 80
     volumes:
       - ./wms_data/wms_data/static:/mnt/static
-      - ./wms_data/wms_data:/mnt/data
+      - ./wms_data/wms_data/data:/mnt/data
     command: [
       "/bin/bash",
       "-c",
