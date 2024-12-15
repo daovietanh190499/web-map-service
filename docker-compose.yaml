@@ -1,5 +1,3 @@
-version: "3"
-
 networks:
   wms-network:
     driver: "bridge"
@@ -7,7 +5,7 @@ networks:
 services:
   wms-backend: &backend
     build:
-      context: wsm_project
+      context: wms_project
       dockerfile: Dockerfile
     restart: always
     ports:
@@ -16,19 +14,17 @@ services:
       - 80
     environment:
       SECRET_KET: 'django-insecure-w7z4a$-zclzww3izii@a(53%_1i9gfg^y)k2ban+e0h!)d'
-      # DB_ENGINE: 'django.contrib.gis.db.backends.postgis'
-      DB_ENGINE: "django.db.backends.postgresql"
+      DB_ENGINE: ${DB_ENGINE}
       DB_NAME: ${POSTGRES_DB}
       DB_USER: ${POSTGRES_USER}
       DB_PASSWORD: ${POSTGRES_PASSWORD}
       DB_PORT: ${PGPORT}
-      DB_HOST: 'wms-db'
+      DB_HOST: ${DB_HOST}
       AWS_ACCESS_ID: ${MINIO_ROOT_USER}
       AWS_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
       AWS_BUCKET_NAME: "wms_images"
-      AWS_S3_ENDPOINT: "http://wms-minio:9000"
-      # AWS_S3_REGION: "us-east-1"
-      ELASTICSEARCH_HOST: "https://wms-elasticsearch:9200"
+      AWS_S3_ENDPOINT: ${AWS_S3_ENDPOINT}
+      ELASTICSEARCH_HOST: ${ELASTICSEARCH_HOST}
       REDIS_HOST: ""
     volumes:
       - ./wms_data:/mnt/data
@@ -43,8 +39,6 @@ services:
   wms-celery:
     << : *backend
     restart: always
-    env_file:
-    - ".env-prod"
     command: [
       "/bin/bash",
       "-c",
