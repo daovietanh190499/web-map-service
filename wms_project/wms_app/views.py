@@ -39,7 +39,7 @@ class ImageViewSet(viewsets.ModelViewSet):
     filter_backends = (InBBoxFilter,)
     bbox_filter_include_overlapping = True
 
-    img = rasterio.open("/home/coder/3D_Reconstruction/web-map-service/wms_project/data/Hanoi_20240810_S2.jp2")
+    img = rasterio.open("/home/coder/web-map-service/wms_project/data/Hanoi_20240810_S2.jp2")
 
     @action(detail=False, url_path='jp2/tiles/(?P<z>[0-9]+)/(?P<x>[0-9]+)/(?P<y>[0-9]+).png', methods=['GET'])
     def generate_tile(self, request, z, x, y):
@@ -62,7 +62,7 @@ class ImageViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['post'])
     def scan_folder(self, request):
         """Scan a folder for JP2 files and store their metadata"""
-        folder_path = '/home/coder/3D_Reconstruction/web-map-service/wms_project/data/'
+        folder_path = '/home/coder/web-map-service/wms_project/data/'
         if not folder_path:
             return Response(
                 {'error': 'folder_path is required'},

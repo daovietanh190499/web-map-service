@@ -20,3 +20,11 @@ class Image(models.Model):
     source = models.CharField(max_length=255, null=True)
     satellite_id = models.CharField(max_length=255, null=True)
     geom = models.GeometryField(srid=4326, null=True)
+
+class PredictArea(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    created_at = models.DateTimeField(default=datetime.now)
+    updated_at = models.DateTimeField(auto_now=True, null=True)
+    image = models.ForeignKey(to=Image, on_delete=models.SET_NULL, related_name="predictions", null=True)
+    geom = models.GeometryField(srid=4326, null=True)
+
