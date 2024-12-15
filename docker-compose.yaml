@@ -5,8 +5,10 @@ networks:
     driver: "bridge"
 
 services:
-  wms-backend:
-    image: wms-backend:latest
+  wms-backend: &backend
+    build:
+      context: wsm_project
+      dockerfile: Dockerfile
     restart: always
     ports:
     - 80:8000
@@ -37,7 +39,7 @@ services:
     - wms-network
 
   wms-celery:
-    image: wms-backend:latest
+    << : *backend
     restart: always
     env_file:
     - ".env-prod"
