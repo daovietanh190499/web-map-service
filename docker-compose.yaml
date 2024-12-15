@@ -30,6 +30,8 @@ services:
       # AWS_S3_REGION: "us-east-1"
       ELASTICSEARCH_HOST: "https://wms-elasticsearch:9200"
       REDIS_HOST: ""
+    volumes:
+      - ./wms_data:/mnt/data
     command: [
       "/bin/bash",
       "-c",
@@ -48,6 +50,8 @@ services:
       "-c",
       "python -m celery -A wms_project worker --loglevel info"
     ]
+    volumes:
+      - ./wms_data:/mnt/data
     networks:
     - wms-network
 
@@ -63,6 +67,8 @@ services:
       - 5432:5432
     expose:
       - 5432
+    volumes:
+      - ./postgis:/mnt/data
     networks:
     - wms-network
 
@@ -80,7 +86,7 @@ services:
       MINIO_ROOT_USER: "wms-minio"
       MINIO_ROOT_PASSWORD: "wms-minio-123!@"
     volumes:
-      - ./minio/data:/data
+      - ./minio:/data
     networks:
     - wms-network
   
@@ -123,5 +129,5 @@ services:
       - 6379
     command: redis-server --save 20 1 /etc/redis/redis.conf
     volumes:
-      - ./redis/redis-data:/data
+      - ./redis:/data
       - ./redis/redis.conf:/etc/redis/redis.conf
