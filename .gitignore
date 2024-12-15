@@ -2,5 +2,4 @@ __pycache__
 .env
 .env-prod
 wms_env/
-data
 tiles

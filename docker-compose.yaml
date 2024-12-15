@@ -3,6 +3,7 @@ networks:
     driver: "bridge"
 
 services:
+
   wms-backend: &backend
     build:
       context: wms_project
@@ -27,7 +28,7 @@ services:
       ELASTICSEARCH_HOST: ${ELASTICSEARCH_HOST}
       REDIS_HOST: ""
     volumes:
-      - ./wms_data:/mnt/data
+      - ./data/wms_data:/mnt/data
     command: [
       "/bin/bash",
       "-c",
@@ -45,7 +46,7 @@ services:
       "python -m celery -A wms_project worker --loglevel info"
     ]
     volumes:
-      - ./wms_data:/mnt/data
+      - ./data/wms_data:/mnt/data
     networks:
     - wms-network
 
@@ -62,7 +63,7 @@ services:
     expose:
       - 5432
     volumes:
-      - ./postgis:/var/lib/postgresql
+      - ./data/postgis:/var/lib/postgresql
     networks:
     - wms-network
 
@@ -80,7 +81,7 @@ services:
       MINIO_ROOT_USER: "wms-minio"
       MINIO_ROOT_PASSWORD: "wms-minio-123!@"
     volumes:
-      - ./minio:/data
+      - ./data/minio:/data
     networks:
     - wms-network
   
@@ -100,7 +101,7 @@ services:
     networks:
     - wms-network
     volumes:
-    - ./opensearch:/usr/share/opensearch/data
+    - ./data/opensearch:/usr/share/opensearch/data
 
   wms-elasticsearch-dashboards:
     image: opensearchproject/opensearch-dashboards:latest
@@ -123,5 +124,5 @@ services:
       - 6379
     command: redis-server --save 20 1 /etc/redis/redis.conf
     volumes:
-      - ./redis:/data
-      - ./redis/redis.conf:/etc/redis/redis.conf
+      - ./data/redis/data:/data
+      - ./data/redis/redis.conf:/etc/redis/redis.conf
