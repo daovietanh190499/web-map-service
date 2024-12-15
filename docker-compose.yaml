@@ -23,7 +23,7 @@ services:
       dockerfile: Dockerfile
     restart: always
     environment:
-      SECRET_KET: 'django-insecure-w7z4a$-zclzww3izii@a(53%_1i9gfg^y)k2ban+e0h!)d'
+      SECRET_KEY: 'django-insecure-w7z4a$-zclzww3izii@a(53%_1i9gfg^y)k2ban+e0h!)d'
       DB_ENGINE: ${DB_ENGINE}
       DB_NAME: ${POSTGRES_DB}
       DB_USER: ${POSTGRES_USER}
