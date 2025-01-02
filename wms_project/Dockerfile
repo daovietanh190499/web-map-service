@@ -1,19 +1,13 @@
-FROM python:3.7-bullseye
-
-USER root
+FROM ubuntu:22.04
 
 RUN apt update
-RUN apt install -y software-properties-common
-# RUN add-apt-repository ppa:ubuntugis/ppa
-# RUN apt update
-RUN apt install -y gdal-bin libgdal-dev
+RUN apt install -y gdal-bin libgdal-dev python3-gdal python3 python3-pip
 
 RUN export CPLUS_INCLUDE_PATH=/usr/include/gdal
 RUN export C_INCLUDE_PATH=/usr/include/gdal
 
-
 COPY ./requirements.txt ./requirements.txt
-RUN pip install -r requirements.txt
+RUN pip3 install -r requirements.txt
 
 WORKDIR /home/wms
 COPY . .

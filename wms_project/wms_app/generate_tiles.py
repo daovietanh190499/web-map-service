@@ -189,6 +189,7 @@ class Tiles:
                 "image must be of type rasterio.DatasetReader, not "
                 f"{type(image).__name__}.",
             )
+        print(dir(image))
         if image.crs is None:
             raise errors.CRSError("image must be a georeferenced dataset.")
         self.img = image

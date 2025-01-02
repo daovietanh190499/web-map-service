@@ -13,10 +13,10 @@ django-filter
 boto3
 pytz
 psycopg2-binary
-rasterio
+rasterio==1.3.9
 
 setuptools==57.5.0
-gdal==3.2.2
+gdal==3.4.1
 
 celery
 
