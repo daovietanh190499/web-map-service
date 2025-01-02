@@ -7,6 +7,7 @@
     <link href="static/css/tailwind.min.css" rel="stylesheet">
     <link rel="stylesheet" href="static/css/leaflet.css" />
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="static/css/leaflet-layer-tree-control.css" />
     <script src="static/js/tailwind.js"></script>
     <style>
         @keyframes fadeInLeft {
@@ -86,6 +87,23 @@
         <!-- Sidebar -->
         <div id="search-sidebar" class="w-1/3 h-full bg-white shadow-lg z-50 hidden flex-shrink-0">
             <div class="h-full flex flex-col">
+                <!-- <div id="search-toolbar" class="absolute top-4 left-4 z-50 bg-white bg-opacity-90 p-3 rounded-lg shadow-md">
+                    <form id="map-search-form" class="flex items-center gap-2">
+                        <input
+                            type="text"
+                            id="search-input"
+                            placeholder="Search location..."
+                            class="w-64 px-2 py-1 text-sm border rounded-lg focus:outline-none focus:ring focus:border-blue-300"
+                        />
+                        <button
+                            type="submit"
+                            class="px-3 py-1 text-white bg-blue-500 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring"
+                        >
+                            Search
+                        </button>
+                    </form>
+                </div> -->
+
                 <!-- Header -->
                 <div class="p-4 border-b">
                     <div class="flex justify-between items-center">
@@ -214,6 +232,8 @@
     <link rel="stylesheet" href="static/css/leaflet.draw.css"></script>
     <script src="static/js/L.Control.Layers.Tree.js"></script>
     <link rel="stylesheet" href="static/css/L.Control.Layers.Tree.css"></script>
+    <script src="static/js/leaflet-layer-tree-control.js"></script>
+    <script src="static/js/leaflet-layer-tree-control-wfs-zoom.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function() {
             var map = L.map('map', {
@@ -238,46 +258,137 @@
                 attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
             });
 
-            osmLayer.addTo(map);
+            // osmLayer.addTo(map);
 
-            var baseTree = {
-                label: 'Base Layers',
-                children: [
-                    {
-                        label: 'World',
-                        children: [
-                            { label: 'OpenStreetMap', layer: osmLayer},
-                            { label: 'Satellite', layer: satelliteLayer },
-                        ]
+            // var baseTree = {
+            //     label: 'Base Layers',
+            //     children: [
+            //         {
+            //             label: 'World',
+            //             children: [
+            //                 { label: 'OpenStreetMap', layer: osmLayer},
+            //                 { label: 'Satellite', layer: satelliteLayer },
+            //             ]
+            //         }
+            //     ]
+            // };
+
+            // var overlayTree = {
+            //     label: 'Choosen Layers',
+            //     selectAllCheckbox: true,
+            //     children: [
+            //         {
+            //             label: 'Image1',
+            //             selectAllCheckbox: true,
+            //             children: [
+            //                 { label: 'Predict1', layer: ownLayer },
+            //             ]
+            //         }
+            //     ]
+            // };
+
+            // L.control.layers.tree(baseTree, overlayTree, {
+            //     namedToggle: true,
+            //     collapseAll: 'Collapse all',
+            //     expandAll: 'Expand all',
+            //     collapsed: false,
+            // }).addTo(map).collapseTree().expandSelected();
+
+            var layerBuilders = {
+                GOOGLE: function (layerSettings) {
+                    return L.tileLayer('http://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+                    maxZoom: 20,
+                    subdomains: ['mt0', 'mt1', 'mt2', 'mt3']
+                    });
+                },
+                GOOGLE_TERRAIN: function (layerSettings) {
+                    return L.tileLayer('http://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+                    maxZoom: 20,
+                    subdomains: ['mt0', 'mt1', 'mt2', 'mt3']
+                    });
+                }
+	        }
+
+            var theTreeControl = new L.Control.LayerTreeControl({
+                // layerTree: rootLayerSettings,
+                openByDefault: true,
+                layerBuilders: layerBuilders,
+                featureBuilders: {
+                    WFS: {
+                        zoom: L.Control.LayerTreeControl.WFSZoomFeature
                     }
-                ]
-            };
+                }
+            }).addTo(map);
 
-            var overlayTree = {
-                label: 'Choosen Layers',
-                selectAllCheckbox: true,
-                children: [
-                    {
-                        label: 'Image1',
-                        selectAllCheckbox: true,
-                        children: [
-                            { label: 'Predict1', layer: ownLayer },
-                        ]
-                    }
-                ]
-            };
 
-            L.control.layers.tree(baseTree, overlayTree, {
-                namedToggle: true,
-                collapseAll: 'Collapse all',
-                expandAll: 'Expand all',
-                collapsed: false,
-            }).addTo(map).collapseTree().expandSelected();
+            var rootLayerId = theTreeControl.addLayerDynamically({
+            code: "root",
+            name: "All the Layers",
+            active: true,
+            selectedByDefault: false,
+            openByDefault: true,
+            childLayers: [],
+            selectType: "NONE",
+            serviceType: null,
+            params: {}
+            });
+
+            var baseLayerId = theTreeControl.addLayerDynamically({
+            code: "base",
+            name: "Base layers",
+            active: true,
+            selectedByDefault: false,
+            openByDefault: true,
+            childLayers: [],
+            selectType: "SINGLE",
+            serviceType: null,
+            params: {}
+
+            }, rootLayerId);
+
+            var overlaysLayerId = theTreeControl.addLayerDynamically({
+            code: "overlays",
+            name: "Overlays",
+            active: true,
+            selectedByDefault: false,
+            openByDefault: true,
+            childLayers: [],
+            selectType: "MULTIPLE",
+            serviceType: null,
+            params: {}
+            }, rootLayerId);
+
+            var osmLayerId = theTreeControl.addLayerDynamically({
+            code: "osm",
+            name: "OpenStreetMap",
+            active: true,
+            selectedByDefault: true,
+            openByDefault: true,
+            childLayers: [],
+            selectType: "MULTIPLE",
+            serviceType: "OSM",
+            params: {
+                url: "http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            }
+            }, baseLayerId);
+
+            var googleLayerId = theTreeControl.addLayerDynamically({
+            code: "google",
+            name: "Google",
+            active: true,
+            selectedByDefault: false,
+            openByDefault: false,
+            childLayers: [],
+            selectType: "NONE",
+            serviceType: "GOOGLE",
+            params: {}
+            }, baseLayerId);
 
             var drawnItems = new L.FeatureGroup();
             map.addLayer(drawnItems);
 
             var drawControl = new L.Control.Draw({
+                position: 'topright',
                 draw: {
                     polygon: {
                         allowIntersection: false,

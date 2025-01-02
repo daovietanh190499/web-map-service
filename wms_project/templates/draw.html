@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web Map Service</title>
+    <link href="static/css/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="static/css/leaflet.css" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="static/css/leaflet-layer-tree-control.css" />
+    <script src="static/js/tailwind.js"></script>
+    <style>
+        @keyframes fadeInLeft {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+        .fade-in-left {
+            animation: fadeInLeft 0.3s ease-out;
+        }
+        #sidebar {
+            transition: transform 0.3s ease-in-out;
+        }
+        #sidebar.hidden {
+            transform: translateX(-100%);
+        }
+
+        #search-sidebar {
+            transition: transform 0.3s ease-in-out;
+            height: 100vh;
+            width: 360px;
+        }
+        #search-sidebar.hidden {
+            transform: translateX(-100%);
+        }
+        .filter-section {
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .filter-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+        }
+        .filter-content.expanded {
+            max-height: 500px; /* Adjust based on content */
+        }
+        .filter-header {
+            cursor: pointer;
+            padding: 1rem;
+            user-select: none;
+        }
+        .filter-header i {
+            transition: transform 0.3s ease;
+        }
+        .filter-header.expanded i {
+            transform: rotate(180deg);
+        }
+        .search-results-container {
+            height: calc(100vh - 120px); /* Adjust based on header height */
+            overflow-y: auto;
+        }
+
+        #app-container {
+            display: flex;
+        }
+
+        #map-container {
+            flex-grow: 1;
+        }
+
+        #search-sidebar.hidden {
+            display: none;
+        }
+
+        #app-container.with-sidebar #map-container {
+            width: calc(100% - 33.333%); /* Adjust for the sidebar width */
+        }
+    </style>
+</head>
+<body class="h-screen overflow-hidden">
+    <div id="app-container" class="flex h-full">
+        <!-- Sidebar -->
+        <div id="search-sidebar" class="w-1/3 h-full bg-white shadow-lg z-50 hidden flex-shrink-0">
+            <div class="h-full flex flex-col">
+                <!-- Header -->
+                <div class="p-4 border-b">
+                    <div class="flex justify-between items-center">
+                        <h2 class="text-xl font-bold">Search Images</h2>
+                        <div class="flex items-center gap-2">
+                            <button id="toggle-filters" class="text-gray-500 hover:text-gray-700">
+                                <i class="fas fa-filter"></i>
+                            </button>
+                            <button id="close-search" class="text-gray-500 hover:text-gray-700">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Collapsible Filters -->
+                <div id="filters-container" class="hidden">
+                    <form id="search-form">
+                        <div class="filter-section">
+                            <div class="filter-header" data-target="date-filter">
+                                <div class="flex justify-between items-center">
+                                    <span class="font-semibold">Date Range</span>
+                                    <i class="fas fa-chevron-down"></i>
+                                </div>
+                            </div>
+                            <div id="date-filter" class="filter-content p-4">
+                                <div class="grid grid-cols-2 gap-2">
+                                    <div>
+                                        <label class="block text-sm">Start Date</label>
+                                        <input type="datetime-local" name="start_date" class="w-full border rounded p-1">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm">End Date</label>
+                                        <input type="datetime-local" name="end_date" class="w-full border rounded p-1">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+    
+                        <div class="filter-section">
+                            <div class="filter-header" data-target="resolution-filter">
+                                <div class="flex justify-between items-center">
+                                    <span class="font-semibold">Resolution (meters)</span>
+                                    <i class="fas fa-chevron-down"></i>
+                                </div>
+                            </div>
+                            <div id="resolution-filter" class="filter-content p-4">
+                                <div class="grid grid-cols-2 gap-2">
+                                    <div>
+                                        <label class="block text-sm">Min</label>
+                                        <input type="number" step="0.1" name="resolution_min" class="w-full border rounded p-1">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm">Max</label>
+                                        <input type="number" step="0.1" name="resolution_max" class="w-full border rounded p-1">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+    
+                        <div class="filter-section">
+                            <div class="filter-header" data-target="metadata-filter">
+                                <div class="flex justify-between items-center">
+                                    <span class="font-semibold">Metadata</span>
+                                    <i class="fas fa-chevron-down"></i>
+                                </div>
+                            </div>
+                            <div id="metadata-filter" class="filter-content p-4">
+                                <div class="space-y-2">
+                                    <div>
+                                        <label class="block text-sm">Topic</label>
+                                        <input type="text" name="topic" class="w-full border rounded p-1">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm">Source</label>
+                                        <input type="text" name="source" class="w-full border rounded p-1">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm">Satellite ID</label>
+                                        <input type="text" name="satellite_id" class="w-full border rounded p-1">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+    
+                        <div class="p-4">
+                            <button type="submit" class="w-full bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600">
+                                Apply Filters
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Search Results -->
+                <div class="search-results-container flex-grow p-4">
+                    <div id="search-results" class="space-y-2">
+                        <!-- Results will be populated here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="map-container" class="flex-grow relative">
+            <div id="map" class="absolute inset-0 z-10"></div>
+        </div>
+    </div>
+
+    <div id="search-toolbar" class="absolute top-4 left-4 z-50 bg-white bg-opacity-90 p-3 rounded-lg shadow-md">
+        <form id="map-search-form" class="flex items-center gap-2">
+            <input
+                type="text"
+                id="search-input"
+                placeholder="Search location..."
+                class="w-64 px-2 py-1 text-sm border rounded-lg focus:outline-none focus:ring focus:border-blue-300"
+            />
+            <button
+                type="submit"
+                class="px-3 py-1 text-white bg-blue-500 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring"
+            >
+                Search
+            </button>
+        </form>
+    </div>
+    
+    <script src="static/js/leaflet.js"></script>
+    <script src="static/js/leaflet.draw.js"></script>
+    <link rel="stylesheet" href="static/css/leaflet.draw.css"></script>
+    <script src="static/js/L.Control.Layers.Tree.js"></script>
+    <link rel="stylesheet" href="static/css/L.Control.Layers.Tree.css"></script>
+    <script src="static/js/leaflet-layer-tree-control.js"></script>
+    <script src="static/js/leaflet-layer-tree-control-wfs-zoom.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var map = L.map('map', {
+                zoomControl: false,
+                contextmenu: true
+            }).setView([21.148023790045897, 105.62239681777376], 13);
+
+            L.control.zoom({
+                position: 'bottomright'
+            }).addTo(map);
+
+            var osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            });
+
+            var ownLayer = L.tileLayer('api/images/jp2/tiles/{z}/{x}/{y}.png/', {
+                maxZoom: 18,
+                attribution: 'JP2 Layer'
+            });
+
+            var satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+            });
+
+            // osmLayer.addTo(map);
+
+            // var baseTree = {
+            //     label: 'Base Layers',
+            //     children: [
+            //         {
+            //             label: 'World',
+            //             children: [
+            //                 { label: 'OpenStreetMap', layer: osmLayer},
+            //                 { label: 'Satellite', layer: satelliteLayer },
+            //             ]
+            //         }
+            //     ]
+            // };
+
+            // var overlayTree = {
+            //     label: 'Choosen Layers',
+            //     selectAllCheckbox: true,
+            //     children: [
+            //         {
+            //             label: 'Image1',
+            //             selectAllCheckbox: true,
+            //             children: [
+            //                 { label: 'Predict1', layer: ownLayer },
+            //             ]
+            //         }
+            //     ]
+            // };
+
+            // L.control.layers.tree(baseTree, overlayTree, {
+            //     namedToggle: true,
+            //     collapseAll: 'Collapse all',
+            //     expandAll: 'Expand all',
+            //     collapsed: false,
+            // }).addTo(map).collapseTree().expandSelected();
+
+            var layerBuilders = {
+                GOOGLE: function (layerSettings) {
+                    return L.tileLayer('http://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+                    maxZoom: 20,
+                    subdomains: ['mt0', 'mt1', 'mt2', 'mt3']
+                    });
+                },
+                GOOGLE_TERRAIN: function (layerSettings) {
+                    return L.tileLayer('http://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+                    maxZoom: 20,
+                    subdomains: ['mt0', 'mt1', 'mt2', 'mt3']
+                    });
+                }
+	        }
+
+            var theTreeControl = new L.Control.LayerTreeControl({
+                // layerTree: rootLayerSettings,
+                openByDefault: true,
+                layerBuilders: layerBuilders,
+                featureBuilders: {
+                    WFS: {
+                        zoom: L.Control.LayerTreeControl.WFSZoomFeature
+                    }
+                }
+            }).addTo(map);
+
+
+            var rootLayerId = theTreeControl.addLayerDynamically({
+            code: "root",
+            name: "All the Layers",
+            active: true,
+            selectedByDefault: false,
+            openByDefault: true,
+            childLayers: [],
+            selectType: "NONE",
+            serviceType: null,
+            params: {}
+            });
+
+            var baseLayerId = theTreeControl.addLayerDynamically({
+            code: "base",
+            name: "Base layers",
+            active: true,
+            selectedByDefault: false,
+            openByDefault: true,
+            childLayers: [],
+            selectType: "SINGLE",
+            serviceType: null,
+            params: {}
+
+            }, rootLayerId);
+
+            var overlaysLayerId = theTreeControl.addLayerDynamically({
+            code: "overlays",
+            name: "Overlays",
+            active: true,
+            selectedByDefault: false,
+            openByDefault: true,
+            childLayers: [],
+            selectType: "MULTIPLE",
+            serviceType: null,
+            params: {}
+            }, rootLayerId);
+
+            var osmLayerId = theTreeControl.addLayerDynamically({
+            code: "osm",
+            name: "OpenStreetMap",
+            active: true,
+            selectedByDefault: true,
+            openByDefault: true,
+            childLayers: [],
+            selectType: "MULTIPLE",
+            serviceType: "OSM",
+            params: {
+                url: "http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            }
+            }, baseLayerId);
+
+            var googleLayerId = theTreeControl.addLayerDynamically({
+            code: "google",
+            name: "Google",
+            active: true,
+            selectedByDefault: false,
+            openByDefault: false,
+            childLayers: [],
+            selectType: "NONE",
+            serviceType: "GOOGLE",
+            params: {}
+            }, baseLayerId);
+
+            var drawnItems = new L.FeatureGroup();
+            map.addLayer(drawnItems);
+
+            var drawControl = new L.Control.Draw({
+                draw: {
+                    polygon: {
+                        allowIntersection: false,
+                        drawError: {
+                            color: '#e1e100',
+                            timeout: 1000
+                        },
+                        shapeOptions: {
+                            color: '#3388ff'
+                        },
+                        showArea: true
+                    },
+                    polyline: true,
+                    circle: true,
+                    rectangle: true,
+                    circlemarker: true,
+                    marker: true
+                },
+                edit: {
+                    featureGroup: drawnItems,
+                    remove: true
+                }
+            });
+
+            var searchSidebar = document.getElementById('search-sidebar');
+            var searchControl = document.getElementById('search-control');
+            var closeSearch = document.getElementById('close-search');
+            var searchForm = document.getElementById('search-form');
+            var searchResults = document.getElementById('search-results');
+            var isDrawing = false;
+
+            map.addControl(drawControl);
+
+            // Draw event handlers
+            // map.on('draw:created', function(e) {
+            //     drawnItems.clearLayers();
+            //     drawnItems.addLayer(e.layer);
+            //     searchSidebar.classList.remove('hidden');
+            //     isDrawing = false;
+            //     map.removeControl(drawControl);
+            //     searchControl.style.backgroundColor = '#ffffff';
+            // });
+
+            map.on('draw:created', function(e) {
+                drawnItems.clearLayers();
+                let layer = e.layer;
+                drawnItems.addLayer(layer);
+                
+                // Show search sidebar
+                document.getElementById('search-sidebar').classList.remove('hidden');
+
+                document.getElementById('app-container').classList.add('with-sidebar');
+                
+                // Perform initial search with drawn geometry
+                const bounds = layer.getBounds();
+                const searchArea = {
+                    north: bounds.getNorth(),
+                    south: bounds.getSouth(),
+                    east: bounds.getEast(),
+                    west: bounds.getWest()
+                };
+                
+                performSearch({
+                    bbox: searchArea,
+                    datetime: `${new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()}/${new Date().toISOString()}`
+                });
+            });
+
+            // Search function
+            async function performSearch(searchParams) {
+                try {
+                    // Show loading state
+                    const searchResults = document.getElementById('search-results');
+                    searchResults.innerHTML = `
+                        <div class="flex justify-center items-center py-4">
+                            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                        </div>
+                    `;
+
+                    // Build STAC API search parameters
+                    const searchBody = {
+                        geometry: drawnItems.toGeoJSON().features[0].geometry,
+                        operation: 'intersects',
+                        datetime: searchParams.datetime,
+                        collections: ["sentinel-2-l2a"], // Default collection
+                        limit: 50
+                    };
+
+                    // Add additional parameters if provided
+                    if (searchParams.resolution) {
+                        searchBody.query = {
+                            "eo:gsd": {
+                                gte: parseFloat(searchParams.resolution.min) || 0,
+                                lte: parseFloat(searchParams.resolution.max) || 100
+                            }
+                        };
+                    }
+
+                    // Make API request
+                    const response = await fetch('/api/images/search/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(searchBody)
+                    });
+
+                    if (!response.ok) throw new Error('Search request failed');
+                    
+                    const results = await response.json();
+                    displaySearchResults(results);
+                } catch (error) {
+                    console.error('Search error:', error);
+                    document.getElementById('search-results').innerHTML = `
+                        <div class="text-center text-red-500 py-4">
+                            Error performing search. Please try again.
+                        </div>
+                    `;
+                }
+            }
+
+            // Handle form submission for filtered search
+            document.getElementById('search-form').addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const formData = new FormData(e.target);
+                const bounds = drawnItems.getBounds();
+                
+                const searchParams = {
+                    bbox: {
+                        north: bounds.getNorth(),
+                        south: bounds.getSouth(),
+                        east: bounds.getEast(),
+                        west: bounds.getWest()
+                    },
+                    datetime: `${formData.get('start_date')}/${formData.get('end_date')}`,
+                    resolution: {
+                        min: formData.get('resolution_min'),
+                        max: formData.get('resolution_max')
+                    }
+                };
+
+                performSearch(searchParams);
+            });
+
+            // Modified displaySearchResults function to match STAC API response
+            function displaySearchResults(results) {
+                const searchResults = document.getElementById('search-results');
+                searchResults.innerHTML = '';
+                
+                if (!results.features || results.features.length === 0) {
+                    searchResults.innerHTML = `
+                        <div class="text-center text-gray-500 py-4">
+                            No results found
+                        </div>
+                    `;
+                    return;
+                }
+
+                results.features.forEach(feature => {
+                    const result = document.createElement('div');
+                    result.className = 'bg-white border rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 mb-3';
+                    result.innerHTML = `
+                        <div class="p-3">
+                            <div class="font-semibold text-gray-800">${feature.id}</div>
+                            <div class="text-sm text-gray-600 mt-1">
+                                <div class="flex items-center gap-2">
+                                    <i class="far fa-calendar-alt w-4"></i>
+                                    ${new Date(feature.properties.datetime).toLocaleDateString()}
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <i class="fas fa-rulers w-4"></i>
+                                    ${feature.properties['eo:gsd']}m
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <i class="fas fa-cloud w-4"></i>
+                                    ${feature.properties['eo:cloud_cover']}%
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    result.addEventListener('click', () => {
+                        const bounds = L.geoJSON(feature.geometry).getBounds();
+                        map.fitBounds(bounds);
+                    });
+                    
+                    searchResults.appendChild(result);
+                });
+            }
+
+
+            const toggleFiltersBtn = document.getElementById('toggle-filters');
+            const filtersContainer = document.getElementById('filters-container');
+            
+            toggleFiltersBtn.addEventListener('click', function() {
+                filtersContainer.classList.toggle('hidden');
+            });
+
+            // Add collapsible functionality to filter sections
+            document.querySelectorAll('.filter-header').forEach(header => {
+                header.addEventListener('click', function() {
+                    const targetId = this.getAttribute('data-target');
+                    const content = document.getElementById(targetId);
+                    
+                    // Toggle expanded class
+                    content.classList.toggle('expanded');
+                    this.classList.toggle('expanded');
+                    
+                    // Close other sections
+                    document.querySelectorAll('.filter-content').forEach(el => {
+                        if (el.id !== targetId) {
+                            el.classList.remove('expanded');
+                            el.previousElementSibling.classList.remove('expanded');
+                        }
+                    });
+                });
+            });
+
+            // Modified displaySearchResults function to include more details
+            function displaySearchResults(results) {
+                searchResults.innerHTML = '';
+                if (results.features.length === 0) {
+                    searchResults.innerHTML = `
+                        <div class="text-center text-gray-500 py-4">
+                            No results found
+                        </div>
+                    `;
+                    return;
+                }
+
+                results.features.forEach(feature => {
+                    const result = document.createElement('div');
+                    result.className = 'bg-white border rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 mb-3';
+                    result.innerHTML = `
+                        <div class="p-3">
+                            <div class="font-semibold text-gray-800">${feature.properties.name || feature.properties.filename}</div>
+                            <div class="text-sm text-gray-600 mt-1">
+                                <div class="flex items-center gap-2">
+                                    <i class="far fa-calendar-alt w-4"></i>
+                                    ${new Date(feature.properties.datetime).toLocaleDateString()}
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <i class="fas fa-rulers w-4"></i>
+                                    ${feature.properties.resolution}m
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <i class="fas fa-satellite w-4"></i>
+                                    ${feature.properties.source || 'N/A'}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    result.addEventListener('click', () => {
+                        const bounds = L.geoJSON(feature.geometry).getBounds();
+                        map.fitBounds(bounds);
+                    });
+                    
+                    searchResults.appendChild(result);
+                });
+            }
+
+            closeSearch.addEventListener('click', function () {
+                searchSidebar.classList.add('hidden');
+                document.getElementById('app-container').classList.remove('with-sidebar');
+                drawnItems.clearLayers();
+            });
+
+            // Search form submission
+            searchForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                const formData = new FormData(searchForm);
+                const searchData = {
+                    geometry: drawnItems.toGeoJSON().features[0].geometry,
+                    operation: 'intersects'
+                };
+
+                // Add form fields to search data
+                formData.forEach((value, key) => {
+                    if (value) searchData[key] = value;
+                });
+
+                try {
+                    const response = await fetch('/api/images/search/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(searchData)
+                    });
+
+                    const results = await response.json();
+                    displaySearchResults(results);
+                } catch (error) {
+                    console.error('Error searching images:', error);
+                }
+            });
+
+        });
+    </script>
+</body>
+</html>

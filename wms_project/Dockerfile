@@ -1,8 +1,16 @@
-FROM ghcr.io/andrii-rieznik/python-gdal:py3.12.6-gdal3.9.2
+FROM python:3.6-bullseye
 
 USER root
 
 RUN apt update
+RUN apt install -y software-properties-common
+# RUN add-apt-repository ppa:ubuntugis/ppa
+# RUN apt update
+RUN apt install -y gdal-bin libgdal-dev
+
+RUN export CPLUS_INCLUDE_PATH=/usr/include/gdal
+RUN export C_INCLUDE_PATH=/usr/include/gdal
+
 
 COPY ./requirements.txt ./requirements.txt
 RUN pip install -r requirements.txt

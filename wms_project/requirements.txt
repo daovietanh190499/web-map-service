@@ -8,11 +8,13 @@ djangorestframework-gis
 django-elasticsearch-dsl
 drf-spectacular
 drf-spectacular-sidecar
+django_filters
 
 boto3
 pytz
 psycopg2-binary
 rasterio
+gdal==3.2.2
 
 celery
 

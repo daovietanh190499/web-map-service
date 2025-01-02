@@ -17,6 +17,24 @@ services:
     networks:
     - wms-network
 
+  wms-db:
+    image: kartoza/postgis:13-3.1
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASS: ${POSTGRES_PASSWORD}
+      POSTGRES_DBNAME: ${POSTGRES_DB}
+      POSTGRES_MULTIPLE_EXTENSIONS: postgis,hstore,postgis_topology,postgis_raster,pgrouting
+    ports:
+      - 5432:5432
+    expose:
+      - 5432
+    volumes:
+      - ./wms_data/postgis:/var/lib/postgresql
+      - ./wms_data/postgis/st_geometry.so:/usr/lib/postgresql/13/lib/st_geometry.so
+    networks:
+    - wms-network
+
   wms-celery: &backend
     build:
       context: wms_project
@@ -39,7 +57,7 @@ services:
     command: [
       "/bin/bash",
       "-c",
-      "python -m celery -A wms_project worker --loglevel info"
+      "sleep 10 && python -m celery -A wms_project worker --loglevel info"
     ]
     volumes:
       - ./wms_data/wms_data/data:/mnt/data
@@ -56,30 +74,19 @@ services:
     volumes:
       - ./wms_data/wms_data/static:/mnt/static
       - ./wms_data/wms_data/data:/mnt/data
+      - ./wms_project:/home/wms
+    # command: [
+    #   "/bin/bash",
+    #   "-c",
+    #   "sleep 10 && python manage.py collectstatic --no-input --clear && python manage.py makemigrations && python manage.py migrate && gunicorn wms_project.wsgi:application --bind 0.0.0.0:8000"
+    # ]
     command: [
       "/bin/bash",
       "-c",
-      "python manage.py collectstatic --no-input --clear && python manage.py makemigrations && python manage.py migrate && gunicorn wms_project.wsgi:application --bind 0.0.0.0:8000"
+      "sleep infinity"
     ]
-    networks:
-    - wms-network
-
-  wms-db:
-    image: postgis/postgis:13-3.5
-    restart: always
-    environment:
-      DB_NAME: ${POSTGRES_DB}
-      DB_USER: ${POSTGRES_USER}
-      DB_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
-    ports:
-      - 5432:5432
-    expose:
-      - 5432
-    volumes:
-      - ./wms_data/postgis:/var/lib/postgresql
+    depends_on:
+    - wms-db
     networks:
     - wms-network
 
