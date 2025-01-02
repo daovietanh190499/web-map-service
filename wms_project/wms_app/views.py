@@ -31,7 +31,7 @@ class ImageViewSet(viewsets.ModelViewSet):
     bbox_filter_include_overlapping = True
 
     @action(detail=True, url_path='jp2/tiles/(?P<z>[0-9]+)/(?P<x>[0-9]+)/(?P<y>[0-9]+).png', methods=['GET'])
-    def generate_tile(self, request, z, x, y):
+    def generate_tile(self, request, pk, z, x, y):
         
         img_db = self.get_object()
 
@@ -40,7 +40,7 @@ class ImageViewSet(viewsets.ModelViewSet):
         if os.path.exists(f'tiles/{img_db.id}/{str(z)}/{str(x)}/{str(y)}.png'):
             img = PIL_Image.open(f'tiles/{img_db.id}/{str(z)}/{str(x)}/{str(y)}.png')
         else:
-            img = rasterio.open(os.path.join(img_db.file_path, img_db.file_name))
+            img = rasterio.open(img_db.filepath)
             tiled = Tiles(image=img, zooms=[int(z)], x=int(x), y=int(y), pixels=256, resampling="bilinear")
             img = PIL_Image.fromarray(np.transpose(tiled.tiles.data, (1, 2, 0)))
             if not os.path.exists(f'tiles/{img_db.id}/{str(z)}/{str(x)}'):

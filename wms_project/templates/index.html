@@ -372,6 +372,20 @@
             }
             }, baseLayerId);
 
+            var osmLayerId = theTreeControl.addLayerDynamically({
+            code: "custom_layer",
+            name: "Custom Layer",
+            active: true,
+            selectedByDefault: true,
+            openByDefault: true,
+            childLayers: [],
+            selectType: "MULTIPLE",
+            serviceType: "OSM",
+            params: {
+                url: "api/images/bb9e62bd-d71c-4060-b53c-df3e3e0c9f97/jp2/tiles/{z}/{x}/{y}.png/"
+            }
+            }, overlaysLayerId);
+
             var googleLayerId = theTreeControl.addLayerDynamically({
             code: "google",
             name: "Google",

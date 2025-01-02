@@ -17,7 +17,7 @@ from rasterio import (
 
 from dataclasses import astuple, dataclass
 from itertools import product
-from typing import Iterator
+from typing import Iterator, Tuple
 
 from numpy import ndarray
 from rasterio import Affine, windows
@@ -31,8 +31,8 @@ class _Bounds:
     maxx: float
     maxy: float
 
-    def __iter__(self) -> Iterator[tuple[float, float, float, float]]:
-        iterator: Iterator[tuple[float, float, float, float]] = iter(astuple(self))
+    def __iter__(self) -> Iterator[Tuple[float, float, float, float]]:
+        iterator: Iterator[Tuple[float, float, float, float]] = iter(astuple(self))
         return iterator
 
 
@@ -303,7 +303,7 @@ class Tiles:
             )
         return properties
 
-    def _get_image_statistics(self) -> tuple[float, float]:
+    def _get_image_statistics(self) -> Tuple[float, float]:
         """
         Retrieve the minimum and maximum values across the source dataset's bands-to-tile
         for use in dtype rescaling/casting.
@@ -392,7 +392,7 @@ class Tiles:
         zoom_properties = _Zoom(zoom, tile_dims, tile_indices)
         return zoom_properties
 
-    def _build_tile(self, zoom: int, col: int, row: int, dims: int | float) -> _Tile:
+    def _build_tile(self, zoom: int, col: int, row: int, dims: float) -> _Tile:
         """
         Generate a _Tile object corresponding to a single XYZ tile.
 
