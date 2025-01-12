@@ -45,9 +45,11 @@
             max-height: 0;
             overflow: hidden;
             transition: max-height 0.3s ease-out;
+            padding: 0;
         }
         .filter-content.expanded {
             max-height: 500px; /* Adjust based on content */
+            padding: 1rem;
         }
         .filter-header {
             cursor: pointer;
@@ -87,22 +89,6 @@
         <!-- Sidebar -->
         <div id="search-sidebar" class="w-1/3 h-full bg-white shadow-lg z-50 hidden flex-shrink-0">
             <div class="h-full flex flex-col">
-                <!-- <div id="search-toolbar" class="absolute top-4 left-4 z-50 bg-white bg-opacity-90 p-3 rounded-lg shadow-md">
-                    <form id="map-search-form" class="flex items-center gap-2">
-                        <input
-                            type="text"
-                            id="search-input"
-                            placeholder="Search location..."
-                            class="w-64 px-2 py-1 text-sm border rounded-lg focus:outline-none focus:ring focus:border-blue-300"
-                        />
-                        <button
-                            type="submit"
-                            class="px-3 py-1 text-white bg-blue-500 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring"
-                        >
-                            Search
-                        </button>
-                    </form>
-                </div> -->
 
                 <!-- Header -->
                 <div class="p-4 border-b">
@@ -129,7 +115,7 @@
                                     <i class="fas fa-chevron-down"></i>
                                 </div>
                             </div>
-                            <div id="date-filter" class="filter-content p-4">
+                            <div id="date-filter" class="filter-content">
                                 <div class="grid grid-cols-2 gap-2">
                                     <div>
                                         <label class="block text-sm">Start Date</label>
@@ -150,7 +136,7 @@
                                     <i class="fas fa-chevron-down"></i>
                                 </div>
                             </div>
-                            <div id="resolution-filter" class="filter-content p-4">
+                            <div id="resolution-filter" class="filter-content">
                                 <div class="grid grid-cols-2 gap-2">
                                     <div>
                                         <label class="block text-sm">Min</label>
@@ -171,7 +157,7 @@
                                     <i class="fas fa-chevron-down"></i>
                                 </div>
                             </div>
-                            <div id="metadata-filter" class="filter-content p-4">
+                            <div id="metadata-filter" class="filter-content">
                                 <div class="space-y-2">
                                     <div>
                                         <label class="block text-sm">Topic</label>
@@ -210,12 +196,12 @@
         </div>
     </div>
 
-    <div id="search-toolbar" class="absolute top-4 left-4 z-50 bg-white bg-opacity-90 p-3 rounded-lg shadow-md">
+    <div id="search-vector" class="absolute top-4 left-4 z-50 bg-white bg-opacity-90 p-3 rounded-lg shadow-md">
         <form id="map-search-form" class="flex items-center gap-2">
             <input
                 type="text"
                 id="search-input"
-                placeholder="Search location..."
+                placeholder="Search vectors..."
                 class="w-64 px-2 py-1 text-sm border rounded-lg focus:outline-none focus:ring focus:border-blue-300"
             />
             <button
@@ -233,52 +219,81 @@
     <script src="static/js/leaflet-layer-tree-control.js"></script>
     <script src="static/js/leaflet-layer-tree-control-wfs-zoom.js"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            var map = L.map('map', {
-                zoomControl: false,
-                contextmenu: true
-            }).setView([21.148023790045897, 105.62239681777376], 13);
+        function getListLayer() {
+            let list_layer = JSON.parse(window.localStorage.getItem("layers"));
+            if (!list_layer) {
+                list_layer = {}
+            }
+            return list_layer
+        }
 
-            L.control.zoom({
-                position: 'bottomright'
-            }).addTo(map);
+        function removeLayer(layer_id) {
+            let list_layer = getListLayer()
+            delete list_layer[layer_id]
+            window.localStorage.setItem("layers", JSON.stringify(list_layer))
+        }
+
+        function addLayer(layer_id) {
+            let list_layer = getListLayer()
+            list_layer[layer_id] = []
+            window.localStorage.setItem("layers", JSON.stringify(list_layer))
+        }
+
+        function changeMenu(layer_id) {
+            let list_layer = getListLayer()
+            if (layer_id in list_layer) {
+                removeLayer(layer_id)
+                document.getElementById(layer_id).classList.remove('fa-folder-minus')
+                document.getElementById(layer_id).classList.add('fa-folder-plus')
+            } else {
+                addLayer(layer_id)
+                document.getElementById(layer_id).classList.remove('fa-folder-plus')
+                document.getElementById(layer_id).classList.add('fa-folder-minus')
+            }
+            list_layer = getListLayer()
+            updateLayerTree()
+        }
+
+
+        var map = L.map('map', {
+            zoomControl: false,
+            contextmenu: true
+        }).setView([21.148023790045897, 105.62239681777376], 13);
+
+        L.control.zoom({
+            position: 'bottomright'
+        }).addTo(map);
+
+        var theTreeControl
+
+        updateLayerTree()
+
+        function updateLayerTree() {
+            if (theTreeControl) {
+                theTreeControl.remove(map);
+            }
+
+            let list_layer = getListLayer()
 
             var layerBuilders = {
-                GOOGLE: function (layerSettings) {
-                    return L.tileLayer('http://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
-                        maxZoom: 20,
-                        subdomains: ['mt0', 'mt1', 'mt2', 'mt3']
-                    });
-                },
                 OSM: function(layerSettings) {
                     return L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
                         subdomains: ['a', 'b', 'c']
                     });
-                },
-                OWN: function(layerSettings) { 
-                    return L.tileLayer('api/images/aa2a3602-a0aa-4365-a2b9-9ae4af7b07ea/jp2/tiles/{z}/{x}/{y}.png/', {
-                        maxZoom: 18,
-                        attribution: 'JP2 Layer'
-                    });
-                },
-                SATTERLITE: function(layerSettings) {
-                    return L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-                        attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
-                    });
-                },
-                CUSTOME: function(layerSettings) {
-                    return L.layerGroup(
-                        [
-                        L.tileLayer('api/images/aa2a3602-a0aa-4365-a2b9-9ae4af7b07ea/jp2/tiles/{z}/{x}/{y}.png/', {
-                        maxZoom: 18,
-                        attribution: 'JP2 Layer'
-                    }),
-                            L.marker([21.148023790045897, 105.62239681777376]).bindPopup("Littleton, CO.")], attribution="Vector Layer")
                 }
             }
 
-            var theTreeControl = new L.Control.LayerTreeControl({
+            for (layer in list_layer) {
+                layerBuilders[layer] = function(layerSettings) { 
+                    return L.tileLayer(`api/images/${layer}/jp2/tiles/{z}/{x}/{y}.png/`, {
+                        maxZoom: 20,
+                        attribution: `${layer} JP2 Layer`
+                    });
+                }
+            }
+
+            theTreeControl = new L.Control.LayerTreeControl({
                 // layerTree: rootLayerSettings,
                 openByDefault: true,
                 layerBuilders: layerBuilders,
@@ -334,278 +349,214 @@
                 childLayers: [],
                 selectType: "NONE",
                 serviceType: "OSM",
-                params: {
-                    url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                }
-            }, baseLayerId);
-
-            var googleLayerId = theTreeControl.addLayerDynamically({
-                code: "google",
-                name: "Google",
-                active: true,
-                selectedByDefault: false,
-                openByDefault: false,
-                childLayers: [],
-                selectType: "NONE",
-                serviceType: "GOOGLE",
                 params: {}
             }, baseLayerId);
+            
+            for (layer in list_layer) {
+                theTreeControl.addLayerDynamically({
+                    code: layer,
+                    name: list_layer[layer]['name'],
+                    active: true,
+                    selectedByDefault: true,
+                    openByDefault: true,
+                    childLayers: [],
+                    selectType: "NONE",
+                    serviceType: layer,
+                    params: {}
+                }, overlaysLayerId);
+            }
+        }
 
-            // var ownLayerId = theTreeControl.addLayerDynamically({
-            //     code: "custom_layer",
-            //     name: "Custom Layer",
-            //     active: true,
-            //     selectedByDefault: true,
-            //     openByDefault: true,
-            //     childLayers: [],
-            //     selectType: "NONE",
-            //     serviceType: "OWN",
-            //     params: {}
-            // }, overlaysLayerId);
+        var drawnItems = new L.FeatureGroup();
+        map.addLayer(drawnItems);
 
-            var customeLayerId = theTreeControl.addLayerDynamically({
-                code: "custome_layer",
-                name: "Custome Layer",
-                active: true,
-                selectedByDefault: true,
-                openByDefault: true,
-                childLayers: [],
-                selectType: "NONE",
-                serviceType: "CUSTOME",
-                params: {}
-            }, overlaysLayerId);
-
-            var drawnItems = new L.FeatureGroup();
-            map.addLayer(drawnItems);
-
-            var drawControl = new L.Control.Draw({
-                position: 'topright',
-                draw: {
-                    polygon: {
-                        allowIntersection: false,
-                        drawError: {
-                            color: '#e1e100',
-                            timeout: 1000
-                        },
-                        shapeOptions: {
-                            color: '#3388ff'
-                        },
-                        showArea: true
+        var drawControl = new L.Control.Draw({
+            position: 'bottomright',
+            draw: {
+                polygon: {
+                    allowIntersection: false,
+                    drawError: {
+                        color: '#e1e100',
+                        timeout: 1000
                     },
-                    polyline: false,
-                    circle: false,
-                    rectangle: true,
-                    circlemarker: false,
-                    marker: false
+                    shapeOptions: {
+                        color: '#3388ff'
+                    },
+                    showArea: true
                 },
-                edit: {
-                    featureGroup: drawnItems,
-                    remove: true
-                }
+                polyline: false,
+                circle: false,
+                rectangle: true,
+                circlemarker: false,
+                marker: false
+            },
+            edit: {
+                featureGroup: drawnItems,
+                remove: true
+            }
+        });
+
+        var searchSidebar = document.getElementById('search-sidebar');
+        var searchControl = document.getElementById('search-control');
+        var closeSearch = document.getElementById('close-search');
+        var searchForm = document.getElementById('search-form');
+        var searchResults = document.getElementById('search-results');
+        var isDrawing = false;
+
+        map.addControl(drawControl);
+
+        map.on('draw:created', function(e) {
+            drawnItems.clearLayers();
+            let layer = e.layer;
+            drawnItems.addLayer(layer);
+            
+            // Show search sidebar
+            document.getElementById('search-sidebar').classList.remove('hidden');
+
+            document.getElementById('search-vector').classList.add('hidden');
+
+            document.getElementById('app-container').classList.add('with-sidebar');
+            
+            // Perform initial search with drawn geometry
+            const bounds = layer.getBounds();
+            const searchArea = {
+                north: bounds.getNorth(),
+                south: bounds.getSouth(),
+                east: bounds.getEast(),
+                west: bounds.getWest()
+            };
+            
+            performSearch({
+                bbox: searchArea,
+                datetime: `${new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()}/${new Date().toISOString()}`
             });
+        });
 
-            var searchSidebar = document.getElementById('search-sidebar');
-            var searchControl = document.getElementById('search-control');
-            var closeSearch = document.getElementById('close-search');
-            var searchForm = document.getElementById('search-form');
-            var searchResults = document.getElementById('search-results');
-            var isDrawing = false;
+        // Search function
+        async function performSearch(searchParams) {
+            try {
+                // Show loading state
+                const searchResults = document.getElementById('search-results');
+                searchResults.innerHTML = `
+                    <div class="flex justify-center items-center py-4">
+                        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                    </div>
+                `;
 
-            map.addControl(drawControl);
+                // Build STAC API search parameters
+                const searchBody = {
+                    geometry: drawnItems.toGeoJSON().features[0].geometry,
+                    operation: 'intersects',
+                    datetime: searchParams.datetime,
+                    collections: ["sentinel-2-l2a"], // Default collection
+                    limit: 50
+                };
 
-            map.on('draw:created', function(e) {
-                drawnItems.clearLayers();
-                let layer = e.layer;
-                drawnItems.addLayer(layer);
+                // Add additional parameters if provided
+                if (searchParams.resolution) {
+                    searchBody.query = {
+                        "eo:gsd": {
+                            gte: parseFloat(searchParams.resolution.min) || 0,
+                            lte: parseFloat(searchParams.resolution.max) || 100
+                        }
+                    };
+                }
+
+                // Make API request
+                const response = await fetch('/api/images/search/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(searchBody)
+                });
+
+                if (!response.ok) throw new Error('Search request failed');
                 
-                // Show search sidebar
-                document.getElementById('search-sidebar').classList.remove('hidden');
+                const results = await response.json();
+                displaySearchResults(results);
+            } catch (error) {
+                console.error('Search error:', error);
+                document.getElementById('search-results').innerHTML = `
+                    <div class="text-center text-red-500 py-4">
+                        Error performing search. Please try again.
+                    </div>
+                `;
+            }
+        }
 
-                document.getElementById('app-container').classList.add('with-sidebar');
-                
-                // Perform initial search with drawn geometry
-                const bounds = layer.getBounds();
-                const searchArea = {
+        // Handle form submission for filtered search
+        document.getElementById('search-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(e.target);
+            const bounds = drawnItems.getBounds();
+            
+            const searchParams = {
+                bbox: {
                     north: bounds.getNorth(),
                     south: bounds.getSouth(),
                     east: bounds.getEast(),
                     west: bounds.getWest()
-                };
+                },
+                datetime: `${formData.get('start_date')}/${formData.get('end_date')}`,
+                resolution: {
+                    min: formData.get('resolution_min'),
+                    max: formData.get('resolution_max')
+                }
+            };
+
+            performSearch(searchParams);
+        });
+
+        const toggleFiltersBtn = document.getElementById('toggle-filters');
+        const filtersContainer = document.getElementById('filters-container');
+        
+        toggleFiltersBtn.addEventListener('click', function() {
+            filtersContainer.classList.toggle('hidden');
+        });
+
+        // Add collapsible functionality to filter sections
+        document.querySelectorAll('.filter-header').forEach(header => {
+            header.addEventListener('click', function() {
+                const targetId = this.getAttribute('data-target');
+                const content = document.getElementById(targetId);
                 
-                performSearch({
-                    bbox: searchArea,
-                    datetime: `${new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()}/${new Date().toISOString()}`
+                // Toggle expanded class
+                content.classList.toggle('expanded');
+                this.classList.toggle('expanded');
+                
+                // Close other sections
+                document.querySelectorAll('.filter-content').forEach(el => {
+                    if (el.id !== targetId) {
+                        el.classList.remove('expanded');
+                        el.previousElementSibling.classList.remove('expanded');
+                    }
                 });
             });
+        });
+        
+        // Modified displaySearchResults function to include more details
+        function displaySearchResults(results) {
+            list_layer = getListLayer()
 
-            // Search function
-            async function performSearch(searchParams) {
-                try {
-                    // Show loading state
-                    const searchResults = document.getElementById('search-results');
-                    searchResults.innerHTML = `
-                        <div class="flex justify-center items-center py-4">
-                            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-                        </div>
-                    `;
-
-                    // Build STAC API search parameters
-                    const searchBody = {
-                        geometry: drawnItems.toGeoJSON().features[0].geometry,
-                        operation: 'intersects',
-                        datetime: searchParams.datetime,
-                        collections: ["sentinel-2-l2a"], // Default collection
-                        limit: 50
-                    };
-
-                    // Add additional parameters if provided
-                    if (searchParams.resolution) {
-                        searchBody.query = {
-                            "eo:gsd": {
-                                gte: parseFloat(searchParams.resolution.min) || 0,
-                                lte: parseFloat(searchParams.resolution.max) || 100
-                            }
-                        };
-                    }
-
-                    // Make API request
-                    const response = await fetch('/api/images/search/', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify(searchBody)
-                    });
-
-                    if (!response.ok) throw new Error('Search request failed');
-                    
-                    const results = await response.json();
-                    displaySearchResults(results);
-                } catch (error) {
-                    console.error('Search error:', error);
-                    document.getElementById('search-results').innerHTML = `
-                        <div class="text-center text-red-500 py-4">
-                            Error performing search. Please try again.
-                        </div>
-                    `;
-                }
+            searchResults.innerHTML = '';
+            if (results.features.length === 0) {
+                searchResults.innerHTML = `
+                    <div class="text-center text-gray-500 py-4">
+                        No results found
+                    </div>
+                `;
+                return;
             }
 
-            // Handle form submission for filtered search
-            document.getElementById('search-form').addEventListener('submit', function(e) {
-                e.preventDefault();
-                
-                const formData = new FormData(e.target);
-                const bounds = drawnItems.getBounds();
-                
-                const searchParams = {
-                    bbox: {
-                        north: bounds.getNorth(),
-                        south: bounds.getSouth(),
-                        east: bounds.getEast(),
-                        west: bounds.getWest()
-                    },
-                    datetime: `${formData.get('start_date')}/${formData.get('end_date')}`,
-                    resolution: {
-                        min: formData.get('resolution_min'),
-                        max: formData.get('resolution_max')
-                    }
-                };
-
-                performSearch(searchParams);
-            });
-
-            // Modified displaySearchResults function to match STAC API response
-            function displaySearchResults(results) {
-                const searchResults = document.getElementById('search-results');
-                searchResults.innerHTML = '';
-                
-                if (!results.features || results.features.length === 0) {
-                    searchResults.innerHTML = `
-                        <div class="text-center text-gray-500 py-4">
-                            No results found
-                        </div>
-                    `;
-                    return;
-                }
-
-                results.features.forEach(feature => {
-                    const result = document.createElement('div');
-                    result.className = 'bg-white border rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 mb-3';
-                    result.innerHTML = `
-                        <div class="p-3">
-                            <div class="font-semibold text-gray-800">${feature.id}</div>
-                            <div class="text-sm text-gray-600 mt-1">
-                                <div class="flex items-center gap-2">
-                                    <i class="far fa-calendar-alt w-4"></i>
-                                    ${new Date(feature.properties.datetime).toLocaleDateString()}
-                                </div>
-                                <div class="flex items-center gap-2">
-                                    <i class="fas fa-rulers w-4"></i>
-                                    ${feature.properties['eo:gsd']}m
-                                </div>
-                                <div class="flex items-center gap-2">
-                                    <i class="fas fa-cloud w-4"></i>
-                                    ${feature.properties['eo:cloud_cover']}%
-                                </div>
-                            </div>
-                        </div>
-                    `;
-                    
-                    result.addEventListener('click', () => {
-                        const bounds = L.geoJSON(feature.geometry).getBounds();
-                        map.fitBounds(bounds);
-                    });
-                    
-                    searchResults.appendChild(result);
-                });
-            }
-
-
-            const toggleFiltersBtn = document.getElementById('toggle-filters');
-            const filtersContainer = document.getElementById('filters-container');
-            
-            toggleFiltersBtn.addEventListener('click', function() {
-                filtersContainer.classList.toggle('hidden');
-            });
-
-            // Add collapsible functionality to filter sections
-            document.querySelectorAll('.filter-header').forEach(header => {
-                header.addEventListener('click', function() {
-                    const targetId = this.getAttribute('data-target');
-                    const content = document.getElementById(targetId);
-                    
-                    // Toggle expanded class
-                    content.classList.toggle('expanded');
-                    this.classList.toggle('expanded');
-                    
-                    // Close other sections
-                    document.querySelectorAll('.filter-content').forEach(el => {
-                        if (el.id !== targetId) {
-                            el.classList.remove('expanded');
-                            el.previousElementSibling.classList.remove('expanded');
-                        }
-                    });
-                });
-            });
-
-            // Modified displaySearchResults function to include more details
-            function displaySearchResults(results) {
-                searchResults.innerHTML = '';
-                if (results.features.length === 0) {
-                    searchResults.innerHTML = `
-                        <div class="text-center text-gray-500 py-4">
-                            No results found
-                        </div>
-                    `;
-                    return;
-                }
-
-                results.features.forEach(feature => {
-                    const result = document.createElement('div');
-                    result.className = 'bg-white border rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 mb-3';
-                    result.innerHTML = `
-                        <div class="p-3">
+            results.features.forEach(feature => {
+                console.log(feature)
+                const result = document.createElement('div');
+                result.className = 'bg-white border rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 mb-3';
+                result.innerHTML = `
+                    <div class="flex p-3">
+                        <div class="flex-auto w-4/5">
                             <div class="font-semibold text-gray-800">${feature.properties.name || feature.properties.filename}</div>
                             <div class="text-sm text-gray-600 mt-1">
                                 <div class="flex items-center gap-2">
@@ -613,7 +564,7 @@
                                     ${new Date(feature.properties.datetime).toLocaleDateString()}
                                 </div>
                                 <div class="flex items-center gap-2">
-                                    <i class="fas fa-rulers w-4"></i>
+                                    <i class="fas fa-ruler w-4"></i>
                                     ${feature.properties.resolution}m
                                 </div>
                                 <div class="flex items-center gap-2">
@@ -622,53 +573,56 @@
                                 </div>
                             </div>
                         </div>
-                    `;
-                    
-                    result.addEventListener('click', () => {
-                        const bounds = L.geoJSON(feature.geometry).getBounds();
-                        map.fitBounds(bounds);
-                    });
-                    
-                    searchResults.appendChild(result);
+                        <div class="flex-auto w-1/5">
+                            <i id="${feature.id}" class="fas fa-folder-${(!(feature.id in list_layer)) ? 'plus' : 'minus'} w-8 h-8 text-xl cursor-pointer" onclick="changeMenu('${feature.id}')"></i>
+                        </div>
+                    </div>
+                `;
+                
+                // result.addEventListener('click', () => {
+                //     const bounds = L.geoJSON(feature.geometry).getBounds();
+                //     map.fitBounds(bounds);
+                // });
+                
+                searchResults.appendChild(result);
+            });
+        }
+
+        closeSearch.addEventListener('click', function () {
+            searchSidebar.classList.add('hidden');
+            document.getElementById('search-vector').classList.remove('hidden');
+            document.getElementById('app-container').classList.remove('with-sidebar');
+            drawnItems.clearLayers();
+        });
+
+        // Search form submission
+        searchForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const formData = new FormData(searchForm);
+            const searchData = {
+                geometry: drawnItems.toGeoJSON().features[0].geometry,
+                operation: 'intersects'
+            };
+
+            // Add form fields to search data
+            formData.forEach((value, key) => {
+                if (value) searchData[key] = value;
+            });
+
+            try {
+                const response = await fetch('/api/images/search/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(searchData)
                 });
+
+                const results = await response.json();
+                displaySearchResults(results);
+            } catch (error) {
+                console.error('Error searching images:', error);
             }
-
-            closeSearch.addEventListener('click', function () {
-                searchSidebar.classList.add('hidden');
-                document.getElementById('app-container').classList.remove('with-sidebar');
-                drawnItems.clearLayers();
-            });
-
-            // Search form submission
-            searchForm.addEventListener('submit', async function(e) {
-                e.preventDefault();
-                const formData = new FormData(searchForm);
-                const searchData = {
-                    geometry: drawnItems.toGeoJSON().features[0].geometry,
-                    operation: 'intersects'
-                };
-
-                // Add form fields to search data
-                formData.forEach((value, key) => {
-                    if (value) searchData[key] = value;
-                });
-
-                try {
-                    const response = await fetch('/api/images/search/', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify(searchData)
-                    });
-
-                    const results = await response.json();
-                    displaySearchResults(results);
-                } catch (error) {
-                    console.error('Error searching images:', error);
-                }
-            });
-
         });
     </script>
 </body>

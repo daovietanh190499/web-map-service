@@ -25,6 +25,9 @@ def index(request):
 def draw_map(request):
     return render(request, 'draw.html')
 
+def test_map(request):
+    return render(request, 'test.html')
+
 class ImageViewSet(viewsets.ModelViewSet):
     queryset = Image.objects.all()
     serializer_class = ImageSerializer
@@ -267,3 +270,15 @@ class PredictAreaViewSet(viewsets.ModelViewSet):
         if geom_data:
             geom = GEOSGeometry(geom_data)
             PredictArea.objects.create(geom=geom)
+
+# from django.db.models import F
+# from django.db.models.functions import AsEWKT
+# from django.db import connection
+
+# def get_arc_gis(request):
+#     with connection.cursor() as cursor:
+#         cursor.execute('''
+#             SELECT name, ST_AsEWKT(shape) as geom 
+#             FROM spatial_table
+#         ''')
+#         results = cursor.fetchall()

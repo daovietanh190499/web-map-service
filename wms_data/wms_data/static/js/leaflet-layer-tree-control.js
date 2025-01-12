@@ -118,10 +118,10 @@ L.Control.LayerTreeControl = L.Control.extend({
 		var map = this._map;
 		var me = this;
 		switch (layerSettings.serviceType) {
-			case "OSM":
-				var layer = L.tileLayer(layerSettings.params.url, {});
-				this._addLayerToMap(layer, layerId, layerSettings);
-				break;
+			// case "OSM":
+			// 	var layer = L.tileLayer(layerSettings.params.url, {});
+			// 	this._addLayerToMap(layer, layerId, layerSettings);
+			// 	break;
 			case "TILE":
 				var layer = L.tileLayer(layerSettings.params.url, {});
 				this._addLayerToMap(layer, layerId, layerSettings);

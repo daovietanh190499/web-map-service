@@ -115,7 +115,7 @@
 }
 
 .leaflet-layer-tree-control-order-toggle-open .leaflet-layer-tree-control-order-toggle-link {
-	background-image: url('images/reorder.png');
+	background-image: url('images/sort.svg');
 	background-repeat: no-repeat;
 	background-position: center center;
 	background-color:transparent;
@@ -125,7 +125,7 @@
 }
 
 .leaflet-layer-tree-control-order-toggle-closed .leaflet-layer-tree-control-order-toggle-link {
-	background-image: url('images/reorder.png');
+	background-image: url('images/sort.svg');
 	background-repeat: no-repeat;
 	background-position: center center;
 	background-color:transparent;
