@@ -4,9 +4,9 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.contrib.gis.geos import GEOSGeometry
 from django.contrib.gis.db.models.functions import Intersection
-from .models import Image
+from .models import Image, PredictArea
 from django.db.models import Q
-from .serializers import ImageSerializer, SearchGeometrySerializer, ImageFilterSerializer
+from .serializers import ImageSerializer, SearchGeometrySerializer, ImageFilterSerializer, PredictAreaSerializer
 from osgeo import gdal, osr
 import json
 import os
@@ -21,6 +21,9 @@ from wms_app.generate_tiles import Tiles
 
 def index(request):
     return render(request, 'index.html')
+
+def draw_map(request):
+    return render(request, 'draw.html')
 
 class ImageViewSet(viewsets.ModelViewSet):
     queryset = Image.objects.all()
@@ -253,3 +256,14 @@ class ImageViewSet(viewsets.ModelViewSet):
         results = Image.objects.filter(filters)
         
         return Response(ImageSerializer(results, many=True).data)
+    
+class PredictAreaViewSet(viewsets.ModelViewSet):
+    queryset = PredictArea.objects.all()
+    serializer_class = PredictAreaSerializer
+    
+    @action(detail=False, methods=['post'], url_name='save_area')
+    def save_area(self, request):
+        geom_data = request.POST.get('geom')
+        if geom_data:
+            geom = GEOSGeometry(geom_data)
+            PredictArea.objects.create(geom=geom)

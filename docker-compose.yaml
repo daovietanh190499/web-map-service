@@ -75,16 +75,16 @@ services:
       - ./wms_data/wms_data/static:/mnt/static
       - ./wms_data/wms_data/data:/mnt/data
       - ./wms_project:/home/wms
-    # command: [
-    #   "/bin/bash",
-    #   "-c",
-    #   "sleep 10 && python manage.py collectstatic --no-input --clear && python manage.py makemigrations && python manage.py migrate && gunicorn wms_project.wsgi:application --bind 0.0.0.0:8000"
-    # ]
     command: [
       "/bin/bash",
       "-c",
-      "sleep infinity"
+      "sleep 10 && python3 manage.py collectstatic --no-input --clear && python3 manage.py makemigrations && python3 manage.py migrate && gunicorn wms_project.wsgi:application --bind 0.0.0.0:8000"
     ]
+    # command: [
+    #   "/bin/bash",
+    #   "-c",
+    #   "sleep infinity"
+    # ]
     depends_on:
     - wms-db
     networks:

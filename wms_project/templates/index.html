@@ -230,8 +230,6 @@
     <script src="static/js/leaflet.js"></script>
     <script src="static/js/leaflet.draw.js"></script>
     <link rel="stylesheet" href="static/css/leaflet.draw.css"></script>
-    <script src="static/js/L.Control.Layers.Tree.js"></script>
-    <link rel="stylesheet" href="static/css/L.Control.Layers.Tree.css"></script>
     <script src="static/js/leaflet-layer-tree-control.js"></script>
     <script src="static/js/leaflet-layer-tree-control-wfs-zoom.js"></script>
     <script>
@@ -245,69 +243,40 @@
                 position: 'bottomright'
             }).addTo(map);
 
-            var osmLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            });
-
-            var ownLayer = L.tileLayer('api/images/jp2/tiles/{z}/{x}/{y}.png/', {
-                maxZoom: 18,
-                attribution: 'JP2 Layer'
-            });
-
-            var satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-                attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
-            });
-
-            // osmLayer.addTo(map);
-
-            // var baseTree = {
-            //     label: 'Base Layers',
-            //     children: [
-            //         {
-            //             label: 'World',
-            //             children: [
-            //                 { label: 'OpenStreetMap', layer: osmLayer},
-            //                 { label: 'Satellite', layer: satelliteLayer },
-            //             ]
-            //         }
-            //     ]
-            // };
-
-            // var overlayTree = {
-            //     label: 'Choosen Layers',
-            //     selectAllCheckbox: true,
-            //     children: [
-            //         {
-            //             label: 'Image1',
-            //             selectAllCheckbox: true,
-            //             children: [
-            //                 { label: 'Predict1', layer: ownLayer },
-            //             ]
-            //         }
-            //     ]
-            // };
-
-            // L.control.layers.tree(baseTree, overlayTree, {
-            //     namedToggle: true,
-            //     collapseAll: 'Collapse all',
-            //     expandAll: 'Expand all',
-            //     collapsed: false,
-            // }).addTo(map).collapseTree().expandSelected();
-
             var layerBuilders = {
                 GOOGLE: function (layerSettings) {
                     return L.tileLayer('http://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
-                    maxZoom: 20,
-                    subdomains: ['mt0', 'mt1', 'mt2', 'mt3']
+                        maxZoom: 20,
+                        subdomains: ['mt0', 'mt1', 'mt2', 'mt3']
                     });
                 },
-                GOOGLE_TERRAIN: function (layerSettings) {
-                    return L.tileLayer('http://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
-                    maxZoom: 20,
-                    subdomains: ['mt0', 'mt1', 'mt2', 'mt3']
+                OSM: function(layerSettings) {
+                    return L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+                        subdomains: ['a', 'b', 'c']
                     });
+                },
+                OWN: function(layerSettings) { 
+                    return L.tileLayer('api/images/aa2a3602-a0aa-4365-a2b9-9ae4af7b07ea/jp2/tiles/{z}/{x}/{y}.png/', {
+                        maxZoom: 18,
+                        attribution: 'JP2 Layer'
+                    });
+                },
+                SATTERLITE: function(layerSettings) {
+                    return L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                        attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+                    });
+                },
+                CUSTOME: function(layerSettings) {
+                    return L.layerGroup(
+                        [
+                        L.tileLayer('api/images/aa2a3602-a0aa-4365-a2b9-9ae4af7b07ea/jp2/tiles/{z}/{x}/{y}.png/', {
+                        maxZoom: 18,
+                        attribution: 'JP2 Layer'
+                    }),
+                            L.marker([21.148023790045897, 105.62239681777376]).bindPopup("Littleton, CO.")], attribution="Vector Layer")
                 }
-	        }
+            }
 
             var theTreeControl = new L.Control.LayerTreeControl({
                 // layerTree: rootLayerSettings,
@@ -320,83 +289,91 @@
                 }
             }).addTo(map);
 
-
             var rootLayerId = theTreeControl.addLayerDynamically({
-            code: "root",
-            name: "All the Layers",
-            active: true,
-            selectedByDefault: false,
-            openByDefault: true,
-            childLayers: [],
-            selectType: "NONE",
-            serviceType: null,
-            params: {}
+                code: "root",
+                name: "All the Layers",
+                active: true,
+                selectedByDefault: false,
+                openByDefault: true,
+                childLayers: [],
+                selectType: "NONE",
+                serviceType: null,
+                params: {}
             });
 
             var baseLayerId = theTreeControl.addLayerDynamically({
-            code: "base",
-            name: "Base layers",
-            active: true,
-            selectedByDefault: false,
-            openByDefault: true,
-            childLayers: [],
-            selectType: "SINGLE",
-            serviceType: null,
-            params: {}
-
+                code: "base",
+                name: "Base layers",
+                active: true,
+                selectedByDefault: false,
+                openByDefault: true,
+                childLayers: [],
+                selectType: "SINGLE",
+                serviceType: null,
+                params: {}
             }, rootLayerId);
 
             var overlaysLayerId = theTreeControl.addLayerDynamically({
-            code: "overlays",
-            name: "Overlays",
-            active: true,
-            selectedByDefault: false,
-            openByDefault: true,
-            childLayers: [],
-            selectType: "MULTIPLE",
-            serviceType: null,
-            params: {}
+                code: "overlays",
+                name: "Overlays",
+                active: true,
+                selectedByDefault: false,
+                openByDefault: true,
+                childLayers: [],
+                selectType: "MULTIPLE",
+                serviceType: null,
+                params: {}
             }, rootLayerId);
 
             var osmLayerId = theTreeControl.addLayerDynamically({
-            code: "osm",
-            name: "OpenStreetMap",
-            active: true,
-            selectedByDefault: true,
-            openByDefault: true,
-            childLayers: [],
-            selectType: "MULTIPLE",
-            serviceType: "OSM",
-            params: {
-                url: "http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            }
+                code: "osm",
+                name: "OpenStreetMap",
+                active: true,
+                selectedByDefault: true,
+                openByDefault: true,
+                childLayers: [],
+                selectType: "NONE",
+                serviceType: "OSM",
+                params: {
+                    url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                }
             }, baseLayerId);
-
-            var osmLayerId = theTreeControl.addLayerDynamically({
-            code: "custom_layer",
-            name: "Custom Layer",
-            active: true,
-            selectedByDefault: true,
-            openByDefault: true,
-            childLayers: [],
-            selectType: "MULTIPLE",
-            serviceType: "OSM",
-            params: {
-                url: "api/images/aa2a3602-a0aa-4365-a2b9-9ae4af7b07ea/jp2/tiles/{z}/{x}/{y}.png/"
-            }
-            }, overlaysLayerId);
 
             var googleLayerId = theTreeControl.addLayerDynamically({
-            code: "google",
-            name: "Google",
-            active: true,
-            selectedByDefault: false,
-            openByDefault: false,
-            childLayers: [],
-            selectType: "NONE",
-            serviceType: "GOOGLE",
-            params: {}
+                code: "google",
+                name: "Google",
+                active: true,
+                selectedByDefault: false,
+                openByDefault: false,
+                childLayers: [],
+                selectType: "NONE",
+                serviceType: "GOOGLE",
+                params: {}
             }, baseLayerId);
+
+            // var ownLayerId = theTreeControl.addLayerDynamically({
+            //     code: "custom_layer",
+            //     name: "Custom Layer",
+            //     active: true,
+            //     selectedByDefault: true,
+            //     openByDefault: true,
+            //     childLayers: [],
+            //     selectType: "NONE",
+            //     serviceType: "OWN",
+            //     params: {}
+            // }, overlaysLayerId);
+
+            var customeLayerId = theTreeControl.addLayerDynamically({
+                code: "custome_layer",
+                name: "Custome Layer",
+                active: true,
+                selectedByDefault: true,
+                openByDefault: true,
+                childLayers: [],
+                selectType: "NONE",
+                serviceType: "CUSTOME",
+                params: {}
+            }, overlaysLayerId);
 
             var drawnItems = new L.FeatureGroup();
             map.addLayer(drawnItems);
@@ -415,11 +392,11 @@
                         },
                         showArea: true
                     },
-                    polyline: true,
-                    circle: true,
+                    polyline: false,
+                    circle: false,
                     rectangle: true,
-                    circlemarker: true,
-                    marker: true
+                    circlemarker: false,
+                    marker: false
                 },
                 edit: {
                     featureGroup: drawnItems,
@@ -435,16 +412,6 @@
             var isDrawing = false;
 
             map.addControl(drawControl);
-
-            // Draw event handlers
-            // map.on('draw:created', function(e) {
-            //     drawnItems.clearLayers();
-            //     drawnItems.addLayer(e.layer);
-            //     searchSidebar.classList.remove('hidden');
-            //     isDrawing = false;
-            //     map.removeControl(drawControl);
-            //     searchControl.style.backgroundColor = '#ffffff';
-            // });
 
             map.on('draw:created', function(e) {
                 drawnItems.clearLayers();

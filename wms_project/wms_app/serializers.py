@@ -4,6 +4,13 @@ from rest_framework import serializers
 from .models import Image
 
 from rest_framework_gis.serializers import GeoFeatureModelSerializer
+from .models import PredictArea
+
+class PredictAreaSerializer(GeoFeatureModelSerializer):
+    class Meta:
+        model = PredictArea
+        fields = ('id', 'created_at', 'updated_at', 'image')  # Các trường bạn muốn hiển thị
+        geo_field = 'geom'  # Trường hình học
 
 class ImageSerializer(GeoFeatureModelSerializer):
     class Meta:
