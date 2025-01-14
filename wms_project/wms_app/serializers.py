@@ -6,6 +6,10 @@ from .models import Image
 from rest_framework_gis.serializers import GeoFeatureModelSerializer
 from .models import PredictArea
 
+class ImageUploadSerializer(serializers.Serializer):
+    name = serializers.CharField(max_length=255)
+    file = serializers.FileField()
+
 class PredictAreaSerializer(GeoFeatureModelSerializer):
     class Meta:
         model = PredictArea

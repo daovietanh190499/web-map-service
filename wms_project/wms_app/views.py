@@ -6,7 +6,7 @@ from django.contrib.gis.geos import GEOSGeometry
 from django.contrib.gis.db.models.functions import Intersection
 from .models import Image, PredictArea
 from django.db.models import Q
-from .serializers import ImageSerializer, SearchGeometrySerializer, ImageFilterSerializer, PredictAreaSerializer
+from .serializers import ImageSerializer, SearchGeometrySerializer, ImageFilterSerializer, PredictAreaSerializer, ImageUploadSerializer
 from osgeo import gdal, osr
 import json
 import os
@@ -18,6 +18,7 @@ from PIL import Image as PIL_Image
 import io
 from django.http import HttpResponse
 from wms_app.generate_tiles import Tiles
+from django.conf import settings
 
 def index(request):
     return render(request, 'index.html')
@@ -114,7 +115,7 @@ class ImageViewSet(viewsets.ModelViewSet):
 
         return files_processed
 
-    def _store_jp2_metadata(self, jp2_path):
+    def _store_jp2_metadata(self, jp2_path, name=None):
         """Extract and store JP2 metadata"""
         try:
             ds = gdal.Open(jp2_path)
@@ -150,6 +151,7 @@ class ImageViewSet(viewsets.ModelViewSet):
             Image.objects.update_or_create(
                 filename=os.path.basename(jp2_path),
                 defaults={
+                    'name': os.path.basename(jp2_path) if name is None else name,
                     'filepath': jp2_path,
                     'geom': geometry,
                     'resolution': gt[1],  # Pixel size in map units
@@ -163,6 +165,27 @@ class ImageViewSet(viewsets.ModelViewSet):
         except Exception as e:
             print(f"Error processing {jp2_path}: {str(e)}")
             return False
+        
+    @action(detail=False, methods=['post'])
+    def upload_image(self, request):
+        serializer = ImageUploadSerializer(data=request.data)
+        if serializer.is_valid():
+            name = serializer.validated_data['name']
+            uploaded_file = serializer.validated_data['file']
+
+            # Save the uploaded file to a temporary location
+            temp_path = os.path.join(settings.MEDIA_ROOT, uploaded_file.name)
+            with open(temp_path, 'wb') as f:
+                for chunk in uploaded_file.chunks():
+                    f.write(chunk)
+
+            # Process the file with GDAL
+            if self._store_jp2_metadata(temp_path, name):
+                return Response({'message': 'File processed successfully.'}, status=status.HTTP_201_CREATED)
+            else:
+                return Response({'error': 'Failed to process the file.'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
     @action(detail=False, methods=['post'])
     def spatial_query(self, request):
