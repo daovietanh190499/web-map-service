@@ -3,11 +3,96 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Draw on Map</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
+    <title>Web Map Service</title>
+    <link href="static/css/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="static/css/leaflet.css" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="static/css/leaflet-layer-tree-control.css" />
+    <script src="static/js/tailwind.js"></script>
+    <link rel="stylesheet" href="static/css/easy-button.css">
     <style>
-        /* Modal styles */
+        @keyframes fadeInLeft {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+        .fade-in-left {
+            animation: fadeInLeft 0.3s ease-out;
+        }
+        #sidebar {
+            transition: transform 0.3s ease-in-out;
+        }
+        #sidebar.hidden {
+            transform: translateX(-100%);
+        }
+
+        #search-sidebar {
+            transition: transform 0.3s ease-in-out;
+            height: 100vh;
+            width: 360px;
+        }
+        #search-sidebar.hidden {
+            transform: translateX(-100%);
+        }
+        .filter-section {
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .filter-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+            padding: 0;
+        }
+        .filter-content.expanded {
+            max-height: 500px; /* Adjust based on content */
+            padding: 1rem;
+        }
+        .filter-header {
+            cursor: pointer;
+            padding: 1rem;
+            user-select: none;
+        }
+        .filter-header i {
+            transition: transform 0.3s ease;
+        }
+        .filter-header.expanded i {
+            transform: rotate(180deg);
+        }
+        .search-results-container {
+            height: calc(100vh - 120px); /* Adjust based on header height */
+            overflow-y: auto;
+        }
+
+        #app-container {
+            display: flex;
+        }
+
+        #map-container {
+            flex-grow: 1;
+        }
+
+        #search-sidebar.hidden {
+            display: none;
+        }
+
+        #app-container.with-sidebar #map-container {
+            width: calc(100% - 33.333%); /* Adjust for the sidebar width */
+        }
+
+        .upload_file_icon {
+            background-repeat: no-repeat;
+            background-image: url("static/css/images/folder.svg");
+            background-position: center center;
+            background-color:transparent;
+            background-size: 75% 75%;
+            width: 100%;
+            height: 100%;
+        }
         #style-modal, #text-style-modal {
             display: none;
             position: fixed;
@@ -46,84 +131,473 @@
             background-color: rgba(0, 0, 0, 0.5);
         }
     </style>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
 </head>
-<body>
-    <div id="map" style="height: 500px;"></div>
+<body class="h-screen overflow-hidden">
+    <div id="app-container" class="flex h-full">
+        <div id="search-sidebar" class="w-1/3 h-full bg-white shadow-lg z-50 hidden flex-shrink-0">
+            <div class="h-full flex flex-col">
 
-    <!-- Modal for vector style changes -->
-    <div id="style-modal-overlay"></div>
-    <div id="style-modal">
-        <h3>Change Style</h3>
-        <label for="modal-color">Fill Color:</label>
-        <input type="color" id="modal-color" value="#3388ff">
-        <label for="modal-border-color">Border Color:</label>
-        <input type="color" id="modal-border-color" value="#000000">
-        <label for="modal-border-weight">Border Weight:</label>
-        <select id="modal-border-weight">
-            <option value="1">1</option>
-            <option value="2">2</option>
-            <option value="3">3</option>
-            <option value="4">4</option>
-            <option value="8">8</option>
-            <option value="12">12</option>
-        </select>
-        <input type="number" id="modal-border-weight" value="3" min="1" max="10">
-        <label for="modal-border-style">Border Style:</label>
-        <select id="modal-border-style">
-            <option value="solid">Solid</option>
-            <option value="dashed">Dashed</option>
-            <option value="dotted">Dotted</option>
-        </select>
-        <button id="apply-style">Apply</button>
-        <button id="cancel-style">Cancel</button>
+                <!-- Header -->
+                <div class="p-4 border-b">
+                    <div class="flex justify-between items-center">
+                        <h2 class="text-xl font-bold">Search Images</h2>
+                        <div class="flex items-center gap-2">
+                            <button id="toggle-filters" class="text-gray-500 hover:text-gray-700">
+                                <i class="fas fa-filter"></i>
+                            </button>
+                            <button id="close-search" class="text-gray-500 hover:text-gray-700">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Collapsible Filters -->
+                <div id="filters-container" class="hidden">
+                    <form id="search-form">
+                        <div class="filter-section">
+                            <div class="filter-header" data-target="date-filter">
+                                <div class="flex justify-between items-center">
+                                    <span class="font-semibold">Date Range</span>
+                                    <i class="fas fa-chevron-down"></i>
+                                </div>
+                            </div>
+                            <div id="date-filter" class="filter-content">
+                                <div class="grid grid-cols-2 gap-2">
+                                    <div>
+                                        <label class="block text-sm">Start Date</label>
+                                        <input type="datetime-local" name="start_date" class="w-full border rounded p-1">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm">End Date</label>
+                                        <input type="datetime-local" name="end_date" class="w-full border rounded p-1">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+    
+                        <div class="filter-section">
+                            <div class="filter-header" data-target="resolution-filter">
+                                <div class="flex justify-between items-center">
+                                    <span class="font-semibold">Resolution (meters)</span>
+                                    <i class="fas fa-chevron-down"></i>
+                                </div>
+                            </div>
+                            <div id="resolution-filter" class="filter-content">
+                                <div class="grid grid-cols-2 gap-2">
+                                    <div>
+                                        <label class="block text-sm">Min</label>
+                                        <input type="number" step="0.1" name="resolution_min" class="w-full border rounded p-1">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm">Max</label>
+                                        <input type="number" step="0.1" name="resolution_max" class="w-full border rounded p-1">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+    
+                        <div class="filter-section">
+                            <div class="filter-header" data-target="metadata-filter">
+                                <div class="flex justify-between items-center">
+                                    <span class="font-semibold">Metadata</span>
+                                    <i class="fas fa-chevron-down"></i>
+                                </div>
+                            </div>
+                            <div id="metadata-filter" class="filter-content">
+                                <div class="space-y-2">
+                                    <div>
+                                        <label class="block text-sm">Topic</label>
+                                        <input type="text" name="topic" class="w-full border rounded p-1">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm">Source</label>
+                                        <input type="text" name="source" class="w-full border rounded p-1">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm">Satellite ID</label>
+                                        <input type="text" name="satellite_id" class="w-full border rounded p-1">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+    
+                        <div class="p-4">
+                            <button type="submit" class="w-full bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600">
+                                Apply Filters
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Search Results -->
+                <div class="search-results-container flex-grow p-4">
+                    <div id="search-results" class="space-y-2">
+                        <!-- Results will be populated here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="map-container" class="flex-grow relative">
+            <div id="map" class="absolute inset-0 z-10"></div>
+        </div>
     </div>
 
-    <!-- Modal for text style changes -->
-    <div id="text-style-modal-overlay"></div>
-    <div id="text-style-modal">
-        <h3>Change Text Style</h3>
-        <label for="text-font">Font:</label>
-        <select id="text-font">
-            <option value="Arial">Arial</option>
-            <option value="Verdana">Verdana</option>
-            <option value="Times New Roman">Times New Roman</option>
-            <option value="Courier New">Courier New</option>
-        </select>
-        <label for="text-color">Color:</label>
-        <input type="color" id="text-color" value="#000000">
-        <label for="text-size">Size (px):</label>
-        <input type="number" id="text-size" value="16" min="8" max="72">
-        <button id="apply-text-style">Apply</button>
-        <button id="cancel-text-style">Cancel</button>
+<!-- Style Modal -->
+<div id="style-modal-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden"></div>
+<div id="style-modal" class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-xl p-6 z-50 w-full max-w-md hidden">
+    <h3 class="text-xl font-semibold mb-4 text-gray-800">Change Style</h3>
+    
+    <div class="space-y-4">
+        <div class="flex items-center justify-between">
+            <label for="modal-color" class="text-sm font-medium text-gray-700">Fill Color:</label>
+            <input type="color" id="modal-color" value="#3388ff" class="h-8 w-16 rounded border border-gray-300">
+        </div>
+
+        <div class="flex items-center justify-between">
+            <label for="modal-border-color" class="text-sm font-medium text-gray-700">Border Color:</label>
+            <input type="color" id="modal-border-color" value="#000000" class="h-8 w-16 rounded border border-gray-300">
+        </div>
+
+        <div class="flex items-center justify-between">
+            <label for="modal-border-weight" class="text-sm font-medium text-gray-700">Border Weight:</label>
+            <select id="modal-border-weight" class="block w-32 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                <option value="1">1px</option>
+                <option value="2">2px</option>
+                <option value="3">3px</option>
+                <option value="4">4px</option>
+                <option value="8">8px</option>
+                <option value="12">12px</option>
+            </select>
+        </div>
+
+        <div class="flex items-center justify-between">
+            <label for="modal-border-style" class="text-sm font-medium text-gray-700">Border Style:</label>
+            <select id="modal-border-style" class="block w-32 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                <option value="solid">Solid</option>
+                <option value="dashed">Dashed</option>
+                <option value="dotted">Dotted</option>
+            </select>
+        </div>
     </div>
 
+    <div class="mt-6 flex justify-end space-x-3">
+        <button id="cancel-style" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">
+            Cancel
+        </button>
+        <button id="apply-style" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+            Apply
+        </button>
+    </div>
+</div>
+
+<!-- Text Style Modal -->
+<div id="text-style-modal-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden"></div>
+<div id="text-style-modal" class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-xl p-6 z-50 w-full max-w-md hidden">
+    <h3 class="text-xl font-semibold mb-4 text-gray-800">Change Text Style</h3>
+    
+    <div class="space-y-4">
+        <div class="flex items-center justify-between">
+            <label for="text-font" class="text-sm font-medium text-gray-700">Font:</label>
+            <select id="text-font" class="block w-48 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                <option value="Arial">Arial</option>
+                <option value="Verdana">Verdana</option>
+                <option value="Times New Roman">Times New Roman</option>
+                <option value="Courier New">Courier New</option>
+            </select>
+        </div>
+
+        <div class="flex items-center justify-between">
+            <label for="text-color" class="text-sm font-medium text-gray-700">Color:</label>
+            <input type="color" id="text-color" value="#000000" class="h-8 w-16 rounded border border-gray-300">
+        </div>
+
+        <div class="flex items-center justify-between">
+            <label for="text-size" class="text-sm font-medium text-gray-700">Size (px):</label>
+            <input type="number" id="text-size" value="16" min="8" max="72" class="block w-24 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+        </div>
+    </div>
+
+    <div class="mt-6 flex justify-end space-x-3">
+        <button id="cancel-text-style" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">
+            Cancel
+        </button>
+        <button id="apply-text-style" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+            Apply
+        </button>
+    </div>
+</div>
+    
+    <script src="static/js/leaflet.js"></script>
+    <script src="static/js/leaflet.draw.js"></script>
+    <link rel="stylesheet" href="static/css/leaflet.draw.css"></script>
+    <script src="static/js/leaflet-layer-tree-control.js"></script>
+    <script src="static/js/leaflet-layer-tree-control-wfs-zoom.js"></script>
+    <script src="static/js/easy-button.js"></script>
+    <script src="static/js/jquery.js"></script>
+    <script src="static/js/togeojson.js"></script>
+    <script src="static/js/leaflet.filelayer.js"></script>
+    <link rel="stylesheet" type="text/css" href="static/css/leaflet.measure.css" />
+    <script type="text/javascript" src="static/js/leaflet.measure.js"></script>
+    <link rel="stylesheet" type="text/css" href="static/css/leaflet.mouse-position.css" />
+    <script type="text/javascript" src="static/js/leaflet.mouse-position.js"></script>
+    <link rel="stylesheet" type="text/css" href="static/css/leaflet.scalebar.css" />
+    <script type="text/javascript" src="static/js/leaflet.scalebar.js"></script>
     <script>
-        const map = L.map('map').setView([10.762622, 106.660172], 13);
+        function getListLayer() {
+            let list_layer = JSON.parse(window.localStorage.getItem("layers"));
+            if (!list_layer) {
+                list_layer = {}
+            }
+            return list_layer
+        }
 
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 20,
+        function removeLayer(layer_id) {
+            let list_layer = getListLayer()
+            delete list_layer[layer_id]
+            window.localStorage.setItem("layers", JSON.stringify(list_layer))
+        }
+
+        function addLayer(layer_id) {
+            let list_layer = getListLayer()
+            list_layer[layer_id] = []
+            window.localStorage.setItem("layers", JSON.stringify(list_layer))
+        }
+
+        function changeMenu(layer_id) {
+            let list_layer = getListLayer()
+            if (layer_id in list_layer) {
+                removeLayer(layer_id)
+                document.getElementById(layer_id).classList.remove('fa-folder-minus')
+                document.getElementById(layer_id).classList.add('fa-folder-plus')
+            } else {
+                addLayer(layer_id)
+                document.getElementById(layer_id).classList.remove('fa-folder-plus')
+                document.getElementById(layer_id).classList.add('fa-folder-minus')
+            }
+            list_layer = getListLayer()
+            updateLayerTree()
+        }
+
+
+        var map = L.map('map', {
+            zoomControl: false,
+            contextmenu: true
+        }).setView([21.148023790045897, 105.62239681777376], 13);
+
+        L.control.zoom({
+            position: 'bottomright'
         }).addTo(map);
 
-        const drawnItems = new L.FeatureGroup();
+        L.control.mousePosition().addTo(map);
+
+        L.control.betterscale().addTo(map);
+
+        L.easyButton('fa-home', function(btn, map){
+            window.location.replace('/')
+        }, {position: "bottomright"}).addTo(map);
+
+        L.Control.FileLayerLoad.LABEL = '<div class="upload_file_icon"></div>';
+
+        L.Control.fileLayerLoad({
+            // Allows you to use a customized version of L.geoJson.
+            // For example if you are using the Proj4Leaflet leaflet plugin,
+            // you can pass L.Proj.geoJson and load the files into the
+            // L.Proj.GeoJson instead of the L.geoJson.
+            position: 'bottomleft',
+            layer: L.geoJson,
+            // See http://leafletjs.com/reference.html#geojson-options
+            layerOptions: {
+                style: {
+                    color: 'red',
+                    opacity: 1.0,
+                    fillOpacity: 1.0,
+                    weight: 2,
+                    clickable: true
+                },
+                // pointToLayer: function (data, latlng) {
+                //     return L.circleMarker(
+                //         latlng,
+                //         { style: style }
+                //     );
+                // }
+            },
+            // Add to map after loading (default: true) ?
+            addToMap: true,
+            // File size limit in kb (default: 1024) ?
+            fileSizeLimit: 1024,
+            // Restrict accepted file formats (default: .geojson, .json, .kml, and .gpx) ?
+            formats: [
+                '.geojson',
+                '.json',
+                '.gpx',
+                '.kml'
+            ]
+        }).addTo(map);
+
+        L.Measure = {
+            linearMeasurement: "Distance measurement",
+            areaMeasurement: "Area measurement",
+            start: "Start",
+            meter: "m",
+            kilometer: "km",
+            squareMeter: "m²",
+            squareKilometers: "km²",
+        };
+
+        var measure = L.control.measure({
+            position: "bottomleft"
+        }).addTo(map);
+
+        var theTreeControl
+
+        updateLayerTree()
+
+        function updateLayerTree() {
+            if (theTreeControl) {
+                theTreeControl.remove(map);
+            }
+
+            let list_layer = getListLayer()
+
+            var layerBuilders = {
+                OSM: function(layerSettings) {
+                    return L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+                        subdomains: ['a', 'b', 'c']
+                    });
+                },
+                SATELLITE: function(layerSettings) {
+                    return L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                        attribution: 'Tiles © Esri'
+                    });
+                }
+            }
+
+            for (layer in list_layer) {
+                layerBuilders[layer] = function(layerSettings) { 
+                    return L.tileLayer(`api/images/${layer}/jp2/tiles/{z}/{x}/{y}.png/`, {
+                        maxZoom: 20,
+                        attribution: `${layer} JP2 Layer`
+                    });
+                }
+            }
+
+            theTreeControl = new L.Control.LayerTreeControl({
+                // layerTree: rootLayerSettings,
+                openByDefault: true,
+                layerBuilders: layerBuilders,
+                featureBuilders: {
+                    WFS: {
+                        zoom: L.Control.LayerTreeControl.WFSZoomFeature
+                    }
+                }
+            }).addTo(map);
+
+            var rootLayerId = theTreeControl.addLayerDynamically({
+                code: "root",
+                name: "All the Layers",
+                active: true,
+                selectedByDefault: false,
+                openByDefault: true,
+                childLayers: [],
+                selectType: "NONE",
+                serviceType: null,
+                params: {}
+            });
+
+            var baseLayerId = theTreeControl.addLayerDynamically({
+                code: "base",
+                name: "Base layers",
+                active: true,
+                selectedByDefault: false,
+                openByDefault: true,
+                childLayers: [],
+                selectType: "SINGLE",
+                serviceType: null,
+                params: {}
+            }, rootLayerId);
+
+            var overlaysLayerId = theTreeControl.addLayerDynamically({
+                code: "overlays",
+                name: "Overlays",
+                active: true,
+                selectedByDefault: false,
+                openByDefault: true,
+                childLayers: [],
+                selectType: "SINGLE",
+                serviceType: null,
+                params: {}
+            }, rootLayerId);
+
+            var osmLayerId = theTreeControl.addLayerDynamically({
+                code: "osm",
+                name: "OpenStreetMap",
+                active: true,
+                selectedByDefault: true,
+                openByDefault: true,
+                childLayers: [],
+                selectType: "NONE",
+                serviceType: "OSM",
+                params: {}
+            }, baseLayerId);
+
+            var satelliteLayerId = theTreeControl.addLayerDynamically({
+                code: "satellite",
+                name: "Satellite",
+                active: true,
+                selectedByDefault: false,
+                openByDefault: true,
+                childLayers: [],
+                selectType: "NONE",
+                serviceType: "SATELLITE",
+                params: {}
+            }, baseLayerId);
+            
+            for (layer in list_layer) {
+                theTreeControl.addLayerDynamically({
+                    code: layer,
+                    name: list_layer[layer]['name'] ? list_layer[layer]['name'] : layer,
+                    active: true,
+                    selectedByDefault: false,
+                    openByDefault: true,
+                    childLayers: [],
+                    selectType: "NONE",
+                    serviceType: layer,
+                    params: {}
+                }, overlaysLayerId);
+            }
+        }
+
+        var drawnItems = new L.FeatureGroup();
         map.addLayer(drawnItems);
 
-        const drawControl = new L.Control.Draw({
+        var drawControl = new L.Control.Draw({
+            position: 'bottomleft',
+            draw: {
+                polygon: {
+                    allowIntersection: false,
+                    drawError: {
+                        color: '#e1e100',
+                        timeout: 1000
+                    },
+                    shapeOptions: {
+                        color: '#3388ff'
+                    },
+                    showArea: true
+                },
+                polyline: true,
+                circle: true,
+                rectangle: true,
+                circlemarker: true,
+                marker: true
+            },
             edit: {
                 featureGroup: drawnItems,
-            },
-            draw: {
-                polygon: true,
-                polyline: true,
-                rectangle: true,
-                circle: true,
-                marker: true,
-                circlemarker: false,
-            },
+                remove: true
+            }
         });
 
-        // Add "Add Text" option to the draw menu
         const TextDrawHandler = L.Handler.extend({
             addHooks: function () {
                 map.on('click', this._addText, this);
