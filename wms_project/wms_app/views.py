@@ -177,7 +177,7 @@ class ImageViewSet(viewsets.ModelViewSet):
             milliseconds = int(datetime.now().timestamp() * 1000)
 
             # Save the uploaded file to a temporary location
-            temp_path = os.path.join(settings.MEDIA_ROOT, str(milliseconds) + "_" + "_".join(uploaded_file.name.split()))
+            temp_path = os.path.join("/mnt/data", str(milliseconds) + "_" + "_".join(uploaded_file.name.split()))
             with open(temp_path, 'wb') as f:
                 for chunk in uploaded_file.chunks():
                     f.write(chunk)
