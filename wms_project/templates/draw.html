@@ -245,6 +245,60 @@
 
 <!-- Style Modal -->
 <div id="style-modal-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden"></div>
+<!-- <div id="style-modal" class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-xl p-6 z-50 w-full max-w-md hidden">
+    <h3 class="text-xl font-semibold mb-4 text-gray-800">Change Style</h3>
+    
+    <div class="space-y-4">
+        <div class="flex items-center justify-between">
+            <label for="modal-color" class="text-sm font-medium text-gray-700">Fill Color:</label>
+            <input type="color" id="modal-color" value="#3388ff" class="h-8 w-16 rounded border border-gray-300">
+        </div>
+
+        <div class="flex items-center justify-between">
+            <label for="modal-border-color" class="text-sm font-medium text-gray-700">Border Color:</label>
+            <input type="color" id="modal-border-color" value="#000000" class="h-8 w-16 rounded border border-gray-300">
+        </div>
+
+        <div class="flex items-center justify-between">
+            <label for="modal-border-weight" class="text-sm font-medium text-gray-700">Border Weight:</label>
+            <select id="modal-border-weight" class="block w-32 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                <option value="1">1px</option>
+                <option value="2">2px</option>
+                <option value="3">3px</option>
+                <option value="4">4px</option>
+                <option value="8">8px</option>
+                <option value="12">12px</option>
+            </select>
+        </div>
+
+        <div class="flex items-center justify-between">
+            <label for="modal-border-style" class="text-sm font-medium text-gray-700">Border Style:</label>
+            <select id="modal-border-style" class="block w-32 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                <option value="solid">Solid</option>
+                <option value="5,5">Dashed 5, 5</option>
+                <option value="5,10">Dashed 5, 10</option>
+                <option value="10,5">Dashed 10, 5</option>
+                <option value="5,1">Dashed 5, 1</option>
+                <option value="1,5">Dashed 1, 5</option>
+                <option value="0,9">Dashed 0, 9</option>
+                <option value="15,10,5">Dashed 15, 10, 5</option>
+                <option value="15,10,5,10">Dashed 15, 10, 5, 10</option>
+                <option value="15,10,5,10,15">Dashed 15, 10, 5, 10, 15</option>
+                <option value="5,5,1,5">Dashed 5, 5, 1, 5 </option>
+            </select>
+        </div>
+    </div>
+
+    <div class="mt-6 flex justify-end space-x-3">
+        <button id="cancel-style" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">
+            Cancel
+        </button>
+        <button id="apply-style" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+            Apply
+        </button>
+    </div>
+</div> -->
+
 <div id="style-modal" class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-xl p-6 z-50 w-full max-w-md hidden">
     <h3 class="text-xl font-semibold mb-4 text-gray-800">Change Style</h3>
     
@@ -275,11 +329,153 @@
             <label for="modal-border-style" class="text-sm font-medium text-gray-700">Border Style:</label>
             <select id="modal-border-style" class="block w-32 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
                 <option value="solid">Solid</option>
-                <option value="dashed">Dashed</option>
-                <option value="dotted">Dotted</option>
+                <option value="5,5">Dashed 5, 5</option>
+                <option value="5,10">Dashed 5, 10</option>
+                <option value="10,5">Dashed 10, 5</option>
+                <option value="5,1">Dashed 5, 1</option>
+                <option value="1,5">Dashed 1, 5</option>
+                <option value="0,9">Dashed 0, 9</option>
+                <option value="15,10,5">Dashed 15, 10, 5</option>
+                <option value="15,10,5,10">Dashed 15, 10, 5, 10</option>
+                <option value="15,10,5,10,15">Dashed 15, 10, 5, 10, 15</option>
+                <option value="5,5,1,5">Dashed 5, 5, 1, 5 </option>
             </select>
         </div>
+
+        <div class="flex items-center justify-between">
+            <label for="modal-opacity" class="text-sm font-medium text-gray-700">Opacity:</label>
+            <input type="range" id="modal-opacity" min=0 max=1 step="0.1" value=1 
+                class="w-32 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-500">
+            <span id="opacity-value" class="ml-2 text-sm text-gray-700">1.0</span>
+        </div>
     </div>
+
+    <div class="mt-6 flex justify-end space-x-3">
+        <button id="cancel-style" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">
+            Cancel
+        </button>
+        <button id="apply-style" class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+            Apply
+        </button>
+    </div>
+</div>
+
+<!-- <div id="style-modal" class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-xl p-6 z-50 w-full max-w-md hidden">
+    <h3 class="text-xl font-semibold mb-4 text-gray-800">Change Style</h3>
+    
+    <div class="space-y-4">
+        <div class="flex items-center justify-between">
+            <label for="modal-color" class="text-sm font-medium text-gray-700">Fill Color:</label>
+            <input type="color" id="modal-color" value="#3388ff" class="h-8 w-16 rounded border border-gray-300">
+        </div>
+
+        <div class="flex items-center justify-between">
+            <label for="modal-border-color" class="text-sm font-medium text-gray-700">Border Color:</label>
+            <input type="color" id="modal-border-color" value="#000000" class="h-8 w-16 rounded border border-gray-300">
+        </div>
+
+        <div class="flex items-center justify-between">
+            <label for="modal-border-weight" class="text-sm font-medium text-gray-700">Border Weight:</label>
+            <select id="modal-border-weight" class="block w-32 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                <option value="1">1px</option>
+                <option value="2">2px</option>
+                <option value="3">3px</option>
+                <option value="4">4px</option>
+                <option value="8">8px</option>
+                <option value="12">12px</option>
+            </select>
+        </div>
+
+        <div class="flex items-center justify-between">
+            <label for="modal-border-style" class="text-sm font-medium text-gray-700">Border Style:</label>
+            <select id="modal-border-style" class="block w-48 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                <option value="solid" class="flex items-center">
+                    <div class="inline-block w-16 h-4 mr-2">
+                        <div class="w-full h-0.5 bg-black"></div>
+                    </div>
+                    Solid
+                </option>
+                <option value="5,5" class="flex items-center">
+                    <div class="inline-block w-16 h-4 mr-2">
+                        <div class="w-full h-0.5 bg-black [border-style:dashed] [border-width:0.5px] [border-bottom-width:0.5px]" style="border-dash-pattern: 5 5"></div>
+                    </div>
+                    5, 5
+                </option>
+                <option value="5,10">
+                    <div class="inline-block w-16 h-4 mr-2">
+                        <svg width="100%" height="100%">
+                            <line x1="0" y1="8" x2="64" y2="8" stroke="black" stroke-width="2" stroke-dasharray="5,10"/>
+                        </svg>
+                    </div>
+                    5, 10
+                </option>
+                <option value="10,5">
+                    <div class="inline-block w-16 h-4 mr-2">
+                        <svg width="100%" height="100%">
+                            <line x1="0" y1="8" x2="64" y2="8" stroke="black" stroke-width="2" stroke-dasharray="10,5"/>
+                        </svg>
+                    </div>
+                    10, 5
+                </option>
+                <option value="5,1">
+                    <div class="inline-block w-16 h-4 mr-2">
+                        <svg width="100%" height="100%">
+                            <line x1="0" y1="8" x2="64" y2="8" stroke="black" stroke-width="2" stroke-dasharray="5,1"/>
+                        </svg>
+                    </div>
+                    5, 1
+                </option>
+                <option value="1,5">
+                    <div class="inline-block w-16 h-4 mr-2">
+                        <svg width="100%" height="100%">
+                            <line x1="0" y1="8" x2="64" y2="8" stroke="black" stroke-width="2" stroke-dasharray="1,5"/>
+                        </svg>
+                    </div>
+                    1, 5
+                </option>
+                <option value="0,9">
+                    <div class="inline-block w-16 h-4 mr-2">
+                        <svg width="100%" height="100%">
+                            <line x1="0" y1="8" x2="64" y2="8" stroke="black" stroke-width="2" stroke-dasharray="0,9"/>
+                        </svg>
+                    </div>
+                    0, 9
+                </option>
+                <option value="15,10,5">
+                    <div class="inline-block w-16 h-4 mr-2">
+                        <svg width="100%" height="100%">
+                            <line x1="0" y1="8" x2="64" y2="8" stroke="black" stroke-width="2" stroke-dasharray="15,10,5"/>
+                        </svg>
+                    </div>
+                    15, 10, 5
+                </option>
+                <option value="15,10,5,10">
+                    <div class="inline-block w-16 h-4 mr-2">
+                        <svg width="100%" height="100%">
+                            <line x1="0" y1="8" x2="64" y2="8" stroke="black" stroke-width="2" stroke-dasharray="15,10,5,10"/>
+                        </svg>
+                    </div>
+                    15, 10, 5, 10
+                </option>
+                <option value="15,10,5,10,15">
+                    <div class="inline-block w-16 h-4 mr-2">
+                        <svg width="100%" height="100%">
+                            <line x1="0" y1="8" x2="64" y2="8" stroke="black" stroke-width="2" stroke-dasharray="15,10,5,10,15"/>
+                        </svg>
+                    </div>
+                    15, 10, 5, 10, 15
+                </option>
+                <option value="5,5,1,5">
+                    <div class="inline-block w-16 h-4 mr-2">
+                        <svg width="100%" height="100%">
+                            <line x1="0" y1="8" x2="64" y2="8" stroke="black" stroke-width="2" stroke-dasharray="5,5,1,5"/>
+                        </svg>
+                    </div>
+                    5, 5, 1, 5
+                </option>
+            </select>
+        </div>
+    </div> -->
 
     <div class="mt-6 flex justify-end space-x-3">
         <button id="cancel-style" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">
@@ -633,6 +829,8 @@
         const styleModal = document.getElementById('style-modal');
         const styleModalOverlay = document.getElementById('style-modal-overlay');
         const modalColor = document.getElementById('modal-color');
+        const modalOpacity = document.getElementById('modal-opacity');
+        const opacityValue = document.getElementById('opacity-value');
         const modalBorderColor = document.getElementById('modal-border-color');
         const modalBorderWeight = document.getElementById('modal-border-weight');
         const modalBorderStyle = document.getElementById('modal-border-style');
@@ -648,8 +846,11 @@
                 modalColor.value = layer.options.fillColor || '#3388ff';
                 modalBorderColor.value = layer.options.color || '#000000';
                 modalBorderWeight.value = layer.options.weight || 3;
-                modalBorderStyle.value = layer.options.dashArray ? 'dashed' : 'solid';
+                modalBorderStyle.value = layer.options.dashArray ? layer.options.dashArray : 'solid';
+                modalOpacity.value = layer.options.fillOpacity || 1;
             }
+
+            opacityValue.innerText = layer.options.fillOpacity || 1;
 
             styleModal.style.display = 'block';
             styleModalOverlay.style.display = 'block';
@@ -668,13 +869,18 @@
                 const newStyle = {
                     fillColor: modalColor.value,
                     color: modalBorderColor.value,
+                    fillOpacity: modalOpacity.value,
                     weight: parseInt(modalBorderWeight.value),
-                    dashArray: modalBorderStyle.value === 'dashed' ? '5, 5' : null,
+                    dashArray: modalBorderStyle.value === 'solid' ? null : modalBorderStyle.value,
                 };
                 selectedLayer.setStyle && selectedLayer.setStyle(newStyle);
             }
             closeStyleModal();
         });
+
+        modalOpacity.oninput = e => {
+            opacityValue.innerText = modalOpacity.value
+        }
 
         cancelStyleBtn.addEventListener('click', closeStyleModal);
 
