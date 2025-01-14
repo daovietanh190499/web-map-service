@@ -12,6 +12,7 @@ import json
 import os
 import numpy as np
 import rasterio
+from datetime import datetime
 from rest_framework_gis.filters import InBBoxFilter
 from django.shortcuts import render
 from PIL import Image as PIL_Image
@@ -173,8 +174,10 @@ class ImageViewSet(viewsets.ModelViewSet):
             name = serializer.validated_data['name']
             uploaded_file = serializer.validated_data['file']
 
+            milliseconds = int(datetime.now().timestamp() * 1000)
+
             # Save the uploaded file to a temporary location
-            temp_path = os.path.join(settings.MEDIA_ROOT, uploaded_file.name)
+            temp_path = os.path.join(settings.MEDIA_ROOT, str(milliseconds) + "_" + "_".join(uploaded_file.name.split()))
             with open(temp_path, 'wb') as f:
                 for chunk in uploaded_file.chunks():
                     f.write(chunk)

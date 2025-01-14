@@ -243,6 +243,36 @@
 <div id="upload-modal-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden"></div>
 
 <!-- Modal -->
+<!-- <div id="upload-modal"
+    class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-2xl p-8 z-50 w-full max-w-lg hidden">
+    <h3 class="text-2xl font-bold mb-6 text-gray-900">Upload Image</h3>
+
+    <div class="space-y-6">
+        <div class="flex flex-col">
+            <label for="modal-name" class="text-sm font-medium text-gray-700 mb-2">Name:</label>
+            <input type="text" id="modal-name" placeholder="Enter image name"
+                class="w-full h-10 px-3 rounded-md border border-gray-300 focus:ring-blue-500 focus:border-blue-500">
+        </div>
+
+        <div class="flex flex-col">
+            <label for="modal-file" class="text-sm font-medium text-gray-700 mb-2">Image File:</label>
+            <input type="file" id="modal-file"
+                class="w-full h-10 px-3 rounded-md border border-gray-300 focus:ring-blue-500 focus:border-blue-500">
+        </div>
+    </div>
+
+    <div class="mt-8 flex justify-end space-x-4">
+        <button id="cancel-modal"
+            class="px-5 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400">
+            Cancel
+        </button>
+        <button id="save-modal"
+            class="px-5 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+            Save
+        </button>
+    </div>
+</div> -->
+
 <div id="upload-modal"
     class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-2xl p-8 z-50 w-full max-w-lg hidden">
     <h3 class="text-2xl font-bold mb-6 text-gray-900">Upload Image</h3>
@@ -260,6 +290,12 @@
             <label for="modal-file" class="text-sm font-medium text-gray-700 mb-2">Image File:</label>
             <input type="file" id="modal-file"
                 class="w-full h-10 px-3 rounded-md border border-gray-300 focus:ring-blue-500 focus:border-blue-500">
+        </div>
+
+        <!-- Progress Bar -->
+        <div class="flex flex-col">
+            <label for="upload-progress" class="text-sm font-medium text-gray-700 mb-2">Upload Progress:</label>
+            <progress id="upload-progress" value="0" max="100" class="w-full h-4"></progress>
         </div>
     </div>
 
@@ -572,7 +608,7 @@
             // Show search sidebar
             document.getElementById('search-sidebar').classList.remove('hidden');
 
-            document.getElementById('search-vector').classList.add('hidden');
+            // document.getElementById('search-vector').classList.add('hidden');
 
             document.getElementById('app-container').classList.add('with-sidebar');
 
@@ -612,41 +648,72 @@
 
         saveModalBtn.onclick = async () => {
             const name = document.getElementById('modal-name').value;
-            const fileInput = document.getElementById('modal-file');
+            const fileInput = document.getElementById('modal-file').files[0];
+            const progressBar = document.getElementById('upload-progress');
 
-            // Ensure a file is selected
-            if (!fileInput.files.length) {
-                alert('Please select an image file.');
+            // // Prepare the form data
+            // const formData = new FormData();
+            // formData.append('name', name);
+            // formData.append('file', fileInput);
+
+            // try {
+            //     // Send POST request
+            //     const response = await fetch('/api/images/upload_image/', {
+            //         method: 'POST',
+            //         body: formData,
+            //     });
+
+            //     if (!response.ok) {
+            //         throw new Error(`Server error: ${response.status}`);
+            //     }
+
+            //     const result = await response.json();
+            //     alert('Image uploaded successfully!');
+            //     console.log('Response:', result);
+
+            //     // Hide modal after success
+            //     closeUploadImageModal()
+            // } catch (error) {
+            //     console.error('Error uploading image:', error);
+            //     alert('Failed to upload image. Please try again.');
+            //     closeUploadImageModal()
+            // }
+
+            if (!name || !fileInput) {
+                alert('Please provide a name and select a file.');
                 return;
             }
 
-            // Prepare the form data
             const formData = new FormData();
             formData.append('name', name);
-            formData.append('file', fileInput.files[0]);
+            formData.append('file', fileInput);
 
-            try {
-                // Send POST request
-                const response = await fetch('http://example.com/api', {
-                    method: 'POST',
-                    body: formData,
-                });
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', '/api/images/upload_image/', true);
 
-                if (!response.ok) {
-                    throw new Error(`Server error: ${response.status}`);
+            // Update progress bar
+            xhr.upload.onprogress = function (event) {
+                if (event.lengthComputable) {
+                    const percentComplete = (event.loaded / event.total) * 100;
+                    progressBar.value = percentComplete;
                 }
+            };
 
-                const result = await response.json();
-                alert('Image uploaded successfully!');
-                console.log('Response:', result);
+            // Handle success and error
+            xhr.onload = function () {
+                if (xhr.status === 200 || xhr.status === 201) {
+                    alert('Upload successful!');
+                    progressBar.value = 0; // Reset progress bar
+                } else {
+                    alert('Upload failed. Please try again.');
+                }
+            };
 
-                // Hide modal after success
-                closeUploadImageModal()
-            } catch (error) {
-                console.error('Error uploading image:', error);
-                alert('Failed to upload image. Please try again.');
-                closeUploadImageModal()
-            }
+            xhr.onerror = function () {
+                alert('An error occurred during the upload.');
+            };
+
+            xhr.send(formData);
         };
 
         // Search function
