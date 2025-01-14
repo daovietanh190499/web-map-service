@@ -694,7 +694,10 @@
             // Update progress bar
             xhr.upload.onprogress = function (event) {
                 if (event.lengthComputable) {
-                    const percentComplete = (event.loaded / event.total) * 100;
+                    let percentComplete = (event.loaded / event.total) * 100;
+                    if (percentComplete >= 98) {
+                        percentComplete = 98
+                    }
                     progressBar.value = percentComplete;
                 }
             };
@@ -702,8 +705,8 @@
             // Handle success and error
             xhr.onload = function () {
                 if (xhr.status === 200 || xhr.status === 201) {
+                    progressBar.value = 100; // Reset progress bar
                     alert('Upload successful!');
-                    progressBar.value = 0; // Reset progress bar
                 } else {
                     alert('Upload failed. Please try again.');
                 }
@@ -874,7 +877,7 @@
 
         closeSearch.addEventListener('click', function () {
             searchSidebar.classList.add('hidden');
-            document.getElementById('search-vector').classList.remove('hidden');
+            // document.getElementById('search-vector').classList.remove('hidden');
             document.getElementById('app-container').classList.remove('with-sidebar');
             drawnItems.clearLayers();
         });
