@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -16,17 +17,21 @@
                 opacity: 0;
                 transform: translateX(-20px);
             }
+
             to {
                 opacity: 1;
                 transform: translateX(0);
             }
         }
+
         .fade-in-left {
             animation: fadeInLeft 0.3s ease-out;
         }
+
         #sidebar {
             transition: transform 0.3s ease-in-out;
         }
+
         #sidebar.hidden {
             transform: translateX(-100%);
         }
@@ -36,35 +41,45 @@
             height: 100vh;
             width: 360px;
         }
+
         #search-sidebar.hidden {
             transform: translateX(-100%);
         }
+
         .filter-section {
             border-bottom: 1px solid #e2e8f0;
         }
+
         .filter-content {
             max-height: 0;
             overflow: hidden;
             transition: max-height 0.3s ease-out;
             padding: 0;
         }
+
         .filter-content.expanded {
-            max-height: 500px; /* Adjust based on content */
+            max-height: 500px;
+            /* Adjust based on content */
             padding: 1rem;
         }
+
         .filter-header {
             cursor: pointer;
             padding: 1rem;
             user-select: none;
         }
+
         .filter-header i {
             transition: transform 0.3s ease;
         }
+
         .filter-header.expanded i {
             transform: rotate(180deg);
         }
+
         .search-results-container {
-            height: calc(100vh - 120px); /* Adjust based on header height */
+            height: calc(100vh - 120px);
+            /* Adjust based on header height */
             overflow-y: auto;
         }
 
@@ -81,20 +96,22 @@
         }
 
         #app-container.with-sidebar #map-container {
-            width: calc(100% - 33.333%); /* Adjust for the sidebar width */
+            width: calc(100% - 33.333%);
+            /* Adjust for the sidebar width */
         }
 
         .upload_file_icon {
             background-repeat: no-repeat;
             background-image: url("static/css/images/folder.svg");
             background-position: center center;
-            background-color:transparent;
+            background-color: transparent;
             background-size: 75% 75%;
             width: 100%;
             height: 100%;
         }
     </style>
 </head>
+
 <body class="h-screen overflow-hidden">
     <div id="app-container" class="flex h-full">
         <!-- Sidebar -->
@@ -130,7 +147,8 @@
                                 <div class="grid grid-cols-2 gap-2">
                                     <div>
                                         <label class="block text-sm">Start Date</label>
-                                        <input type="datetime-local" name="start_date" class="w-full border rounded p-1">
+                                        <input type="datetime-local" name="start_date"
+                                            class="w-full border rounded p-1">
                                     </div>
                                     <div>
                                         <label class="block text-sm">End Date</label>
@@ -139,7 +157,7 @@
                                 </div>
                             </div>
                         </div>
-    
+
                         <div class="filter-section">
                             <div class="filter-header" data-target="resolution-filter">
                                 <div class="flex justify-between items-center">
@@ -151,16 +169,18 @@
                                 <div class="grid grid-cols-2 gap-2">
                                     <div>
                                         <label class="block text-sm">Min</label>
-                                        <input type="number" step="0.1" name="resolution_min" class="w-full border rounded p-1">
+                                        <input type="number" step="0.1" name="resolution_min"
+                                            class="w-full border rounded p-1">
                                     </div>
                                     <div>
                                         <label class="block text-sm">Max</label>
-                                        <input type="number" step="0.1" name="resolution_max" class="w-full border rounded p-1">
+                                        <input type="number" step="0.1" name="resolution_max"
+                                            class="w-full border rounded p-1">
                                     </div>
                                 </div>
                             </div>
                         </div>
-    
+
                         <div class="filter-section">
                             <div class="filter-header" data-target="metadata-filter">
                                 <div class="flex justify-between items-center">
@@ -185,9 +205,10 @@
                                 </div>
                             </div>
                         </div>
-    
+
                         <div class="p-4">
-                            <button type="submit" class="w-full bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600">
+                            <button type="submit"
+                                class="w-full bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600">
                                 Apply Filters
                             </button>
                         </div>
@@ -209,24 +230,99 @@
 
     <div id="search-vector" class="absolute top-4 left-4 z-50 bg-white bg-opacity-90 p-3 rounded-lg shadow-md">
         <form id="map-search-form" class="flex items-center gap-2">
-            <input
-                type="text"
-                id="search-input"
-                placeholder="Search vectors..."
-                class="w-64 px-2 py-1 text-sm border rounded-lg focus:outline-none focus:ring focus:border-blue-300"
-            />
-            <button
-                type="submit"
-                class="px-3 py-1 text-white bg-blue-500 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring"
-            >
+            <input type="text" id="search-input" placeholder="Search vectors..."
+                class="w-64 px-2 py-1 text-sm border rounded-lg focus:outline-none focus:ring focus:border-blue-300" />
+            <button type="submit"
+                class="px-3 py-1 text-white bg-blue-500 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring">
                 Search
             </button>
         </form>
     </div>
-    
+
+    <div id="style-modal-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden"></div>
+    <div id="style-modal"
+        class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-xl p-6 z-50 w-full max-w-md hidden">
+        <h3 class="text-xl font-semibold mb-4 text-gray-800">Change Style</h3>
+
+        <div class="space-y-4">
+            <div class="flex items-center justify-between">
+                <label for="modal-color" class="text-sm font-medium text-gray-700">Fill Color:</label>
+                <input type="color" id="modal-color" value="#3388ff" class="h-8 w-16 rounded border border-gray-300">
+            </div>
+
+            <div class="flex items-center justify-between">
+                <label for="modal-border-color" class="text-sm font-medium text-gray-700">Border Color:</label>
+                <input type="color" id="modal-border-color" value="#000000"
+                    class="h-8 w-16 rounded border border-gray-300">
+            </div>
+
+            <div class="flex items-center justify-between">
+                <label for="modal-border-weight" class="text-sm font-medium text-gray-700">Border Weight:</label>
+                <select id="modal-border-weight"
+                    class="block w-32 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                    <option value="1">1px</option>
+                    <option value="2">2px</option>
+                    <option value="3">3px</option>
+                    <option value="4">4px</option>
+                    <option value="8">8px</option>
+                    <option value="12">12px</option>
+                </select>
+            </div>
+
+            <div class="flex items-center justify-between">
+                <label for="modal-border-style" class="text-sm font-medium text-gray-700">Border Style:</label>
+                <select id="modal-border-style"
+                    class="block w-32 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                    <option value="solid">Solid</option>
+                    <option value="5,5">Dashed 5, 5</option>
+                    <option value="5,10">Dashed 5, 10</option>
+                    <option value="10,5">Dashed 10, 5</option>
+                    <option value="5,1">Dashed 5, 1</option>
+                    <option value="1,5">Dashed 1, 5</option>
+                    <option value="0,9">Dashed 0, 9</option>
+                    <option value="15,10,5">Dashed 15, 10, 5</option>
+                    <option value="15,10,5,10">Dashed 15, 10, 5, 10</option>
+                    <option value="15,10,5,10,15">Dashed 15, 10, 5, 10, 15</option>
+                    <option value="5,5,1,5">Dashed 5, 5, 1, 5 </option>
+                </select>
+            </div>
+
+            <div class="flex items-center justify-between">
+                <label for="modal-opacity" class="text-sm font-medium text-gray-700">Opacity:</label>
+                <input type="range" id="modal-opacity" min=0 max=1 step="0.1" value=1
+                    class="w-32 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-500">
+                <span id="opacity-value" class="ml-2 text-sm text-gray-700">1.0</span>
+            </div>
+        </div>
+
+        <div class="mt-6 flex justify-end space-x-3">
+            <button id="cancel-style"
+                class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">
+                Cancel
+            </button>
+            <button id="apply-style"
+                class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                Apply
+            </button>
+        </div>
+    </div>
+
+    <div class="mt-6 flex justify-end space-x-3">
+        <button id="cancel-style"
+            class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">
+            Cancel
+        </button>
+        <button id="apply-style"
+            class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+            Apply
+        </button>
+    </div>
+    </div>
+
     <script src="static/js/leaflet.js"></script>
     <script src="static/js/leaflet.draw.js"></script>
-    <link rel="stylesheet" href="static/css/leaflet.draw.css"></script>
+    <link rel="stylesheet" href="static/css/leaflet.draw.css">
+    </script>
     <script src="static/js/leaflet-layer-tree-control.js"></script>
     <script src="static/js/leaflet-layer-tree-control-wfs-zoom.js"></script>
     <script src="static/js/easy-button.js"></script>
@@ -289,13 +385,13 @@
 
         L.control.betterscale().addTo(map);
 
-        L.easyButton('fa-columns', function(btn, map){
+        L.easyButton('fa-columns', function (btn, map) {
             window.location.replace('compare')
-        }, {position: "bottomleft"}).addTo(map);
+        }, { position: "bottomleft" }).addTo(map);
 
-        L.easyButton('fa-paint-brush', function(btn, map){
+        L.easyButton('fa-paint-brush', function (btn, map) {
             window.location.replace('draw')
-        }, {position: "bottomleft"}).addTo(map);
+        }, { position: "bottomleft" }).addTo(map);
 
         L.Control.FileLayerLoad.LABEL = '<div class="upload_file_icon"></div>';
 
@@ -335,6 +431,10 @@
             ]
         }).addTo(map);
 
+        L.easyButton('fa-file-image', function (btn, map) {
+
+        }, { position: "bottomleft" }).addTo(map);
+
         L.Measure = {
             linearMeasurement: "Distance measurement",
             areaMeasurement: "Area measurement",
@@ -361,13 +461,13 @@
             let list_layer = getListLayer()
 
             var layerBuilders = {
-                OSM: function(layerSettings) {
+                OSM: function (layerSettings) {
                     return L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
                         subdomains: ['a', 'b', 'c']
                     });
                 },
-                SATELLITE: function(layerSettings) {
+                SATELLITE: function (layerSettings) {
                     return L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
                         attribution: 'Tiles © Esri'
                     });
@@ -375,7 +475,7 @@
             }
 
             for (layer in list_layer) {
-                layerBuilders[layer] = function(layerSettings) { 
+                layerBuilders[layer] = function (layerSettings) {
                     return L.tileLayer(`api/images/${layer}/jp2/tiles/{z}/{x}/{y}.png/`, {
                         maxZoom: 20,
                         attribution: `${layer} JP2 Layer`
@@ -453,7 +553,7 @@
                 serviceType: "SATELLITE",
                 params: {}
             }, baseLayerId);
-            
+
             for (layer in list_layer) {
                 theTreeControl.addLayerDynamically({
                     code: layer,
@@ -507,18 +607,18 @@
 
         map.addControl(drawControl);
 
-        map.on('draw:created', function(e) {
+        map.on('draw:created', function (e) {
             drawnItems.clearLayers();
             let layer = e.layer;
             drawnItems.addLayer(layer);
-            
+
             // Show search sidebar
             document.getElementById('search-sidebar').classList.remove('hidden');
 
             document.getElementById('search-vector').classList.add('hidden');
 
             document.getElementById('app-container').classList.add('with-sidebar');
-            
+
             // Perform initial search with drawn geometry
             const bounds = layer.getBounds();
             const searchArea = {
@@ -527,7 +627,7 @@
                 east: bounds.getEast(),
                 west: bounds.getWest()
             };
-            
+
             performSearch({
                 bbox: searchArea,
                 datetime: `${new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()}/${new Date().toISOString()}`
@@ -574,7 +674,7 @@
                 });
 
                 if (!response.ok) throw new Error('Search request failed');
-                
+
                 const results = await response.json();
                 displaySearchResults(results);
             } catch (error) {
@@ -588,12 +688,12 @@
         }
 
         // Handle form submission for filtered search
-        document.getElementById('search-form').addEventListener('submit', function(e) {
+        document.getElementById('search-form').addEventListener('submit', function (e) {
             e.preventDefault();
-            
+
             const formData = new FormData(e.target);
             const bounds = drawnItems.getBounds();
-            
+
             const searchParams = {
                 bbox: {
                     north: bounds.getNorth(),
@@ -613,21 +713,21 @@
 
         const toggleFiltersBtn = document.getElementById('toggle-filters');
         const filtersContainer = document.getElementById('filters-container');
-        
-        toggleFiltersBtn.addEventListener('click', function() {
+
+        toggleFiltersBtn.addEventListener('click', function () {
             filtersContainer.classList.toggle('hidden');
         });
 
         // Add collapsible functionality to filter sections
         document.querySelectorAll('.filter-header').forEach(header => {
-            header.addEventListener('click', function() {
+            header.addEventListener('click', function () {
                 const targetId = this.getAttribute('data-target');
                 const content = document.getElementById(targetId);
-                
+
                 // Toggle expanded class
                 content.classList.toggle('expanded');
                 this.classList.toggle('expanded');
-                
+
                 // Close other sections
                 document.querySelectorAll('.filter-content').forEach(el => {
                     if (el.id !== targetId) {
@@ -637,7 +737,7 @@
                 });
             });
         });
-        
+
         // Modified displaySearchResults function to include more details
         function displaySearchResults(results) {
             list_layer = getListLayer()
@@ -680,12 +780,12 @@
                         </div>
                     </div>
                 `;
-                
+
                 // result.addEventListener('click', () => {
                 //     const bounds = L.geoJSON(feature.geometry).getBounds();
                 //     map.fitBounds(bounds);
                 // });
-                
+
                 searchResults.appendChild(result);
             });
         }
@@ -698,7 +798,7 @@
         });
 
         // Search form submission
-        searchForm.addEventListener('submit', async function(e) {
+        searchForm.addEventListener('submit', async function (e) {
             e.preventDefault();
             const formData = new FormData(searchForm);
             const searchData = {
@@ -728,4 +828,5 @@
         });
     </script>
 </body>
+
 </html>
