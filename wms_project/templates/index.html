@@ -9,6 +9,7 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="static/css/leaflet-layer-tree-control.css" />
     <script src="static/js/tailwind.js"></script>
+    <link rel="stylesheet" href="static/css/easy-button.css">
     <style>
         @keyframes fadeInLeft {
             from {
@@ -81,6 +82,16 @@
 
         #app-container.with-sidebar #map-container {
             width: calc(100% - 33.333%); /* Adjust for the sidebar width */
+        }
+
+        .upload_file_icon {
+            background-repeat: no-repeat;
+            background-image: url("static/css/images/folder.svg");
+            background-position: center center;
+            background-color:transparent;
+            background-size: 75% 75%;
+            width: 100%;
+            height: 100%;
         }
     </style>
 </head>
@@ -218,6 +229,16 @@
     <link rel="stylesheet" href="static/css/leaflet.draw.css"></script>
     <script src="static/js/leaflet-layer-tree-control.js"></script>
     <script src="static/js/leaflet-layer-tree-control-wfs-zoom.js"></script>
+    <script src="static/js/easy-button.js"></script>
+    <script src="static/js/jquery.js"></script>
+    <script src="static/js/togeojson.js"></script>
+    <script src="static/js/leaflet.filelayer.js"></script>
+    <link rel="stylesheet" type="text/css" href="static/css/leaflet.measure.css" />
+    <script type="text/javascript" src="static/js/leaflet.measure.js"></script>
+    <link rel="stylesheet" type="text/css" href="static/css/leaflet.mouse-position.css" />
+    <script type="text/javascript" src="static/js/leaflet.mouse-position.js"></script>
+    <link rel="stylesheet" type="text/css" href="static/css/leaflet.scalebar.css" />
+    <script type="text/javascript" src="static/js/leaflet.scalebar.js"></script>
     <script>
         function getListLayer() {
             let list_layer = JSON.parse(window.localStorage.getItem("layers"));
@@ -264,6 +285,70 @@
             position: 'bottomright'
         }).addTo(map);
 
+        L.control.mousePosition().addTo(map);
+
+        L.control.betterscale().addTo(map);
+
+        L.easyButton('fa-columns', function(btn, map){
+            window.location.replace('compare')
+        }, {position: "bottomleft"}).addTo(map);
+
+        L.easyButton('fa-paint-brush', function(btn, map){
+            window.location.replace('draw')
+        }, {position: "bottomleft"}).addTo(map);
+
+        L.Control.FileLayerLoad.LABEL = '<div class="upload_file_icon"></div>';
+
+        L.Control.fileLayerLoad({
+            // Allows you to use a customized version of L.geoJson.
+            // For example if you are using the Proj4Leaflet leaflet plugin,
+            // you can pass L.Proj.geoJson and load the files into the
+            // L.Proj.GeoJson instead of the L.geoJson.
+            position: 'bottomleft',
+            layer: L.geoJson,
+            // See http://leafletjs.com/reference.html#geojson-options
+            layerOptions: {
+                style: {
+                    color: 'red',
+                    opacity: 1.0,
+                    fillOpacity: 1.0,
+                    weight: 2,
+                    clickable: true
+                },
+                // pointToLayer: function (data, latlng) {
+                //     return L.circleMarker(
+                //         latlng,
+                //         { style: style }
+                //     );
+                // }
+            },
+            // Add to map after loading (default: true) ?
+            addToMap: true,
+            // File size limit in kb (default: 1024) ?
+            fileSizeLimit: 1024,
+            // Restrict accepted file formats (default: .geojson, .json, .kml, and .gpx) ?
+            formats: [
+                '.geojson',
+                '.json',
+                '.gpx',
+                '.kml'
+            ]
+        }).addTo(map);
+
+        L.Measure = {
+            linearMeasurement: "Distance measurement",
+            areaMeasurement: "Area measurement",
+            start: "Start",
+            meter: "m",
+            kilometer: "km",
+            squareMeter: "m²",
+            squareKilometers: "km²",
+        };
+
+        var measure = L.control.measure({
+            position: "bottomleft"
+        }).addTo(map);
+
         var theTreeControl
 
         updateLayerTree()
@@ -280,6 +365,11 @@
                     return L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
                         subdomains: ['a', 'b', 'c']
+                    });
+                },
+                SATELLITE: function(layerSettings) {
+                    return L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                        attribution: 'Tiles © Esri'
                     });
                 }
             }
@@ -351,13 +441,25 @@
                 serviceType: "OSM",
                 params: {}
             }, baseLayerId);
+
+            var satelliteLayerId = theTreeControl.addLayerDynamically({
+                code: "satellite",
+                name: "Satellite",
+                active: true,
+                selectedByDefault: false,
+                openByDefault: true,
+                childLayers: [],
+                selectType: "NONE",
+                serviceType: "SATELLITE",
+                params: {}
+            }, baseLayerId);
             
             for (layer in list_layer) {
                 theTreeControl.addLayerDynamically({
                     code: layer,
-                    name: list_layer[layer]['name'],
+                    name: list_layer[layer]['name'] ? list_layer[layer]['name'] : layer,
                     active: true,
-                    selectedByDefault: true,
+                    selectedByDefault: false,
                     openByDefault: true,
                     childLayers: [],
                     selectType: "NONE",
@@ -371,7 +473,7 @@
         map.addLayer(drawnItems);
 
         var drawControl = new L.Control.Draw({
-            position: 'bottomright',
+            position: 'bottomleft',
             draw: {
                 polygon: {
                     allowIntersection: false,

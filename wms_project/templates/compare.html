@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Leaflet Split Map</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="static/css/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="static/css/leaflet.css" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="static/css/leaflet-layer-tree-control.css" />
+    <script src="static/js/tailwind.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet-easybutton@2/src/easy-button.css">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+        }
+        #container {
+            position: relative;
+            width: 100%;
+            height: 100vh;
+            overflow: hidden;
+        }
+        #map1, #map2 {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+        .divider {
+            position: absolute;
+            width: 4px;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.7);
+            cursor: col-resize;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+        }
+        .divider::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 32px;
+            height: 32px;
+            background: white;
+            border-radius: 50%;
+            box-shadow: 0 0 5px rgba(0,0,0,0.3);
+        }
+        .divider::before {
+            content: '↔';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1;
+            font-size: 20px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <div id="map1"></div>
+        <div class="divider"></div>
+        <div id="map2"></div>
+    </div>
+
+    <script src="static/js/leaflet.js"></script>
+    <script src="static/js/leaflet.draw.js"></script>
+    <link rel="stylesheet" href="static/css/leaflet.draw.css"></script>
+    <script src="static/js/leaflet-layer-tree-control.js"></script>
+    <script src="static/js/leaflet-layer-tree-control-wfs-zoom.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/leaflet-easybutton@2/src/easy-button.js"></script>
+    <script>
+        function getListLayer() {
+            let list_layer = JSON.parse(window.localStorage.getItem("layers"));
+            if (!list_layer) {
+                list_layer = {}
+            }
+            return list_layer
+        }
+
+        // Initialize maps
+        const map1 = L.map('map1', { zoomControl: false }).setView([21.148023790045897, 105.62239681777376], 13);
+        const map2 = L.map('map2', { zoomControl: false }).setView([21.148023790045897, 105.62239681777376], 13);
+
+        L.control.zoom({
+            position: 'bottomleft'
+        }).addTo(map1);
+
+        L.control.zoom({
+            position: 'bottomright'
+        }).addTo(map2);
+
+        L.easyButton('fa-home', function(btn, map){
+            window.location.replace('/')
+        }, {position: "bottomright"}).addTo(map2);
+
+        var theLeftTreeControl
+
+        updateLeftLayerTree()
+
+        function updateLeftLayerTree() {
+            if (theLeftTreeControl) {
+                theLeftTreeControl.remove(map);
+            }
+
+            let list_layer = getListLayer()
+
+            var layerBuilders = {
+                OSM: function(layerSettings) {
+                    return L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+                        subdomains: ['a', 'b', 'c']
+                    });
+                },
+                SATELLITE: function(layerSettings) {
+                    return L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                        attribution: 'Tiles © Esri'
+                    });
+                }
+            }
+
+            for (layer in list_layer) {
+                layerBuilders[layer] = function(layerSettings) { 
+                    return L.tileLayer(`api/images/${layer}/jp2/tiles/{z}/{x}/{y}.png/`, {
+                        maxZoom: 20,
+                        attribution: `${layer} JP2 Layer`
+                    });
+                }
+            }
+
+            theLeftTreeControl = new L.Control.LayerTreeControl({
+                // layerTree: rootLayerSettings,
+                position: 'topleft',
+                openByDefault: true,
+                layerBuilders: layerBuilders,
+                featureBuilders: {
+                    WFS: {
+                        zoom: L.Control.LayerTreeControl.WFSZoomFeature
+                    }
+                }
+            }).addTo(map1);
+
+            var rootLayerId = theLeftTreeControl.addLayerDynamically({
+                code: "root",
+                name: "All the Layers",
+                active: true,
+                selectedByDefault: false,
+                openByDefault: true,
+                childLayers: [],
+                selectType: "NONE",
+                serviceType: null,
+                params: {}
+            });
+
+            var baseLayerId = theLeftTreeControl.addLayerDynamically({
+                code: "base",
+                name: "Base layers",
+                active: true,
+                selectedByDefault: false,
+                openByDefault: true,
+                childLayers: [],
+                selectType: "SINGLE",
+                serviceType: null,
+                params: {}
+            }, rootLayerId);
+
+            var overlaysLayerId = theLeftTreeControl.addLayerDynamically({
+                code: "overlays",
+                name: "Overlays",
+                active: true,
+                selectedByDefault: false,
+                openByDefault: true,
+                childLayers: [],
+                selectType: "MULTIPLE",
+                serviceType: null,
+                params: {}
+            }, rootLayerId);
+
+            var osmLayerId = theLeftTreeControl.addLayerDynamically({
+                code: "osm",
+                name: "OpenStreetMap",
+                active: true,
+                selectedByDefault: true,
+                openByDefault: true,
+                childLayers: [],
+                selectType: "NONE",
+                serviceType: "OSM",
+                params: {}
+            }, baseLayerId);
+
+            var satelliteLayerId = theLeftTreeControl.addLayerDynamically({
+                code: "satellite",
+                name: "Satellite",
+                active: true,
+                selectedByDefault: false,
+                openByDefault: true,
+                childLayers: [],
+                selectType: "NONE",
+                serviceType: "SATELLITE",
+                params: {}
+            }, baseLayerId);
+            
+            for (layer in list_layer) {
+                theLeftTreeControl.addLayerDynamically({
+                    code: layer,
+                    name: list_layer[layer]['name'] ? list_layer[layer]['name'] : layer,
+                    active: true,
+                    selectedByDefault: false,
+                    openByDefault: false,
+                    childLayers: [],
+                    selectType: "NONE",
+                    serviceType: layer,
+                    params: {}
+                }, overlaysLayerId);
+            }
+        }
+
+        var theRightTreeControl
+
+        updateRightLayerTree()
+
+        function updateRightLayerTree() {
+            if (theRightTreeControl) {
+                theRightTreeControl.remove(map);
+            }
+
+            let list_layer = getListLayer()
+
+            var layerBuilders = {
+                OSM: function(layerSettings) {
+                    return L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+                        subdomains: ['a', 'b', 'c']
+                    });
+                }
+            }
+
+            for (layer in list_layer) {
+                layerBuilders[layer] = function(layerSettings) { 
+                    return L.tileLayer(`api/images/${layer}/jp2/tiles/{z}/{x}/{y}.png/`, {
+                        maxZoom: 20,
+                        attribution: `${layer} JP2 Layer`
+                    });
+                }
+            }
+
+            theRightTreeControl = new L.Control.LayerTreeControl({
+                // layerTree: rootLayerSettings,
+                openByDefault: true,
+                layerBuilders: layerBuilders,
+                featureBuilders: {
+                    WFS: {
+                        zoom: L.Control.LayerTreeControl.WFSZoomFeature
+                    }
+                }
+            }).addTo(map2);
+
+            var rootLayerId = theRightTreeControl.addLayerDynamically({
+                code: "root",
+                name: "All the Layers",
+                active: true,
+                selectedByDefault: false,
+                openByDefault: true,
+                childLayers: [],
+                selectType: "NONE",
+                serviceType: null,
+                params: {}
+            });
+
+            var baseLayerId = theRightTreeControl.addLayerDynamically({
+                code: "base",
+                name: "Base layers",
+                active: true,
+                selectedByDefault: false,
+                openByDefault: true,
+                childLayers: [],
+                selectType: "SINGLE",
+                serviceType: null,
+                params: {}
+            }, rootLayerId);
+
+            var overlaysLayerId = theRightTreeControl.addLayerDynamically({
+                code: "overlays",
+                name: "Overlays",
+                active: true,
+                selectedByDefault: false,
+                openByDefault: true,
+                childLayers: [],
+                selectType: "MULTIPLE",
+                serviceType: null,
+                params: {}
+            }, rootLayerId);
+
+            var osmLayerId = theRightTreeControl.addLayerDynamically({
+                code: "osm",
+                name: "OpenStreetMap",
+                active: true,
+                selectedByDefault: true,
+                openByDefault: true,
+                childLayers: [],
+                selectType: "NONE",
+                serviceType: "OSM",
+                params: {}
+            }, baseLayerId);
+            
+            for (layer in list_layer) {
+                theRightTreeControl.addLayerDynamically({
+                    code: layer,
+                    name: list_layer[layer]['name'] ? list_layer[layer]['name'] : layer,
+                    active: true,
+                    selectedByDefault: false,
+                    openByDefault: false,
+                    childLayers: [],
+                    selectType: "NONE",
+                    serviceType: layer,
+                    params: {}
+                }, overlaysLayerId);
+            }
+        }
+
+        // Sync maps for continuous view
+        function syncMaps(sourceMap, targetMap) {
+            sourceMap.on('move', function() {
+                targetMap.setView(sourceMap.getCenter(), sourceMap.getZoom(), {
+                    animate: false
+                });
+            });
+        }
+
+        syncMaps(map1, map2);
+        syncMaps(map2, map1);
+
+        // Resizable divider functionality
+        const container = document.getElementById('container');
+        const divider = document.querySelector('.divider');
+        const map1Div = document.getElementById('map1');
+        const map2Div = document.getElementById('map2');
+
+        let isDragging = false;
+
+        divider.addEventListener('mousedown', function(e) {
+            isDragging = true;
+            e.preventDefault();
+        });
+
+        document.addEventListener('mousemove', function(e) {
+            if (!isDragging) return;
+
+            const containerRect = container.getBoundingClientRect();
+            const x = e.clientX - containerRect.left;
+            const containerWidth = containerRect.width;
+
+            // Calculate percentages
+            const leftPercentage = (x / containerWidth) * 100;
+
+            // Limit the minimum size of each map to 20%
+            if (leftPercentage >= 20 && leftPercentage <= 80) {
+                divider.style.left = leftPercentage + '%';
+
+                // Adjust map positions using clip-path
+                map1Div.style.clipPath = `inset(0 ${100 - leftPercentage}% 0 0)`;
+                map2Div.style.clipPath = `inset(0 0 0 ${leftPercentage}%)`;
+
+                map1.invalidateSize();
+                map2.invalidateSize();
+            }
+        });
+
+        function init() {
+
+          const containerRect = container.getBoundingClientRect();
+          const x = e.clientX - containerRect.left;
+          const containerWidth = containerRect.width;
+
+          // Calculate percentages
+          const leftPercentage = (x / containerWidth) * 100;
+
+          // Limit the minimum size of each map to 20%
+          if (leftPercentage >= 20 && leftPercentage <= 80) {
+              divider.style.left = leftPercentage + '%';
+
+              // Adjust map positions using clip-path
+              map1Div.style.clipPath = `inset(0 ${100 - leftPercentage}% 0 0)`;
+              map2Div.style.clipPath = `inset(0 0 0 ${leftPercentage}%)`;
+
+              map1.invalidateSize();
+              map2.invalidateSize();
+          }
+        }
+
+        // init()
+
+        document.addEventListener('mouseup', function() {
+            isDragging = false;
+        });
+
+        // Handle window resize
+        window.addEventListener('resize', function() {
+            map1.invalidateSize();
+            map2.invalidateSize();
+        });
+    </script>
+</body>
+</html>

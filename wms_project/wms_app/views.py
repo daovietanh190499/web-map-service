@@ -25,8 +25,8 @@ def index(request):
 def draw_map(request):
     return render(request, 'draw.html')
 
-def test_map(request):
-    return render(request, 'test.html')
+def compare_map(request):
+    return render(request, 'compare.html')
 
 class ImageViewSet(viewsets.ModelViewSet):
     queryset = Image.objects.all()
