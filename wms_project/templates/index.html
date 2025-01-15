@@ -467,7 +467,7 @@
                 }
             }
 
-            for (layer in list_layer) {
+            for (let layer in list_layer) {
                 layerBuilders[layer] = function (layerSettings) {
                     return L.tileLayer(`api/images/${layer}/jp2/tiles/{z}/{x}/{y}.png/`, {
                         maxZoom: 20,
@@ -547,7 +547,7 @@
                 params: {}
             }, baseLayerId);
 
-            for (layer in list_layer) {
+            for (let layer in list_layer) {
                 theTreeControl.addLayerDynamically({
                     code: layer,
                     name: list_layer[layer]['name'] ? list_layer[layer]['name'] : layer,
@@ -707,13 +707,16 @@
                 if (xhr.status === 200 || xhr.status === 201) {
                     progressBar.value = 100; // Reset progress bar
                     alert('Upload successful!');
+                    closeUploadImageModal();
                 } else {
                     alert('Upload failed. Please try again.');
+                    closeUploadImageModal();
                 }
             };
 
             xhr.onerror = function () {
                 alert('An error occurred during the upload.');
+                closeUploadImageModal();
             };
 
             xhr.send(formData);
