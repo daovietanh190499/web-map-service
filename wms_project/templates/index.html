@@ -864,7 +864,7 @@
                             </div>
                         </div>
                         <div class="flex-auto w-1/5">
-                            <i id="${feature.id}" class="fas fa-folder-${(!(feature.id in list_layer)) ? 'plus' : 'minus'} w-8 h-8 text-xl cursor-pointer" onclick="changeMenu('${feature.id}', '${feature.name}')"></i>
+                            <i id="${feature.id}" class="fas fa-folder-${(!(feature.id in list_layer)) ? 'plus' : 'minus'} w-8 h-8 text-xl cursor-pointer" onclick="changeMenu('${feature.id}', '${feature.properties.name}')"></i>
                         </div>
                     </div>
                 `;
