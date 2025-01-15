@@ -125,7 +125,7 @@
                 }
             }
 
-            for (layer in list_layer) {
+            for (let layer in list_layer) {
                 layerBuilders[layer] = function(layerSettings) { 
                     return L.tileLayer(`api/images/${layer}/jp2/tiles/{z}/{x}/{y}.png/`, {
                         maxZoom: 20,
@@ -206,7 +206,7 @@
                 params: {}
             }, baseLayerId);
             
-            for (layer in list_layer) {
+            for (let layer in list_layer) {
                 theLeftTreeControl.addLayerDynamically({
                     code: layer,
                     name: list_layer[layer]['name'] ? list_layer[layer]['name'] : layer,
@@ -238,10 +238,15 @@
                         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
                         subdomains: ['a', 'b', 'c']
                     });
+                },
+                SATELLITE: function(layerSettings) {
+                    return L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                        attribution: 'Tiles © Esri'
+                    });
                 }
             }
 
-            for (layer in list_layer) {
+            for (let layer in list_layer) {
                 layerBuilders[layer] = function(layerSettings) { 
                     return L.tileLayer(`api/images/${layer}/jp2/tiles/{z}/{x}/{y}.png/`, {
                         maxZoom: 20,
@@ -308,8 +313,20 @@
                 serviceType: "OSM",
                 params: {}
             }, baseLayerId);
+
+            var satelliteLayerId = theLeftTreeControl.addLayerDynamically({
+                code: "satellite",
+                name: "Satellite",
+                active: true,
+                selectedByDefault: false,
+                openByDefault: true,
+                childLayers: [],
+                selectType: "NONE",
+                serviceType: "SATELLITE",
+                params: {}
+            }, baseLayerId);
             
-            for (layer in list_layer) {
+            for (let layer in list_layer) {
                 theRightTreeControl.addLayerDynamically({
                     code: layer,
                     name: list_layer[layer]['name'] ? list_layer[layer]['name'] : layer,

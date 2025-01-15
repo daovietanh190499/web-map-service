@@ -546,7 +546,7 @@
                 }
             }
 
-            for (layer in list_layer) {
+            for (let layer in list_layer) {
                 layerBuilders[layer] = function (layerSettings) {
                     return L.tileLayer(`api/images/${layer}/jp2/tiles/{z}/{x}/{y}.png/`, {
                         maxZoom: 20,
@@ -626,7 +626,7 @@
                 params: {}
             }, baseLayerId);
 
-            for (layer in list_layer) {
+            for (let layer in list_layer) {
                 theTreeControl.addLayerDynamically({
                     code: layer,
                     name: list_layer[layer]['name'] ? list_layer[layer]['name'] : layer,
