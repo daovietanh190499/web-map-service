@@ -343,20 +343,20 @@
             window.localStorage.setItem("layers", JSON.stringify(list_layer))
         }
 
-        function addLayer(layer_id) {
+        function addLayer(layer_id, name) {
             let list_layer = getListLayer()
-            list_layer[layer_id] = []
+            list_layer[layer_id] = {"name":name, "children": []}
             window.localStorage.setItem("layers", JSON.stringify(list_layer))
         }
 
-        function changeMenu(layer_id) {
+        function changeMenu(layer_id, name) {
             let list_layer = getListLayer()
             if (layer_id in list_layer) {
                 removeLayer(layer_id)
                 document.getElementById(layer_id).classList.remove('fa-folder-minus')
                 document.getElementById(layer_id).classList.add('fa-folder-plus')
             } else {
-                addLayer(layer_id)
+                addLayer(layer_id, name)
                 document.getElementById(layer_id).classList.remove('fa-folder-plus')
                 document.getElementById(layer_id).classList.add('fa-folder-minus')
             }
@@ -864,7 +864,7 @@
                             </div>
                         </div>
                         <div class="flex-auto w-1/5">
-                            <i id="${feature.id}" class="fas fa-folder-${(!(feature.id in list_layer)) ? 'plus' : 'minus'} w-8 h-8 text-xl cursor-pointer" onclick="changeMenu('${feature.id}')"></i>
+                            <i id="${feature.id}" class="fas fa-folder-${(!(feature.id in list_layer)) ? 'plus' : 'minus'} w-8 h-8 text-xl cursor-pointer" onclick="changeMenu('${feature.id}', '${feature.name}')"></i>
                         </div>
                     </div>
                 `;

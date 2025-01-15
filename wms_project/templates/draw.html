@@ -424,34 +424,6 @@
             return list_layer
         }
 
-        function removeLayer(layer_id) {
-            let list_layer = getListLayer()
-            delete list_layer[layer_id]
-            window.localStorage.setItem("layers", JSON.stringify(list_layer))
-        }
-
-        function addLayer(layer_id) {
-            let list_layer = getListLayer()
-            list_layer[layer_id] = []
-            window.localStorage.setItem("layers", JSON.stringify(list_layer))
-        }
-
-        function changeMenu(layer_id) {
-            let list_layer = getListLayer()
-            if (layer_id in list_layer) {
-                removeLayer(layer_id)
-                document.getElementById(layer_id).classList.remove('fa-folder-minus')
-                document.getElementById(layer_id).classList.add('fa-folder-plus')
-            } else {
-                addLayer(layer_id)
-                document.getElementById(layer_id).classList.remove('fa-folder-plus')
-                document.getElementById(layer_id).classList.add('fa-folder-minus')
-            }
-            list_layer = getListLayer()
-            updateLayerTree()
-        }
-
-
         var map = L.map('map', {
             zoomControl: false,
             contextmenu: true
