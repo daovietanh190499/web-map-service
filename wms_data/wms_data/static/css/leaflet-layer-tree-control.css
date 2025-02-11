@@ -71,6 +71,10 @@
 	height: 36px;
 }
 
+.leaflet-left > .leaflet-layer-tree-control {
+	margin-left: 49px !important;
+}
+
 .leaflet-layer-tree-control-toggle-open .leaflet-layer-tree-control-toggle-link {
 	background-image: url('images/layers-2x.png');
 	background-repeat: no-repeat;
@@ -115,21 +119,21 @@
 }
 
 .leaflet-layer-tree-control-order-toggle-open .leaflet-layer-tree-control-order-toggle-link {
-	background-image: url('images/reorder.png');
+	background-image: url('images/sort.svg');
 	background-repeat: no-repeat;
 	background-position: center center;
 	background-color:transparent;
-	background-size: 75% 75%;
+	background-size: 55% 55%;
 	width: 100%;
 	height: 100%;
 }
 
 .leaflet-layer-tree-control-order-toggle-closed .leaflet-layer-tree-control-order-toggle-link {
-	background-image: url('images/reorder.png');
+	background-image: url('images/sort.svg');
 	background-repeat: no-repeat;
 	background-position: center center;
 	background-color:transparent;
-	background-size: 75% 75%;
+	background-size: 55% 55%;
 	width: 100%;
 	height: 100%;
 }

@@ -28,3 +28,4 @@ class PredictArea(models.Model):
     image = models.ForeignKey(to=Image, on_delete=models.SET_NULL, related_name="predictions", null=True)
     geom = models.GeometryField(srid=4326, null=True)
 
+

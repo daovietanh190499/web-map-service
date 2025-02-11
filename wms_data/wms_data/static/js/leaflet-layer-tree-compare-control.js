@@ -25,6 +25,9 @@ L.Control.LayerTreeControl = L.Control.extend({
 	},
 	onAdd: function (map) {
 		this._map = map;
+		// console.log(this.options.layerBuilders["OSM_left"]())
+		this._compare = L.control.compare([this.options.layerBuilders["OSM_left"]({})], [this.options.layerBuilders["OSM_right"]({})]).addTo(map)
+		
 		var className = this.options.className;
 		var container = this._container = L.DomUtil.create('div', className + " leaflet-control");
 		L.DomEvent.disableClickPropagation(container);
@@ -118,6 +121,10 @@ L.Control.LayerTreeControl = L.Control.extend({
 		var map = this._map;
 		var me = this;
 		switch (layerSettings.serviceType) {
+			// case "OSM":
+			// 	var layer = L.tileLayer(layerSettings.params.url, {});
+			// 	this._addLayerToMap(layer, layerId, layerSettings);
+			// 	break;
 			case "TILE":
 				var layer = L.tileLayer(layerSettings.params.url, {});
 				this._addLayerToMap(layer, layerId, layerSettings);
