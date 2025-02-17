@@ -13,7 +13,7 @@ class ImageUploadSerializer(serializers.Serializer):
 class PredictAreaSerializer(GeoFeatureModelSerializer):
     class Meta:
         model = PredictArea
-        fields = ('id', 'created_at', 'updated_at', 'image')  # Các trường bạn muốn hiển thị
+        fields = ('id', 'created_at', 'updated_at', 'image', 'geom')  # Các trường bạn muốn hiển thị
         geo_field = 'geom'  # Trường hình học
 
 class ImageSerializer(GeoFeatureModelSerializer):

@@ -2,7 +2,7 @@
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from django.contrib.gis.geos import GEOSGeometry
+from django.contrib.gis.geos import GEOSGeometry, GeometryCollection
 from django.contrib.gis.db.models.functions import Intersection
 from .models import Image, PredictArea
 from django.db.models import Q
@@ -29,6 +29,9 @@ def draw_map(request):
 
 def compare_map(request):
     return render(request, 'compare.html')
+
+def test_map(request):
+    return render(request, 'test.html')
 
 class ImageViewSet(viewsets.ModelViewSet):
     queryset = Image.objects.all()
@@ -290,12 +293,21 @@ class PredictAreaViewSet(viewsets.ModelViewSet):
     queryset = PredictArea.objects.all()
     serializer_class = PredictAreaSerializer
     
-    @action(detail=False, methods=['post'], url_name='save_area')
+    @action(detail=False, methods=['POST'], url_name='save-area')
     def save_area(self, request):
-        geom_data = request.POST.get('geom')
-        if geom_data:
-            geom = GEOSGeometry(geom_data)
-            PredictArea.objects.create(geom=geom)
+        features_data = request.data.pop('geom', [])
+        
+        geometries = [GEOSGeometry(json.dumps(feature)) for feature in features_data]
+        geometry_collection = GeometryCollection(geometries, srid=4326)
+        
+        data = dict(request.data)
+        data['geom'] = geometry_collection
+
+        serializer = PredictAreaSerializer(data=data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 # from django.db.models import F
 # from django.db.models.functions import AsEWKT
