@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 
@@ -5,13 +6,41 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Web Map Service</title>
-    <link href="static/css/tailwind.min.css" rel="stylesheet">
+
+    <link rel="stylesheet" href="static/css/tailwind.min.css">
     <link rel="stylesheet" href="static/css/leaflet.css" />
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
     <link rel="stylesheet" href="static/css/leaflet-layer-tree-control.css" />
-    <script src="static/js/tailwind.js"></script>
+    <link rel="stylesheet" href="static/css/leaflet.geoman.css">
+    <link rel="stylesheet" href="static/css/leaflet.draw.css">
+    <link rel="stylesheet" href="static/css/leaflet.mouse-position.css" />
+    <link rel="stylesheet" href="static/css/leaflet.measure.css" />
     <link rel="stylesheet" href="static/css/easy-button.css">
+    <link rel="stylesheet" href="static/js/Leaflet.DistortableImage/dist/vendor.css">
+    <link rel="stylesheet" href="static/js/Leaflet.DistortableImage/dist/leaflet.distortableimage.css">
     <!-- <link rel="stylesheet" href="static/css/leaflet.illustrate.css"> -->
+    <link rel="stylesheet" href="static/css/leaflet.scalebar.css" />
+
+    <script src="static/js/tailwind.js"></script>
+    <script src="static/js/leaflet.js"></script>
+    <script src="static/js/leaflet.draw.js"></script>
+    <script src="static/js/leaflet.geoman.js"></script>
+    <script src="static/js/leaflet.draggable.js"></script>
+    <script src="static/js/leaflet.editable.js"></script>
+    <script src="static/js/leaflet.textbox.js"></script>
+    <script src="static/js/leaflet-layer-tree-control.js"></script>
+    <script src="static/js/leaflet-layer-tree-control-wfs-zoom.js"></script>
+    <script src="static/js/easy-button.js"></script>
+    <script src="static/js/jquery.js"></script>
+    <script src="static/js/togeojson.js"></script>
+    <script src="static/js/leaflet.filelayer.js"></script>
+    <!-- <script src="static/js/leaflet.illustrate.js"></script> -->
+    <script src="static/js/Leaflet.DistortableImage/dist/vendor.js"></script>
+    <script src="static/js/Leaflet.DistortableImage/dist/leaflet.distortableimage.js"></script>
+    <script src="static/js/leaflet.measure.js"></script>
+    <script src="static/js/leaflet.mouse-position.js"></script>
+    <script src="static/js/leaflet.scalebar.js"></script>
+
     <style>
         @keyframes fadeInLeft {
             from {
@@ -181,27 +210,28 @@
 
                 <!-- Collapsible Filters -->
                 <div id="filters-container">
-                        <div class="filter-section">
-                            <div id="metadata-filter" class="filter-content expanded">
-                                <div class="space-y-2">
-                                    <div>
-                                        <label class="block text-sm">Name</label>
-                                        <input type="text" name="name" id="layer-name" class="w-full border rounded p-1">
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm">Image</label>
-                                        <input disabled type="text" value="test" name="image" id="layer-image" class="w-full border rounded p-1">
-                                    </div>
+                    <div class="filter-section">
+                        <div id="metadata-filter" class="filter-content expanded">
+                            <div class="space-y-2">
+                                <div>
+                                    <label class="block text-sm">Name</label>
+                                    <input type="text" name="name" id="layer-name" class="w-full border rounded p-1">
+                                </div>
+                                <div>
+                                    <label class="block text-sm">Image</label>
+                                    <input disabled type="text" value="test" name="image" id="layer-image"
+                                        class="w-full border rounded p-1">
                                 </div>
                             </div>
                         </div>
+                    </div>
 
-                        <div class="p-4">
-                            <button type="submit" id="submit-layer"
-                                class="w-full bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600">
-                               Submit
-                            </button>
-                        </div>
+                    <div class="p-4">
+                        <button type="submit" id="submit-layer"
+                            class="w-full bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600">
+                            Submit
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -333,23 +363,6 @@
         </div>
     </div>
 
-    <script src="static/js/leaflet.js"></script>
-    <script src="static/js/leaflet.draw.js"></script>
-    <link rel="stylesheet" href="static/css/leaflet.draw.css">
-    </script>
-    <script src="static/js/leaflet-layer-tree-control.js"></script>
-    <script src="static/js/leaflet-layer-tree-control-wfs-zoom.js"></script>
-    <script src="static/js/easy-button.js"></script>
-    <script src="static/js/jquery.js"></script>
-    <script src="static/js/togeojson.js"></script>
-    <script src="static/js/leaflet.filelayer.js"></script>
-    <script src="static/js/leaflet.illustrate.js"></script>
-    <link rel="stylesheet" type="text/css" href="static/css/leaflet.measure.css" />
-    <script type="text/javascript" src="static/js/leaflet.measure.js"></script>
-    <link rel="stylesheet" type="text/css" href="static/css/leaflet.mouse-position.css" />
-    <script type="text/javascript" src="static/js/leaflet.mouse-position.js"></script>
-    <link rel="stylesheet" type="text/css" href="static/css/leaflet.scalebar.css" />
-    <script type="text/javascript" src="static/js/leaflet.scalebar.js"></script>
     <script>
         function getListLayer() {
             let list_layer = JSON.parse(window.localStorage.getItem("layers"));
@@ -361,12 +374,18 @@
 
         var map = L.map('map', {
             zoomControl: false,
-            contextmenu: true
+            contextmenu: true,
+            editable: true,
+            pmIgnore: false
         }).setView([21.148023790045897, 105.62239681777376], 13);
 
         L.control.zoom({
             position: 'bottomright'
         }).addTo(map);
+
+        map.pm.addControls({  
+            position: 'topleft',
+        }); 
 
         L.control.mousePosition().addTo(map);
 
@@ -495,10 +514,10 @@
                 },
                 body: JSON.stringify(data)
             }).then(response => response.json())
-            .then(data => {
-                console.log("Saved:", data);
-            })
-            .catch(error => console.error("Error:", error));
+                .then(data => {
+                    console.log("Saved:", data);
+                })
+                .catch(error => console.error("Error:", error));
         });
 
         var theTreeControl
@@ -624,68 +643,33 @@
         var drawnItems = new L.FeatureGroup();
         map.addLayer(drawnItems);
 
-        var drawControl = new L.Control.Draw({
-            position: 'bottomleft',
-            draw: {
-                polygon: {
-                    allowIntersection: false,
-                    drawError: {
-                        color: '#e1e100',
-                        timeout: 1000
-                    },
-                    shapeOptions: {
-                        color: '#3388ff'
-                    },
-                    showArea: true
-                },
-                polyline: true,
-                circle: true,
-                rectangle: true,
-                circlemarker: true,
-                marker: true
-            },
-            edit: {
-                featureGroup: drawnItems,
-                remove: true
-            }
-        });
+        // var drawControl = new L.Control.Draw({
+        //     position: 'bottomleft',
+        //     draw: {
+        //         polygon: {
+        //             allowIntersection: false,
+        //             drawError: {
+        //                 color: '#e1e100',
+        //                 timeout: 1000
+        //             },
+        //             shapeOptions: {
+        //                 color: '#3388ff'
+        //             },
+        //             showArea: true
+        //         },
+        //         polyline: true,
+        //         circle: true,
+        //         rectangle: true,
+        //         circlemarker: true,
+        //         marker: true
+        //     },
+        //     edit: {
+        //         featureGroup: drawnItems,
+        //         remove: true
+        //     }
+        // });
 
-        const TextDrawHandler = L.Handler.extend({
-            addHooks: function () {
-                map.on('click', this._addText, this);
-            },
-            removeHooks: function () {
-                map.off('click', this._addText, this);
-            },
-            _addText: function (e) {
-                const text = prompt('Enter text:');
-                if (text) {
-                    const textLayer = L.marker(e.latlng, {
-                        icon: L.divIcon({
-                            className: 'custom-text-icon',
-                            html: `<div style="font-size: 16px; color: black;">${text}</div>`,
-                            iconSize: [0, 0],
-                        }),
-                    }).addTo(drawnItems);
-
-                    textLayer.on('contextmenu', () => openTextStyleModal(textLayer));
-                }
-            },
-        });
-
-        drawControl.options.draw.text = {
-            handler: TextDrawHandler,
-            title: 'Add Text',
-        };
-        map.addControl(drawControl);
-
-        var illustrateControl = new L.Illustrate.Control({
-            position: 'bottomleft',
-			edit: {
-				featureGroup: drawnItems
-			}
-		});
-		map.addControl(illustrateControl);
+        // map.addControl(drawControl);
 
         let selectedLayer = null;
 
@@ -795,9 +779,11 @@
 
         cancelTextStyleBtn.addEventListener('click', closeTextStyleModal);
 
-        // Add new layers
-        map.on(L.Draw.Event.CREATED, function (e) {
-            const layer = e.layer;
+        map.on('draw:created', function (evt) {
+            console.log(evt, evt.layer)
+            var type = evt.layerType,
+                layer = evt.layer;
+
             drawnItems.addLayer(layer);
         });
     </script>

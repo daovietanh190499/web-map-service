@@ -550,6 +550,7 @@ function LeafletLayerTreeLeafTraverser(thePluginArg, className, childrenVisibili
 		L.DomEvent.on(checkbox, "change", function (event) {
 			var elem = event.srcElement != undefined ? event.srcElement : this;
 			var sourceElementId = elem.id;
+			console.log(sourceElementId)
 			if (sourceElementId) {
 				var parentElementId = elem.parentId;
 				var checked = elem.checked;
@@ -564,6 +565,7 @@ function LeafletLayerTreeLeafTraverser(thePluginArg, className, childrenVisibili
 			checkbox.checked = true;
 			var parentElementId = checkbox.parentId;
 			var sourceElementId = checkbox.id;
+			console.log(sourceElementId)
 			toggleLayerSINGLE(parentElementId, sourceElementId);
 		});
 		if (leafSettings.selectedByDefault) {

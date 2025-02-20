@@ -2,44 +2,32 @@
  * Load files *locally* (GeoJSON, KML, GPX) into the map
  * using the HTML5 File API.
  *
- * Requires Mapbox's togeojson.js to be in global scope
- * https://github.com/mapbox/togeojson
+ * Requires Pavel Shramov's GPX.js
+ * https://github.com/shramov/leaflet-plugins/blob/d74d67/layer/vector/GPX.js
  */
 
-(function (factory, window) {
+(function (factory, controler, window) {
     // define an AMD module that relies on 'leaflet'
-    if (typeof define === 'function' && define.amd && window.toGeoJSON) {
-        define(['leaflet'], function (L) {
-            factory(L, window.toGeoJSON);
-        });
-    } else if (typeof module === 'object' && module.exports) {
-        // require('LIBRARY') returns a factory that requires window to
-        // build a LIBRARY instance, we normalize how we use modules
-        // that require this pattern but the window provided is a noop
-        // if it's defined
-        module.exports = function (root, L, toGeoJSON) {
-            if (L === undefined) {
-                if (typeof window !== 'undefined') {
-                    L = require('leaflet');
-                } else {
-                    L = require('leaflet')(root);
-                }
-            }
-            if (toGeoJSON === undefined) {
-                if (typeof window !== 'undefined') {
-                    toGeoJSON = require('togeojson');
-                } else {
-                    toGeoJSON = require('togeojson')(root);
-                }
-            }
-            factory(L, toGeoJSON);
-            return L;
-        };
-    } else if (typeof window !== 'undefined' && window.L && window.toGeoJSON) {
-        factory(window.L, window.toGeoJSON);
+    if (typeof define === 'function' && define.amd) {
+        define(['leaflet'], factory);
+    } else if (typeof exports === 'object') {
+        module.exports = factory(require('leaflet'));
     }
-}(function fileLoaderFactory(L, toGeoJSON) {
-    var FileLoader = L.Layer.extend({
+
+    if (typeof window !== 'undefined' && window.L) {
+        window.L.Util.FileLoader = factory(window.L);
+        window.L.Util.fileLoader = function (map, options) {
+            return new window.L.Util.FileLoader(map, options);
+        };
+
+        window.L.Control.FileLayerLoad = controler(window.L);
+        window.L.Control.fileLayerLoad = function (options) {
+            return new window.L.Control.FileLayerLoad(options);
+        };
+    }
+}(function (L) {
+    var FileLoader = L.Class.extend({
+        includes: L.Mixin.Events,
         options: {
             layer: L.geoJson,
             layerOptions: {},
@@ -58,147 +46,46 @@
             };
         },
 
-        load: function (file, ext) {
-            var parser,
-                reader;
-
-            // Check file is defined
-            if (this._isParameterMissing(file, 'file')) {
-                return false;
-            }
-
+        load: function (file /* File */) {
             // Check file size
-            if (!this._isFileSizeOk(file.size)) {
-                return false;
+            var fileSize = (file.size / 1024).toFixed(4);
+            if (fileSize > this.options.fileSizeLimit) {
+                this.fire('data:error', {
+                    error: new Error('File size exceeds limit (' + fileSize + ' > ' + this.options.fileSizeLimit + 'kb)')
+                });
+                return;
             }
 
-            // Get parser for this data type
-            parser = this._getParser(file.name, ext);
+            // Check file extension
+            var ext = file.name.split('.').pop(),
+                parser = this._parsers[ext];
             if (!parser) {
-                return false;
+                this.fire('data:error', {
+                    error: new Error('Unsupported file type ' + file.type + '(' + ext + ')')
+                });
+                return;
             }
-
             // Read selected file using HTML5 File API
-            reader = new FileReader();
+            var reader = new FileReader();
             reader.onload = L.Util.bind(function (e) {
-                var layer;
                 try {
-                    this.fire('data:loading', { filename: file.name, format: parser.ext });
-                    layer = parser.processor.call(this, e.target.result, parser.ext);
-                    this.fire('data:loaded', {
-                        layer: layer,
-                        filename: file.name,
-                        format: parser.ext
-                    });
+                    this.fire('data:loading', { filename: file.name, format: ext });
+                    var layer = parser.call(this, e.target.result, ext);
+                    this.fire('data:loaded', { layer: layer, filename: file.name, format: ext });
                 } catch (err) {
                     this.fire('data:error', { error: err });
                 }
+
             }, this);
-            // Testing trick: tests don't pass a real file,
-            // but an object with file.testing set to true.
-            // This object cannot be read by reader, just skip it.
-            if (!file.testing) {
-                reader.readAsText(file);
-            }
-            // We return this to ease testing
+            reader.readAsText(file);
             return reader;
         },
 
-        loadMultiple: function (files, ext) {
-            var readers = [];
-            if (files[0]) {
-              files = Array.prototype.slice.apply(files);
-              while (files.length > 0) {
-                readers.push(this.load(files.shift(), ext));
-              }
-            }
-            // return first reader (or false if no file),
-            // which is also used for subsequent loadings
-            return readers;
-        },
-
-        loadData: function (data, name, ext) {
-            var parser;
-            var layer;
-
-            // Check required parameters
-            if ((this._isParameterMissing(data, 'data'))
-              || (this._isParameterMissing(name, 'name'))) {
-                return;
-            }
-
-            // Check file size
-            if (!this._isFileSizeOk(data.length)) {
-                return;
-            }
-
-            // Get parser for this data type
-            parser = this._getParser(name, ext);
-            if (!parser) {
-                return;
-            }
-
-            // Process data
-            try {
-                this.fire('data:loading', { filename: name, format: parser.ext });
-                layer = parser.processor.call(this, data, parser.ext);
-                this.fire('data:loaded', {
-                    layer: layer,
-                    filename: name,
-                    format: parser.ext
-                });
-            } catch (err) {
-                this.fire('data:error', { error: err });
-            }
-        },
-
-        _isParameterMissing: function (v, vname) {
-            if (typeof v === 'undefined') {
-                this.fire('data:error', {
-                    error: new Error('Missing parameter: ' + vname)
-                });
-                return true;
-            }
-            return false;
-        },
-
-        _getParser: function (name, ext) {
-            var parser;
-            ext = ext || name.split('.').pop();
-            parser = this._parsers[ext];
-            if (!parser) {
-                this.fire('data:error', {
-                    error: new Error('Unsupported file type (' + ext + ')')
-                });
-                return undefined;
-            }
-            return {
-                processor: parser,
-                ext: ext
-            };
-        },
-
-        _isFileSizeOk: function (size) {
-            var fileSize = (size / 1024).toFixed(4);
-            if (fileSize > this.options.fileSizeLimit) {
-                this.fire('data:error', {
-                    error: new Error(
-                        'File size exceeds limit (' +
-                        fileSize + ' > ' +
-                        this.options.fileSizeLimit + 'kb)'
-                    )
-                });
-                return false;
-            }
-            return true;
-        },
-
-        _loadGeoJSON: function _loadGeoJSON(content) {
-            var layer;
+        _loadGeoJSON: function (content) {
             if (typeof content === 'string') {
                 content = JSON.parse(content);
             }
-            layer = this.options.layer(content, this.options.layerOptions);
+            var layer = this.options.layer(content, this.options.layerOptions);
 
             if (layer.getLayers().length === 0) {
                 throw new Error('GeoJSON has no valid layers.');
@@ -210,17 +97,18 @@
             return layer;
         },
 
-        _convertToGeoJSON: function _convertToGeoJSON(content, format) {
-            var geojson;
+        _convertToGeoJSON: function (content, format) {
             // Format is either 'gpx' or 'kml'
             if (typeof content === 'string') {
                 content = (new window.DOMParser()).parseFromString(content, 'text/xml');
             }
-            geojson = toGeoJSON[format](content);
+            var geojson = window.toGeoJSON[format](content);
             return this._loadGeoJSON(geojson);
         }
     });
 
+    return FileLoader;
+}, function (L) {
     var FileLayerLoad = L.Control.extend({
         statics: {
             TITLE: 'Load local file (GPX, KML, GeoJSON)',
@@ -240,7 +128,7 @@
         },
 
         onAdd: function (map) {
-            this.loader = L.FileLayer.fileLoader(map, this.options);
+            this.loader = L.Util.fileLoader(map, this.options);
 
             this.loader.on('data:loaded', function (e) {
                 // Fit bounds after loading
@@ -259,8 +147,7 @@
         },
 
         _initDragAndDrop: function (map) {
-            var callbackName;
-            var thisLoader = this.loader;
+            var thisFileLayerLoad = this;
             var dropbox = map._container;
 
             var callbacks = {
@@ -278,65 +165,66 @@
                     e.stopPropagation();
                     e.preventDefault();
 
-                    thisLoader.loadMultiple(e.dataTransfer.files);
+                    thisFileLayerLoad._loadFiles(e.dataTransfer.files);
                     map.scrollWheelZoom.enable();
                 }
             };
-            for (callbackName in callbacks) {
-                if (callbacks.hasOwnProperty(callbackName)) {
-                    dropbox.addEventListener(callbackName, callbacks[callbackName], false);
-                }
+            for (var name in callbacks) {
+                dropbox.addEventListener(name, callbacks[name], false);
             }
         },
 
         _initContainer: function () {
-            var thisLoader = this.loader;
+            var thisFileLayerLoad = this;
 
             // Create a button, and bind click on hidden file input
-            var fileInput;
-            var zoomName = 'leaflet-control-filelayer leaflet-control-zoom';
-            var barName = 'leaflet-bar';
-            var partName = barName + '-part';
-            var container = L.DomUtil.create('div', zoomName + ' ' + barName);
+            var zoomName = 'leaflet-control-filelayer leaflet-control-zoom',
+                barName = 'leaflet-bar',
+                partName = barName + '-part',
+                container = L.DomUtil.create('div', zoomName + ' ' + barName);
             var link = L.DomUtil.create('a', zoomName + '-in ' + partName, container);
             link.innerHTML = L.Control.FileLayerLoad.LABEL;
             link.href = '#';
             link.title = L.Control.FileLayerLoad.TITLE;
 
             // Create an invisible file input
-            fileInput = L.DomUtil.create('input', 'hidden', container);
+            var fileInput = L.DomUtil.create('input', 'hidden', container);
             fileInput.type = 'file';
             fileInput.multiple = 'multiple';
             if (!this.options.formats) {
-                fileInput.accept = '.gpx,.kml,.json,.geojson';
+                fileInput.accept = '.gpx,.kml,.geojson';
             } else {
                 fileInput.accept = this.options.formats.join(',');
             }
             fileInput.style.display = 'none';
             // Load on file change
             fileInput.addEventListener('change', function () {
-                thisLoader.loadMultiple(this.files);
+                thisFileLayerLoad._loadFiles(this.files);
                 // reset so that the user can upload the same file again if they want to
                 this.value = '';
             }, false);
 
-            L.DomEvent.disableClickPropagation(container);
+            L.DomEvent.disableClickPropagation(link);
             L.DomEvent.on(link, 'click', function (e) {
                 fileInput.click();
                 e.preventDefault();
             });
             return container;
+        },
+
+        _loadFiles: function (files) {
+            files = Array.prototype.slice.apply(files);
+
+            var fileLoader = this.loader;
+            var i = files.length;
+            setTimeout(function () {
+                fileLoader.load(files.shift());
+                if (files.length > 0) {
+                    setTimeout(arguments.callee, 25);
+                }
+            }, 25);
         }
     });
 
-    L.FileLayer = {};
-    L.FileLayer.FileLoader = FileLoader;
-    L.FileLayer.fileLoader = function (map, options) {
-        return new L.FileLayer.FileLoader(map, options);
-    };
-
-    L.Control.FileLayerLoad = FileLayerLoad;
-    L.Control.fileLayerLoad = function (options) {
-        return new L.Control.FileLayerLoad(options);
-    };
+    return FileLayerLoad;
 }, window));
