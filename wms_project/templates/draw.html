@@ -18,7 +18,6 @@
     <link rel="stylesheet" href="static/css/easy-button.css">
     <link rel="stylesheet" href="static/js/Leaflet.DistortableImage/dist/vendor.css">
     <link rel="stylesheet" href="static/js/Leaflet.DistortableImage/dist/leaflet.distortableimage.css">
-    <!-- <link rel="stylesheet" href="static/css/leaflet.illustrate.css"> -->
     <link rel="stylesheet" href="static/css/leaflet.scalebar.css" />
 
     <script src="static/js/tailwind.js"></script>
@@ -34,7 +33,6 @@
     <script src="static/js/jquery.js"></script>
     <script src="static/js/togeojson.js"></script>
     <script src="static/js/leaflet.filelayer.js"></script>
-    <!-- <script src="static/js/leaflet.illustrate.js"></script> -->
     <script src="static/js/Leaflet.DistortableImage/dist/vendor.js"></script>
     <script src="static/js/Leaflet.DistortableImage/dist/leaflet.distortableimage.js"></script>
     <script src="static/js/leaflet.measure.js"></script>
@@ -138,6 +136,10 @@
             background-size: 75% 75%;
             width: 100%;
             height: 100%;
+        }
+
+        #style-text-modal {
+            display: none;
         }
 
         #style-modal,
@@ -297,42 +299,27 @@
             </div>
         </div>
 
-        <div class="mt-6 flex justify-end space-x-3">
-            <button id="cancel-style"
-                class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">
-                Cancel
-            </button>
-            <button id="apply-style"
-                class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                Apply
-            </button>
-        </div>
-    </div>
-
-    <div class="mt-6 flex justify-end space-x-3">
-        <button id="cancel-style"
-            class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">
-            Cancel
-        </button>
-        <button id="apply-style"
-            class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-            Apply
-        </button>
-    </div>
-    </div>
-
-    <!-- Text Style Modal -->
-    <div id="text-style-modal-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden"></div>
-    <div id="text-style-modal"
-        class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-xl p-6 z-50 w-full max-w-md hidden">
-        <h3 class="text-xl font-semibold mb-4 text-gray-800">Change Text Style</h3>
-
-        <div class="space-y-4">
+        <div class="space-y-4" id="style-text-modal">
             <div class="flex items-center justify-between">
-                <label for="text-font" class="text-sm font-medium text-gray-700">Font:</label>
-                <select id="text-font"
+                <label for="modal-text" class="text-sm font-medium text-gray-700">Text:</label>
+                <input type="text" id="modal-text" value="Change text here" class="h-8 w-16 rounded border border-gray-300">
+            </div>
+
+            <div class="flex items-center justify-between">
+                <label for="modal-text-style" class="text-sm font-medium text-gray-700">Text Style:</label>
+                <select id="modal-text-style"
                     class="block w-48 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
-                    <option value="Arial">Arial</option>
+                    <option value="normal">Normal</option>
+                    <option value="bold">Bold</option>
+                    <option value="italic">Italic</option>
+                </select>
+            </div>
+
+            <div class="flex items-center justify-between">
+                <label for="modal-text-font" class="text-sm font-medium text-gray-700">Font:</label>
+                <select id="modal-text-font"
+                    class="block w-48 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                    <option value="arial">Arial</option>
                     <option value="Verdana">Verdana</option>
                     <option value="Times New Roman">Times New Roman</option>
                     <option value="Courier New">Courier New</option>
@@ -340,23 +327,23 @@
             </div>
 
             <div class="flex items-center justify-between">
-                <label for="text-color" class="text-sm font-medium text-gray-700">Color:</label>
-                <input type="color" id="text-color" value="#000000" class="h-8 w-16 rounded border border-gray-300">
+                <label for="modal-text-color" class="text-sm font-medium text-gray-700">Color:</label>
+                <input type="color" id="modal-text-color" value="#000000" class="h-8 w-16 rounded border border-gray-300">
             </div>
 
             <div class="flex items-center justify-between">
-                <label for="text-size" class="text-sm font-medium text-gray-700">Size (px):</label>
-                <input type="number" id="text-size" value="16" min="8" max="72"
+                <label for="modal-text-size" class="text-sm font-medium text-gray-700">Size (px):</label>
+                <input type="number" id="modal-text-size" value="0" min="0" max="72"
                     class="block w-24 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
             </div>
         </div>
 
         <div class="mt-6 flex justify-end space-x-3">
-            <button id="cancel-text-style"
+            <button id="cancel-style"
                 class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">
                 Cancel
             </button>
-            <button id="apply-text-style"
+            <button id="apply-style"
                 class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
                 Apply
             </button>
@@ -376,16 +363,11 @@
             zoomControl: false,
             contextmenu: true,
             editable: true,
-            pmIgnore: false
         }).setView([21.148023790045897, 105.62239681777376], 13);
 
         L.control.zoom({
             position: 'bottomright'
         }).addTo(map);
-
-        map.pm.addControls({  
-            position: 'topleft',
-        }); 
 
         L.control.mousePosition().addTo(map);
 
@@ -643,40 +625,46 @@
         var drawnItems = new L.FeatureGroup();
         map.addLayer(drawnItems);
 
-        // var drawControl = new L.Control.Draw({
-        //     position: 'bottomleft',
-        //     draw: {
-        //         polygon: {
-        //             allowIntersection: false,
-        //             drawError: {
-        //                 color: '#e1e100',
-        //                 timeout: 1000
-        //             },
-        //             shapeOptions: {
-        //                 color: '#3388ff'
-        //             },
-        //             showArea: true
-        //         },
-        //         polyline: true,
-        //         circle: true,
-        //         rectangle: true,
-        //         circlemarker: true,
-        //         marker: true
-        //     },
-        //     edit: {
-        //         featureGroup: drawnItems,
-        //         remove: true
-        //     }
-        // });
+        var drawControl = new L.Control.Draw({
+            position: 'bottomleft',
+            draw: {
+                polygon: {
+                    allowIntersection: false,
+                    drawError: {
+                        color: '#e1e100',
+                        timeout: 1000
+                    },
+                    shapeOptions: {
+                        color: '#3388ff'
+                    },
+                    showArea: true
+                },
+                polyline: true,
+                circle: true,
+                rectangle: true,
+                circlemarker: true,
+                marker: true
+            },
+            edit: {
+                featureGroup: drawnItems,
+                remove: true
+            }
+        });
 
-        // map.addControl(drawControl);
+        map.addControl(drawControl);
 
         let selectedLayer = null;
 
         // Modal references
         const styleModal = document.getElementById('style-modal');
         const styleModalOverlay = document.getElementById('style-modal-overlay');
+        const styleTextModal = document.getElementById('style-text-modal');
         const modalColor = document.getElementById('modal-color');
+        const modalText = document.getElementById('modal-text');
+        const modalTextColor = document.getElementById('modal-text-color');
+        const modalTextFont = document.getElementById('modal-text-font');
+        const modalTextSize = document.getElementById('modal-text-size');
+        const modalTextStyle = document.getElementById('modal-text-style');
         const modalOpacity = document.getElementById('modal-opacity');
         const opacityValue = document.getElementById('opacity-value');
         const modalBorderColor = document.getElementById('modal-border-color');
@@ -696,6 +684,15 @@
                 modalBorderWeight.value = layer.options.weight || 3;
                 modalBorderStyle.value = layer.options.dashArray ? layer.options.dashArray : 'solid';
                 modalOpacity.value = layer.options.fillOpacity || 1;
+
+                if (layer.setText) {
+                    styleTextModal.style.display = 'block';
+                    modalText.value = layer.options.text || "Change text here!";
+                    modalTextColor.value = layer.options.textOptions?.color || "#000000";
+                    modalTextStyle.value = layer.options.textOptions?.style || "normal";
+                    modalTextFont.value = layer.options.textOptions?.font || "arial";
+                    modalTextSize.value = layer.options.textOptions?.fontSize || 0;
+                }
             }
 
             opacityValue.innerText = layer.options.fillOpacity || 1;
@@ -706,6 +703,7 @@
 
         // Close modal
         function closeStyleModal() {
+            styleTextModal.style.display = 'none';
             styleModal.style.display = 'none';
             styleModalOverlay.style.display = 'none';
             selectedLayer = null;
@@ -722,6 +720,16 @@
                     dashArray: modalBorderStyle.value === 'solid' ? null : modalBorderStyle.value,
                 };
                 selectedLayer.setStyle && selectedLayer.setStyle(newStyle);
+                if (selectedLayer.setText) {
+                    const newTextStyle = {
+                        color: modalTextColor.value,
+                        style: modalTextStyle.value,
+                        font: modalTextFont.value,
+                        fontSize: modalTextSize.value,
+                    }
+                    selectedLayer.setText && selectedLayer.setText(null);
+                    selectedLayer.setText && selectedLayer.setText(modalText.value, newTextStyle);
+                }
             }
             closeStyleModal();
         });
@@ -736,48 +744,6 @@
         drawnItems.on('contextmenu', (e) => {
             openStyleModal(e.layer);
         });
-
-        // Modal references
-        const textStyleModal = document.getElementById('text-style-modal');
-        const textStyleModalOverlay = document.getElementById('text-style-modal-overlay');
-        const textFont = document.getElementById('text-font');
-        const textColor = document.getElementById('text-color');
-        const textSize = document.getElementById('text-size');
-        const applyTextStyleBtn = document.getElementById('apply-text-style');
-        const cancelTextStyleBtn = document.getElementById('cancel-text-style');
-
-        // Open text style modal
-        function openTextStyleModal(layer) {
-            selectedLayer = layer;
-
-            const currentText = layer.getElement().querySelector('div');
-            textFont.value = currentText.style.fontFamily || 'Arial';
-            textColor.value = currentText.style.color || '#000000';
-            textSize.value = parseInt(currentText.style.fontSize) || 16;
-
-            textStyleModal.style.display = 'block';
-            textStyleModalOverlay.style.display = 'block';
-        }
-
-        // Close text style modal
-        function closeTextStyleModal() {
-            textStyleModal.style.display = 'none';
-            textStyleModalOverlay.style.display = 'none';
-            selectedLayer = null;
-        }
-
-        // Apply text styles
-        applyTextStyleBtn.addEventListener('click', () => {
-            if (selectedLayer) {
-                const currentText = selectedLayer.getElement().querySelector('div');
-                currentText.style.fontFamily = textFont.value;
-                currentText.style.color = textColor.value;
-                currentText.style.fontSize = `${textSize.value}px`;
-            }
-            closeTextStyleModal();
-        });
-
-        cancelTextStyleBtn.addEventListener('click', closeTextStyleModal);
 
         map.on('draw:created', function (evt) {
             console.log(evt, evt.layer)

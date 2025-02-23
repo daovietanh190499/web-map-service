@@ -40,6 +40,8 @@
         setText: function (text, options) {
             this._text = text;
             this._textOptions = options;
+            this.options.text = text;
+            this.options.textOptions = options;
     
             // If not in SVG mode or Rectangle not added to map yet return
             // setText will be called by onAdd, using value stored in this._text
@@ -91,7 +93,7 @@
             // Calculate the scale of the text
             var defaultScale = 13;
             var offsetFromDefault = this._map.getZoom() - 13
-            var twoToPowerOfOffset = Math.pow(2, offsetFromDefault)
+            var twoToPowerOfOffset = Math.pow(2, offsetFromDefault) + (this.options.textOptions?.fontSize/10 || 0)
     
             // Create the the inner spans
             var words = text.split(/\s+/).reverse(),
@@ -100,7 +102,8 @@
                 lineNumber = 0,
                 lineHeight = 1.1, // em
                 tspan = L.SVG.create('tspan');
-            tspan.setAttribute('style', 'font-size: ' + twoToPowerOfOffset + 'em');
+            tspan.setAttribute('style', 'font: ' +  (this.options.textOptions?.style || "normal") + ' ' + twoToPowerOfOffset + 'em ' + (this.options.textOptions?.font || "arial"));
+            tspan.setAttribute('fill', this.options.textOptions?.color || '#000000');
             tspan.setAttribute('x', textNode.getAttribute('x'));
             tspan.setAttribute('y', textNode.getAttribute('y'));
             tspan.setAttribute('dy', ++lineNumber * lineHeight + "em");
@@ -116,7 +119,8 @@
                     line = [word];
                     // Start a new tspan
                     tspan = L.SVG.create('tspan');
-                    tspan.setAttribute('style', 'font-size: ' + twoToPowerOfOffset + 'em');
+                    tspan.setAttribute('style', 'font: ' +  (this.options.textOptions?.style || "normal") + ' ' + twoToPowerOfOffset + 'em ' + (this.options.textOptions?.font || "arial"));
+                    tspan.setAttribute('fill', this.options.textOptions?.color || '#000000');
                     tspan.setAttribute('x', textNode.getAttribute('x'));
                     tspan.setAttribute('y', textNode.getAttribute('y'));
                     tspan.setAttribute('dy', ++lineNumber * lineHeight + "em");
