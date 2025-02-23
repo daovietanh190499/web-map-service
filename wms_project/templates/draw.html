@@ -154,7 +154,7 @@
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
             padding: 20px;
             border-radius: 8px;
-            width: 300px;
+            width: 600px;
         }
 
         #style-modal label,
@@ -245,96 +245,106 @@
     <!-- Style Modal -->
     <div id="style-modal-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden"></div>
     <div id="style-modal"
-        class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-xl p-6 z-50 w-full max-w-md hidden">
+        class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-xl p-6 z-50 w-full max-w-4xl hidden">
         <h3 class="text-xl font-semibold mb-4 text-gray-800">Change Style</h3>
 
-        <div class="space-y-4">
-            <div class="flex items-center justify-between">
-                <label for="modal-color" class="text-sm font-medium text-gray-700">Fill Color:</label>
-                <input type="color" id="modal-color" value="#3388ff" class="h-8 w-16 rounded border border-gray-300">
+        <div class="flex gap-6">
+            <!-- Style Settings Column -->
+            <div class="flex-1 space-y-4">
+                <h4 class="font-medium text-gray-700">Style Settings</h4>
+                <div class="flex items-center justify-between">
+                    <label for="modal-color" class="text-sm font-medium text-gray-700">Fill Color:</label>
+                    <input type="color" id="modal-color" value="#3388ff" class="h-8 w-16 rounded border border-gray-300">
+                </div>
+
+                <div class="flex items-center justify-between">
+                    <label for="modal-border-color" class="text-sm font-medium text-gray-700">Border Color:</label>
+                    <input type="color" id="modal-border-color" value="#000000"
+                        class="h-8 w-16 rounded border border-gray-300">
+                </div>
+
+                <div class="flex items-center justify-between">
+                    <label for="modal-border-weight" class="text-sm font-medium text-gray-700">Border Weight:</label>
+                    <select id="modal-border-weight"
+                        class="block w-32 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        <option value="1">1px</option>
+                        <option value="2">2px</option>
+                        <option value="3">3px</option>
+                        <option value="4">4px</option>
+                        <option value="8">8px</option>
+                        <option value="12">12px</option>
+                    </select>
+                </div>
+
+                <div class="flex items-center justify-between">
+                    <label for="modal-border-style" class="text-sm font-medium text-gray-700">Border Style:</label>
+                    <select id="modal-border-style"
+                        class="block w-32 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        <option value="solid">Solid</option>
+                        <option value="5,5">Dashed 5, 5</option>
+                        <option value="5,10">Dashed 5, 10</option>
+                        <option value="10,5">Dashed 10, 5</option>
+                        <option value="5,1">Dashed 5, 1</option>
+                        <option value="1,5">Dashed 1, 5</option>
+                        <option value="0,9">Dashed 0, 9</option>
+                        <option value="15,10,5">Dashed 15, 10, 5</option>
+                        <option value="15,10,5,10">Dashed 15, 10, 5, 10</option>
+                        <option value="15,10,5,10,15">Dashed 15, 10, 5, 10, 15</option>
+                        <option value="5,5,1,5">Dashed 5, 5, 1, 5 </option>
+                    </select>
+                </div>
+
+                <div class="flex items-center justify-between">
+                    <label for="modal-opacity" class="text-sm font-medium text-gray-700">Opacity:</label>
+                    <div class="flex items-center">
+                        <input type="range" id="modal-opacity" min=0 max=1 step="0.1" value=1
+                            class="w-32 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-500">
+                        <span id="opacity-value" class="ml-2 text-sm text-gray-700">1.0</span>
+                    </div>
+                </div>
             </div>
 
-            <div class="flex items-center justify-between">
-                <label for="modal-border-color" class="text-sm font-medium text-gray-700">Border Color:</label>
-                <input type="color" id="modal-border-color" value="#000000"
-                    class="h-8 w-16 rounded border border-gray-300">
-            </div>
+            <!-- Text Style Settings Column -->
+            <div class="flex-1 space-y-4" id="style-text-modal">
+                <h4 class="font-medium text-gray-700">Text Settings</h4>
+                <div class="flex items-center justify-between">
+                    <label for="modal-text" class="text-sm font-medium text-gray-700">Text:</label>
+                    <input type="text" id="modal-text" value="Change text here" 
+                        class="w-48 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                </div>
 
-            <div class="flex items-center justify-between">
-                <label for="modal-border-weight" class="text-sm font-medium text-gray-700">Border Weight:</label>
-                <select id="modal-border-weight"
-                    class="block w-32 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
-                    <option value="1">1px</option>
-                    <option value="2">2px</option>
-                    <option value="3">3px</option>
-                    <option value="4">4px</option>
-                    <option value="8">8px</option>
-                    <option value="12">12px</option>
-                </select>
-            </div>
+                <div class="flex items-center justify-between">
+                    <label for="modal-text-style" class="text-sm font-medium text-gray-700">Text Style:</label>
+                    <select id="modal-text-style"
+                        class="block w-48 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        <option value="normal">Normal</option>
+                        <option value="bold">Bold</option>
+                        <option value="italic">Italic</option>
+                    </select>
+                </div>
 
-            <div class="flex items-center justify-between">
-                <label for="modal-border-style" class="text-sm font-medium text-gray-700">Border Style:</label>
-                <select id="modal-border-style"
-                    class="block w-32 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
-                    <option value="solid">Solid</option>
-                    <option value="5,5">Dashed 5, 5</option>
-                    <option value="5,10">Dashed 5, 10</option>
-                    <option value="10,5">Dashed 10, 5</option>
-                    <option value="5,1">Dashed 5, 1</option>
-                    <option value="1,5">Dashed 1, 5</option>
-                    <option value="0,9">Dashed 0, 9</option>
-                    <option value="15,10,5">Dashed 15, 10, 5</option>
-                    <option value="15,10,5,10">Dashed 15, 10, 5, 10</option>
-                    <option value="15,10,5,10,15">Dashed 15, 10, 5, 10, 15</option>
-                    <option value="5,5,1,5">Dashed 5, 5, 1, 5 </option>
-                </select>
-            </div>
+                <div class="flex items-center justify-between">
+                    <label for="modal-text-font" class="text-sm font-medium text-gray-700">Font:</label>
+                    <select id="modal-text-font"
+                        class="block w-48 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        <option value="arial">Arial</option>
+                        <option value="Verdana">Verdana</option>
+                        <option value="Times New Roman">Times New Roman</option>
+                        <option value="Courier New">Courier New</option>
+                    </select>
+                </div>
 
-            <div class="flex items-center justify-between">
-                <label for="modal-opacity" class="text-sm font-medium text-gray-700">Opacity:</label>
-                <input type="range" id="modal-opacity" min=0 max=1 step="0.1" value=1
-                    class="w-32 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-500">
-                <span id="opacity-value" class="ml-2 text-sm text-gray-700">1.0</span>
-            </div>
-        </div>
+                <div class="flex items-center justify-between">
+                    <label for="modal-text-color" class="text-sm font-medium text-gray-700">Color:</label>
+                    <input type="color" id="modal-text-color" value="#000000" 
+                        class="h-8 w-16 rounded border border-gray-300">
+                </div>
 
-        <div class="space-y-4" id="style-text-modal">
-            <div class="flex items-center justify-between">
-                <label for="modal-text" class="text-sm font-medium text-gray-700">Text:</label>
-                <input type="text" id="modal-text" value="Change text here" class="h-8 w-16 rounded border border-gray-300">
-            </div>
-
-            <div class="flex items-center justify-between">
-                <label for="modal-text-style" class="text-sm font-medium text-gray-700">Text Style:</label>
-                <select id="modal-text-style"
-                    class="block w-48 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
-                    <option value="normal">Normal</option>
-                    <option value="bold">Bold</option>
-                    <option value="italic">Italic</option>
-                </select>
-            </div>
-
-            <div class="flex items-center justify-between">
-                <label for="modal-text-font" class="text-sm font-medium text-gray-700">Font:</label>
-                <select id="modal-text-font"
-                    class="block w-48 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
-                    <option value="arial">Arial</option>
-                    <option value="Verdana">Verdana</option>
-                    <option value="Times New Roman">Times New Roman</option>
-                    <option value="Courier New">Courier New</option>
-                </select>
-            </div>
-
-            <div class="flex items-center justify-between">
-                <label for="modal-text-color" class="text-sm font-medium text-gray-700">Color:</label>
-                <input type="color" id="modal-text-color" value="#000000" class="h-8 w-16 rounded border border-gray-300">
-            </div>
-
-            <div class="flex items-center justify-between">
-                <label for="modal-text-size" class="text-sm font-medium text-gray-700">Size (px):</label>
-                <input type="number" id="modal-text-size" value="0" min="0" max="72"
-                    class="block w-24 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                <div class="flex items-center justify-between">
+                    <label for="modal-text-size" class="text-sm font-medium text-gray-700">Size (px):</label>
+                    <input type="number" id="modal-text-size" value="0" min="0" max="72"
+                        class="block w-24 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                </div>
             </div>
         </div>
 

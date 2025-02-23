@@ -551,6 +551,7 @@ function LeafletLayerTreeLeafTraverser(thePluginArg, className, childrenVisibili
 			var elem = event.srcElement != undefined ? event.srcElement : this;
 			var sourceElementId = elem.id;
 			console.log(sourceElementId)
+			window.localStorage.setItem("currentLayer", sourceElementId.replace("root_root_0_overlays_0_", ""))
 			if (sourceElementId) {
 				var parentElementId = elem.parentId;
 				var checked = elem.checked;
@@ -566,6 +567,7 @@ function LeafletLayerTreeLeafTraverser(thePluginArg, className, childrenVisibili
 			var parentElementId = checkbox.parentId;
 			var sourceElementId = checkbox.id;
 			console.log(sourceElementId)
+			window.localStorage.setItem("currentLayer", sourceElementId.replace("root_root_0_overlays_0_", ""))
 			toggleLayerSINGLE(parentElementId, sourceElementId);
 		});
 		if (leafSettings.selectedByDefault) {
