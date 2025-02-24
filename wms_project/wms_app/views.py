@@ -312,7 +312,7 @@ class PredictAreaViewSet(viewsets.ModelViewSet):
             for feature in features_data:
                 component_data = {
                     'area': predict_area.id,
-                    'geom': GEOSGeometry(json.dumps({'type': 'GeometryCollection', 'geometries': [feature]})),
+                    'geom': GEOSGeometry(json.dumps(feature.get("geom"))),
                     'options': json.dumps(feature.get('options', {}))
                 }
                 

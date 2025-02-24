@@ -495,34 +495,6 @@
             const fileInput = document.getElementById('modal-file').files[0];
             const progressBar = document.getElementById('upload-progress');
 
-            // // Prepare the form data
-            // const formData = new FormData();
-            // formData.append('name', name);
-            // formData.append('file', fileInput);
-
-            // try {
-            //     // Send POST request
-            //     const response = await fetch('/api/images/upload_image/', {
-            //         method: 'POST',
-            //         body: formData,
-            //     });
-
-            //     if (!response.ok) {
-            //         throw new Error(`Server error: ${response.status}`);
-            //     }
-
-            //     const result = await response.json();
-            //     alert('Image uploaded successfully!');
-            //     console.log('Response:', result);
-
-            //     // Hide modal after success
-            //     closeUploadImageModal()
-            // } catch (error) {
-            //     console.error('Error uploading image:', error);
-            //     alert('Failed to upload image. Please try again.');
-            //     closeUploadImageModal()
-            // }
-
             if (!name || !fileInput) {
                 alert('Please provide a name and select a file.');
                 return;

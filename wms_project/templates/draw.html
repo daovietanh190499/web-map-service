@@ -235,6 +235,13 @@
                         </button>
                     </div>
                 </div>
+
+                <!-- List -->
+                <div class="search-results-container flex-grow p-4">
+                    <div id="search-results" class="space-y-2">
+                        <!-- Results will be populated here -->
+                    </div>
+                </div>
             </div>
         </div>
         <div id="map-container" class="flex-grow relative">
@@ -443,7 +450,50 @@
             document.getElementById('app-container').classList.add('with-sidebar');
             layerImage.layer_id = window.localStorage.getItem("currentLayer")
             layerImage.value = JSON.parse(window.localStorage.getItem("layers"))[layerImage.layer_id]['name']
+            fetch('api/images/' + layerImage.layer_id)
+            .then(res => res.json())
+            .then(res => {
+                displaySearchResults(res)
+            })
         }, { position: "bottomleft" }).addTo(map);
+
+        var searchResults = document.getElementById('search-results');
+
+        function displaySearchResults(results) {
+            searchResults.innerHTML = '';
+            if (results.properties.predictions.length === 0) {
+                searchResults.innerHTML = `
+                    <div class="text-center text-gray-500 py-4">
+                        No results found
+                    </div>
+                `;
+                return;
+            }
+
+            results.properties.predictions.forEach(feature => {
+                const result = document.createElement('div');
+                result.className = 'bg-white border rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 mb-3';
+                result.innerHTML = `
+                    <div class="flex p-3">
+                        <div class="flex-auto w-4/5">
+                            <div class="font-semibold text-gray-800">${feature.name}</div>
+                            <div class="font-semibold text-gray-800">${feature.id}</div>
+                            <div class="text-sm text-gray-600 mt-1">
+                                <div class="flex items-center gap-2">
+                                    <i class="far fa-calendar-alt w-4"></i>
+                                    ${new Date(feature.created_at).toLocaleDateString()}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex-auto w-1/5">
+                            <i id="${feature.id}" class="w-8 h-8 text-xl cursor-pointer"></i>
+                        </div>
+                    </div>
+                `;
+
+                searchResults.appendChild(result);
+            });
+        }
 
         closeSearch.addEventListener('click', function () {
             searchSidebar.classList.add('hidden');

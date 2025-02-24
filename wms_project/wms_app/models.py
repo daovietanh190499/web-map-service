@@ -32,6 +32,6 @@ class PredictAreaComponent(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     created_at = models.DateTimeField(default=datetime.now)
     updated_at = models.DateTimeField(auto_now=True, null=True)
-    area = models.ForeignKey(to=PredictArea, on_delete=models.SET_NULL, related_name="components", null=True)
+    area = models.ForeignKey(to=PredictArea, on_delete=models.CASCADE, related_name="components", null=True)
     options = models.CharField(max_length=10000, null=True)
-    geom = models.GeometryCollectionField(srid=4326, null=True)
+    geom = models.GeometryField(srid=4326, null=True)
