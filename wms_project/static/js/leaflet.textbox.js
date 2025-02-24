@@ -92,8 +92,8 @@
     
             // Calculate the scale of the text
             var defaultScale = 13;
-            var offsetFromDefault = this._map.getZoom() - 13
-            var twoToPowerOfOffset = Math.pow(2, offsetFromDefault) + (this.options.textOptions?.fontSize/10 || 0)
+            var offsetFromDefault = this._map.getZoom() + (this.options.textOptions?.fontSize || 0) - 13
+            var twoToPowerOfOffset = Math.pow(2, offsetFromDefault)
     
             // Create the the inner spans
             var words = text.split(/\s+/).reverse(),

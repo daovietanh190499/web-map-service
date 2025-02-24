@@ -23,10 +23,15 @@ class Image(models.Model):
 
 class PredictArea(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    name = models.CharField(max_length=255, null=True)
+    name = models.CharField(max_length=255)
     created_at = models.DateTimeField(default=datetime.now)
     updated_at = models.DateTimeField(auto_now=True, null=True)
     image = models.ForeignKey(to=Image, on_delete=models.SET_NULL, related_name="predictions", null=True)
+
+class PredictAreaComponent(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    created_at = models.DateTimeField(default=datetime.now)
+    updated_at = models.DateTimeField(auto_now=True, null=True)
+    area = models.ForeignKey(to=PredictArea, on_delete=models.SET_NULL, related_name="components", null=True)
+    options = models.CharField(max_length=10000, null=True)
     geom = models.GeometryCollectionField(srid=4326, null=True)
-
-

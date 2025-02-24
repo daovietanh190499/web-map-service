@@ -6,7 +6,7 @@ from django.contrib.gis.geos import GEOSGeometry, GeometryCollection
 from django.contrib.gis.db.models.functions import Intersection
 from .models import Image, PredictArea
 from django.db.models import Q
-from .serializers import ImageSerializer, SearchGeometrySerializer, ImageFilterSerializer, PredictAreaSerializer, ImageUploadSerializer
+from .serializers import ImageSerializer, SearchGeometrySerializer, ImageFilterSerializer, PredictAreaSerializer, PredictAreaComponentSerializer, ImageUploadSerializer, DetailPredictAreaSerializer
 from osgeo import gdal, osr
 import json
 import os
@@ -292,22 +292,40 @@ class ImageViewSet(viewsets.ModelViewSet):
 class PredictAreaViewSet(viewsets.ModelViewSet):
     queryset = PredictArea.objects.all()
     serializer_class = PredictAreaSerializer
-    
+
+    def retrieve(self, request, pk):
+        instance = self.get_object()
+        return Response(DetailPredictAreaSerializer(instance).data)
+
     @action(detail=False, methods=['POST'], url_name='save-area')
     def save_area(self, request):
-        features_data = request.data.pop('geom', [])
+        features_data = request.data.pop('components', [])
         
-        geometries = [GEOSGeometry(json.dumps(feature)) for feature in features_data]
-        geometry_collection = GeometryCollection(geometries, srid=4326)
-        
+        # Create PredictArea first
         data = dict(request.data)
-        data['geom'] = geometry_collection
-
-        serializer = PredictAreaSerializer(data=data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        area_serializer = PredictAreaSerializer(data=data)
+        
+        if area_serializer.is_valid():
+            predict_area = area_serializer.save()
+            
+            # Create PredictAreaComponent for each geometry
+            for feature in features_data:
+                component_data = {
+                    'area': predict_area.id,
+                    'geom': GEOSGeometry(json.dumps({'type': 'GeometryCollection', 'geometries': [feature]})),
+                    'options': json.dumps(feature.get('options', {}))
+                }
+                
+                component_serializer = PredictAreaComponentSerializer(data=component_data)
+                if component_serializer.is_valid():
+                    component_serializer.save()
+                else:
+                    # If component save fails, delete the predict area and return error
+                    predict_area.delete()
+                    return Response(component_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            
+            return Response(area_serializer.data, status=status.HTTP_201_CREATED)
+        return Response(area_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 # from django.db.models import F
 # from django.db.models.functions import AsEWKT

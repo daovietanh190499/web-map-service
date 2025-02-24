@@ -4,17 +4,28 @@ from rest_framework import serializers
 from .models import Image
 
 from rest_framework_gis.serializers import GeoFeatureModelSerializer
-from .models import PredictArea
+from .models import PredictArea, PredictAreaComponent
 
 class ImageUploadSerializer(serializers.Serializer):
     name = serializers.CharField(max_length=255)
     file = serializers.FileField()
 
-class PredictAreaSerializer(GeoFeatureModelSerializer):
+class PredictAreaSerializer(serializers.ModelSerializer):
     class Meta:
         model = PredictArea
-        fields = ('id', 'created_at', 'updated_at', 'image', 'geom')  # Các trường bạn muốn hiển thị
-        geo_field = 'geom'  # Trường hình học
+        fields = ('id', 'created_at', 'updated_at', 'image')  # Các trường bạn muốn hiển thị
+
+class PredictAreaComponentSerializer(GeoFeatureModelSerializer):
+    class Meta:
+        model = PredictAreaComponent
+        fields = ('id', 'created_at', 'updated_at', 'area', 'options', 'geom')  # Các trường bạn muốn hiển thị
+        geo_field = 'geom'
+
+class DetailPredictAreaSerializer(serializers.ModelSerializer):
+    components = PredictAreaComponentSerializer(many=True)
+    class Meta:
+        model = PredictArea
+        fields = ('id', 'created_at', 'updated_at', 'image', 'components')  # Các trường bạn muốn hiển thị
 
 class ImageSerializer(GeoFeatureModelSerializer):
     class Meta:

@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 
@@ -11,7 +10,6 @@
     <link rel="stylesheet" href="static/css/leaflet.css" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
     <link rel="stylesheet" href="static/css/leaflet-layer-tree-control.css" />
-    <link rel="stylesheet" href="static/css/leaflet.geoman.css">
     <link rel="stylesheet" href="static/css/leaflet.draw.css">
     <link rel="stylesheet" href="static/css/leaflet.mouse-position.css" />
     <link rel="stylesheet" href="static/css/leaflet.measure.css" />
@@ -23,7 +21,8 @@
     <script src="static/js/tailwind.js"></script>
     <script src="static/js/leaflet.js"></script>
     <script src="static/js/leaflet.draw.js"></script>
-    <script src="static/js/leaflet.geoman.js"></script>
+    <!-- <script src="static/js/leaflet.path.transform.js"></script>
+    <script src="static/js/leaflet.rotate.js"></script> -->
     <script src="static/js/leaflet.draggable.js"></script>
     <script src="static/js/leaflet.editable.js"></script>
     <script src="static/js/leaflet.textbox.js"></script>
@@ -217,12 +216,13 @@
                             <div class="space-y-2">
                                 <div>
                                     <label class="block text-sm">Name</label>
-                                    <input type="text" name="name" id="layer-name" class="w-full border rounded p-1">
+                                    <input type="text" name="name" id="layer-name" class="w-full border rounded p-1"
+                                        required>
                                 </div>
                                 <div>
                                     <label class="block text-sm">Image</label>
                                     <input disabled type="text" value="test" name="image" id="layer-image"
-                                        class="w-full border rounded p-1">
+                                        class="w-full border rounded p-1" required>
                                 </div>
                             </div>
                         </div>
@@ -254,7 +254,8 @@
                 <h4 class="font-medium text-gray-700">Style Settings</h4>
                 <div class="flex items-center justify-between">
                     <label for="modal-color" class="text-sm font-medium text-gray-700">Fill Color:</label>
-                    <input type="color" id="modal-color" value="#3388ff" class="h-8 w-16 rounded border border-gray-300">
+                    <input type="color" id="modal-color" value="#3388ff"
+                        class="h-8 w-16 rounded border border-gray-300">
                 </div>
 
                 <div class="flex items-center justify-between">
@@ -309,7 +310,7 @@
                 <h4 class="font-medium text-gray-700">Text Settings</h4>
                 <div class="flex items-center justify-between">
                     <label for="modal-text" class="text-sm font-medium text-gray-700">Text:</label>
-                    <input type="text" id="modal-text" value="Change text here" 
+                    <input type="text" id="modal-text" value="Change text here"
                         class="w-48 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
                 </div>
 
@@ -336,7 +337,7 @@
 
                 <div class="flex items-center justify-between">
                     <label for="modal-text-color" class="text-sm font-medium text-gray-700">Color:</label>
-                    <input type="color" id="modal-text-color" value="#000000" 
+                    <input type="color" id="modal-text-color" value="#000000"
                         class="h-8 w-16 rounded border border-gray-300">
                 </div>
 
@@ -361,14 +362,6 @@
     </div>
 
     <script>
-        function getListLayer() {
-            let list_layer = JSON.parse(window.localStorage.getItem("layers"));
-            if (!list_layer) {
-                list_layer = {}
-            }
-            return list_layer
-        }
-
         var map = L.map('map', {
             zoomControl: false,
             contextmenu: true,
@@ -443,11 +436,13 @@
         var closeSearch = document.getElementById('close-search');
         var layerImage = document.getElementById('layer-image');
         var submitLayer = document.getElementById('submit-layer');
+        layerImage.layer_id = window.localStorage.getItem("currentLayer")
 
         L.easyButton('fa-save', function (btn, map) {
             searchSidebar.classList.remove('hidden');
             document.getElementById('app-container').classList.add('with-sidebar');
-            console.log(drawnItems.toGeoJSON())
+            layerImage.layer_id = window.localStorage.getItem("currentLayer")
+            layerImage.value = JSON.parse(window.localStorage.getItem("layers"))[layerImage.layer_id]['name']
         }, { position: "bottomleft" }).addTo(map);
 
         closeSearch.addEventListener('click', function () {
@@ -457,13 +452,13 @@
 
         submitLayer.addEventListener('click', function () {
             var layerName = document.getElementById('layer-name').value;
-            var layerImage = document.getElementById('layer-image').value;
-            var geoJson = drawnItems.toGeoJSON();
+            var layerImage = document.getElementById('layer-image').layer_id;
 
-            let features = [];
-            
+            let components = [];
+
             drawnItems.eachLayer(function (layer) {
-                let geojson;
+                let geom;
+                let options = {};
 
                 if (layer instanceof L.Circle) {
                     // Convert circle to polygon
@@ -480,24 +475,37 @@
                     }
                     coordinates.push(coordinates[0]);
 
-                    geojson = {
+                    geom = {
                         type: 'Polygon',
                         coordinates: [coordinates]
                     };
+
+                    options = {
+                        radius: radius
+                    };
                 } else {
-                    geojson = layer.toGeoJSON().geometry;
+                    geom = layer.toGeoJSON().geometry;
+
+                    // Store style options if they exist
+                    if (layer.options) {
+                        console.log(layer.options)
+                        options = JSON.stringify(layer.options);
+                    }
                 }
 
-                features.push(geojson);
+                components.push({
+                    geom: geom,
+                    options: options
+                });
             });
-
-            console.log(features)
 
             var data = {
                 name: layerName,
                 image: layerImage,
-                geom: features
+                components: components
             };
+
+            console.log(data)
 
             fetch('/api/predict-area/save_area/', {
                 method: 'POST',
@@ -505,132 +513,17 @@
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify(data)
-            }).then(response => response.json())
+            })
+                .then(response => response.json())
                 .then(data => {
                     console.log("Saved:", data);
+                    // Optional: Close sidebar after successful save
+                    searchSidebar.classList.add('hidden');
+                    document.getElementById('app-container').classList.remove('with-sidebar');
+                    
                 })
                 .catch(error => console.error("Error:", error));
         });
-
-        var theTreeControl
-
-        updateLayerTree()
-
-        function updateLayerTree() {
-            if (theTreeControl) {
-                theTreeControl.remove(map);
-            }
-
-            let list_layer = getListLayer()
-
-            var layerBuilders = {
-                OSM: function (layerSettings) {
-                    return L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-                        subdomains: ['a', 'b', 'c']
-                    });
-                },
-                SATELLITE: function (layerSettings) {
-                    return L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-                        attribution: 'Tiles © Esri'
-                    });
-                }
-            }
-
-            for (let layer in list_layer) {
-                layerBuilders[layer] = function (layerSettings) {
-                    return L.tileLayer(`api/images/${layer}/jp2/tiles/{z}/{x}/{y}.png/`, {
-                        maxZoom: 20,
-                        attribution: `${layer} JP2 Layer`
-                    });
-                }
-            }
-
-            theTreeControl = new L.Control.LayerTreeControl({
-                // layerTree: rootLayerSettings,
-                openByDefault: true,
-                layerBuilders: layerBuilders,
-                featureBuilders: {
-                    WFS: {
-                        zoom: L.Control.LayerTreeControl.WFSZoomFeature
-                    }
-                }
-            }).addTo(map);
-
-            var rootLayerId = theTreeControl.addLayerDynamically({
-                code: "root",
-                name: "All the Layers",
-                active: true,
-                selectedByDefault: false,
-                openByDefault: true,
-                childLayers: [],
-                selectType: "NONE",
-                serviceType: null,
-                params: {}
-            });
-
-            var baseLayerId = theTreeControl.addLayerDynamically({
-                code: "base",
-                name: "Base layers",
-                active: true,
-                selectedByDefault: false,
-                openByDefault: true,
-                childLayers: [],
-                selectType: "SINGLE",
-                serviceType: null,
-                params: {}
-            }, rootLayerId);
-
-            var overlaysLayerId = theTreeControl.addLayerDynamically({
-                code: "overlays",
-                name: "Overlays",
-                active: true,
-                selectedByDefault: false,
-                openByDefault: true,
-                childLayers: [],
-                selectType: "SINGLE",
-                serviceType: null,
-                params: {}
-            }, rootLayerId);
-
-            var osmLayerId = theTreeControl.addLayerDynamically({
-                code: "osm",
-                name: "OpenStreetMap",
-                active: true,
-                selectedByDefault: true,
-                openByDefault: true,
-                childLayers: [],
-                selectType: "NONE",
-                serviceType: "OSM",
-                params: {}
-            }, baseLayerId);
-
-            var satelliteLayerId = theTreeControl.addLayerDynamically({
-                code: "satellite",
-                name: "Satellite",
-                active: true,
-                selectedByDefault: false,
-                openByDefault: true,
-                childLayers: [],
-                selectType: "NONE",
-                serviceType: "SATELLITE",
-                params: {}
-            }, baseLayerId);
-
-            for (let layer in list_layer) {
-                theTreeControl.addLayerDynamically({
-                    code: layer,
-                    name: list_layer[layer]['name'] ? list_layer[layer]['name'] : layer,
-                    active: true,
-                    selectedByDefault: false,
-                    openByDefault: true,
-                    childLayers: [],
-                    selectType: "NONE",
-                    serviceType: layer,
-                    params: {}
-                }, overlaysLayerId);
-            }
-        }
 
         var drawnItems = new L.FeatureGroup();
         map.addLayer(drawnItems);
@@ -763,6 +656,8 @@
             drawnItems.addLayer(layer);
         });
     </script>
+
+    <script src="static/js/layer-tree.js"></script>
 </body>
 
 </html>

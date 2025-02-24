@@ -207,13 +207,15 @@
             }, baseLayerId);
             
             for (let layer in list_layer) {
+                let coords = JSON.parse(list_layer[layer]['coords'])
                 theLeftTreeControl.addLayerDynamically({
                     code: layer,
                     name: list_layer[layer]['name'] ? list_layer[layer]['name'] : layer,
                     active: true,
                     selectedByDefault: false,
-                    openByDefault: false,
+                    openByDefault: true,
                     childLayers: [],
+                    coord: [coords[1], coords[0]],
                     selectType: "NONE",
                     serviceType: layer,
                     params: {}
@@ -327,13 +329,15 @@
             }, baseLayerId);
             
             for (let layer in list_layer) {
+                let coords = JSON.parse(list_layer[layer]['coords'])
                 theRightTreeControl.addLayerDynamically({
                     code: layer,
                     name: list_layer[layer]['name'] ? list_layer[layer]['name'] : layer,
                     active: true,
                     selectedByDefault: false,
-                    openByDefault: false,
+                    openByDefault: true,
                     childLayers: [],
+                    coord: [coords[1], coords[0]],
                     selectType: "NONE",
                     serviceType: layer,
                     params: {}
