@@ -119,7 +119,7 @@ function updateLayerTree() {
         selectedByDefault: false,
         openByDefault: true,
         childLayers: [],
-        selectType: "MULTIPLE",
+        selectType: selectType,
         serviceType: null,
         params: {}
     }, rootLayerId);
@@ -157,10 +157,13 @@ function updateLayerTree() {
             selectedByDefault: false,
             openByDefault: true,
             childLayers: [],
-            coord: [coords[1], coords[0]],
+            coord: [(coords[5] + coords[1])/2, (coords[0] + coords[4])/2],
             selectType: "NONE",
             serviceType: layer,
-            params: {}
+            params: {},
+            callback: () => {
+                (saveSideBar || (() => {}))();
+            }
         }, overlaysLayerId);
     }
 }

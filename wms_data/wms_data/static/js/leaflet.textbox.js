@@ -13,8 +13,7 @@
     
         onRemove: function (map) {
             map = map || this._map;
-            if (map && this._textNode)
-                map._pathRoot.removeChild(this._textNode);
+            this.setText(null);
             __onRemove.call(this, map);
         },
     
@@ -92,7 +91,7 @@
     
             // Calculate the scale of the text
             var defaultScale = 13;
-            var offsetFromDefault = this._map.getZoom() + (this.options.textOptions?.fontSize || 0) - 13
+            var offsetFromDefault = this._map.getZoom() - 13 //+ parseInt((this.options.textOptions?.fontSize || 0))
             var twoToPowerOfOffset = Math.pow(2, offsetFromDefault)
     
             // Create the the inner spans

@@ -6,6 +6,8 @@ from .models import Image
 from rest_framework_gis.serializers import GeoFeatureModelSerializer
 from .models import PredictArea, PredictAreaComponent
 
+import json
+
 class ImageUploadSerializer(serializers.Serializer):
     name = serializers.CharField(max_length=255)
     file = serializers.FileField()
@@ -18,8 +20,15 @@ class PredictAreaSerializer(serializers.ModelSerializer):
 class PredictAreaComponentSerializer(GeoFeatureModelSerializer):
     class Meta:
         model = PredictAreaComponent
-        fields = ('id', 'created_at', 'updated_at', 'area', 'options', 'geom')  # Các trường bạn muốn hiển thị
+        fields = ('id', 'created_at', 'updated_at', 'area', 'options', 'object', 'geom')  # Các trường bạn muốn hiển thị
         geo_field = 'geom'
+    
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        str_opt = data.get("properties", "").get("options", "")
+        obj_opt = json.loads(str_opt)
+        data["properties"]["options"] = obj_opt
+        return data
 
 class DetailPredictAreaSerializer(serializers.ModelSerializer):
     components = PredictAreaComponentSerializer(many=True)

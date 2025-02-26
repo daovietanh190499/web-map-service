@@ -110,7 +110,6 @@ L.Control.LayerTreeControl = L.Control.extend({
 		return params;
 	},
 	addLayerToMap: function (layerSettings, layerId) {
-		console.log("tessssssst", layerSettings)
 		if (this._mapLayersById.hasOwnProperty(layerId)) {
 			console.warn("Layer [" + layerId + "] already exists. Skipping...")
 			return;
@@ -120,6 +119,9 @@ L.Control.LayerTreeControl = L.Control.extend({
 		var me = this;
 		if (layerSettings.coord) {
 			map.setView(layerSettings.coord, 13);
+		}
+		if (layerSettings.callback) {
+			layerSettings.callback()
 		}
 		switch (layerSettings.serviceType) {
 			case "TILE":

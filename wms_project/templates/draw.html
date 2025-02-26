@@ -21,6 +21,8 @@
     <script src="static/js/tailwind.js"></script>
     <script src="static/js/leaflet.js"></script>
     <script src="static/js/leaflet.draw.js"></script>
+    <script src="static/js/leaflet.geometryutils.js"></script>
+    <script src="static/js/leaflet.arrowhead.js"></script>
     <!-- <script src="static/js/leaflet.path.transform.js"></script>
     <script src="static/js/leaflet.rotate.js"></script> -->
     <script src="static/js/leaflet.draggable.js"></script>
@@ -275,6 +277,7 @@
                     <label for="modal-border-weight" class="text-sm font-medium text-gray-700">Border Weight:</label>
                     <select id="modal-border-weight"
                         class="block w-32 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        <option value="0">0px</option>
                         <option value="1">1px</option>
                         <option value="2">2px</option>
                         <option value="3">3px</option>
@@ -369,6 +372,8 @@
     </div>
 
     <script>
+        var openPredictions = {}
+        var selectType = "SINGLE"
         var map = L.map('map', {
             zoomControl: false,
             contextmenu: true,
@@ -446,18 +451,115 @@
         layerImage.layer_id = window.localStorage.getItem("currentLayer")
 
         L.easyButton('fa-save', function (btn, map) {
+            saveSideBar()
+        }, { position: "bottomleft" }).addTo(map);
+
+        function saveSideBar() {
             searchSidebar.classList.remove('hidden');
             document.getElementById('app-container').classList.add('with-sidebar');
             layerImage.layer_id = window.localStorage.getItem("currentLayer")
             layerImage.value = JSON.parse(window.localStorage.getItem("layers"))[layerImage.layer_id]['name']
+            fetchListPredict()
+        }
+
+        function fetchListPredict() {
             fetch('api/images/' + layerImage.layer_id)
-            .then(res => res.json())
-            .then(res => {
-                displaySearchResults(res)
-            })
-        }, { position: "bottomleft" }).addTo(map);
+                .then(res => res.json())
+                .then(res => {
+                    displaySearchResults(res)
+                })
+        }
 
         var searchResults = document.getElementById('search-results');
+
+        function deletePrediction(id) {
+            fetch(`api/predict-area/${id}/`, {
+                method: "DELETE"
+            })
+                .then(res => {
+                    fetchListPredict()
+                })
+        }
+
+        function showPrediction(id) {
+            fetch(`api/predict-area/${id}/`, {
+                method: "GET"
+            })
+                .then(res => res.json())
+                .then(res => {
+                    if (!(id in openPredictions)) {
+                        openPredictions[id] = []
+                        res.components.features.map(ele => {
+                            let latLngs = null
+                            let layer = null
+                            let options = null
+                            switch (ele.properties.object) {
+                                case "L.Circle":
+                                    latLngs = L.latLng(ele.geometry.coordinates[1], ele.geometry.coordinates[0]);
+                                    options = JSON.parse(ele.properties.options);
+                                    delete options['callInitHooks'];
+                                    layer = L.circle(latLngs, options);
+                                    break;
+                                case "L.Rectangle":
+                                    latLngs = ele.geometry.coordinates[0].map(c => L.latLng(c[1], c[0]));
+                                    latLngs.pop();
+                                    options = JSON.parse(ele.properties.options);
+                                    console.log(options)
+                                    delete options['callInitHooks']
+                                    layer = L.rectangle(latLngs, options);
+                                    if (options["text"]) {
+                                        layer.setText(options["text"], options["textOptions"])
+                                    }
+                                    break;
+                                case "L.Polygon":
+                                    latLngs = ele.geometry.coordinates[0].map(c => L.latLng(c[1], c[0]));
+                                    latLngs.pop();
+                                    options = JSON.parse(ele.properties.options); delete options['callInitHooks']
+                                    layer = L.polygon(latLngs, options);
+                                    break;
+                                case "L.Polyline":
+                                    latLngs = ele.geometry.coordinates.map(c => L.latLng(c[1], c[0]));
+                                    options = JSON.parse(ele.properties.options); delete options['callInitHooks']
+                                    layer = L.polyline(latLngs, options);
+                                    break;
+                                case "L.CircleMarker":
+                                    latLngs = L.latLng(ele.geometry.coordinates[1], ele.geometry.coordinates[0]);
+                                    options = JSON.parse(ele.properties.options);
+                                    delete options['callInitHooks'];
+                                    delete options['icon'];
+                                    layer = L.circleMarker(latLngs, options);
+                                    break;
+                                case "L.Marker":
+                                    latLngs = L.latLng(ele.geometry.coordinates[1], ele.geometry.coordinates[0]);
+                                    options = JSON.parse(ele.properties.options);
+                                    delete options['callInitHooks'];
+                                    delete options['icon'];
+                                    layer = L.marker(latLngs, options);
+                                    break;
+                                default:
+                                    break;
+                            }
+                            if (layer) {
+                                drawnItems.addLayer(layer);
+                                openPredictions[id].push(layer);
+                            }
+                        })
+                        document.getElementById(`open-${id}`).classList.remove("fa-eye-slash")
+                        document.getElementById(`open-${id}`).classList.remove("text-red-500")
+                        document.getElementById(`open-${id}`).classList.add("fa-eye")
+                        document.getElementById(`open-${id}`).classList.add("text-green-500")
+                    } else {
+                        openPredictions[id].map(ele => {
+                            drawnItems.removeLayer(ele);
+                        })
+                        delete openPredictions[id]
+                        document.getElementById(`open-${id}`).classList.remove("fa-eye")
+                        document.getElementById(`open-${id}`).classList.remove("text-green-500")
+                        document.getElementById(`open-${id}`).classList.add("fa-eye-slash")
+                        document.getElementById(`open-${id}`).classList.add("text-red-500")
+                    }
+                })
+        }
 
         function displaySearchResults(results) {
             searchResults.innerHTML = '';
@@ -485,8 +587,13 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="flex-auto w-1/5">
-                            <i id="${feature.id}" class="w-8 h-8 text-xl cursor-pointer"></i>
+                        <div class="flex flex-auto flex-col w-1/5 content-between justify-center items-center">
+                            <div>
+                                <i id="delete-${feature.id}" class="fas fa-trash mb-4 w-4 h-4 text-lg cursor-pointer text-red-500" onclick="deletePrediction('${feature.id}')"></i>
+                            </div>
+                            <div>
+                                <i id="open-${feature.id}" class="fas fa-eye${(feature.id in openPredictions) ? '' : '-slash'} mt-4 w-4 h-4 text-lg cursor-pointer text-${(feature.id in openPredictions) ? 'green' : 'red'}-500" onclick="showPrediction('${feature.id}')"></i>
+                            <div>
                         </div>
                     </div>
                 `;
@@ -510,42 +617,34 @@
                 let geom;
                 let options = {};
 
+                object = null;
                 if (layer instanceof L.Circle) {
-                    // Convert circle to polygon
-                    const center = layer.getLatLng();
-                    const radius = layer.getRadius();
-                    const points = 32;
-                    const coordinates = [];
+                    object = "L.Circle";
+                } else if (layer instanceof L.Rectangle) {
+                    object = "L.Rectangle";
+                } else if (layer instanceof L.Polygon) {
+                    object = "L.Polygon";
+                } else if (layer instanceof L.Polyline) {
+                    object = "L.Polyline";
+                } else if (layer instanceof L.CircleMarker) {
+                    object = "L.CircleMarker";
+                } else if (layer instanceof L.Marker) {
+                    object = "L.Marker";
+                } else if (layer instanceof L.Point) {
+                    object = "L.Point";
+                }
 
-                    for (let i = 0; i < points; i++) {
-                        const angle = (i / points) * (2 * Math.PI);
-                        const lat = center.lat + (radius / 111319.9) * Math.sin(angle);
-                        const lng = center.lng + (radius / (111319.9 * Math.cos(center.lat * Math.PI / 180))) * Math.cos(angle);
-                        coordinates.push([lng, lat]);
-                    }
-                    coordinates.push(coordinates[0]);
+                geom = layer.toGeoJSON().geometry;
 
-                    geom = {
-                        type: 'Polygon',
-                        coordinates: [coordinates]
-                    };
-
-                    options = {
-                        radius: radius
-                    };
-                } else {
-                    geom = layer.toGeoJSON().geometry;
-
-                    // Store style options if they exist
-                    if (layer.options) {
-                        console.log(layer.options)
-                        options = JSON.stringify(layer.options);
-                    }
+                // Store style options if they exist
+                if (layer.options) {
+                    options = JSON.stringify(layer.options);
                 }
 
                 components.push({
                     geom: geom,
-                    options: options
+                    options: options,
+                    object: object
                 });
             });
 
@@ -554,8 +653,6 @@
                 image: layerImage,
                 components: components
             };
-
-            console.log(data)
 
             fetch('/api/predict-area/save_area/', {
                 method: 'POST',
@@ -566,11 +663,10 @@
             })
                 .then(response => response.json())
                 .then(data => {
-                    console.log("Saved:", data);
                     // Optional: Close sidebar after successful save
                     searchSidebar.classList.add('hidden');
                     document.getElementById('app-container').classList.remove('with-sidebar');
-                    
+
                 })
                 .catch(error => console.error("Error:", error));
         });
@@ -634,7 +730,7 @@
             if (layer.options) {
                 modalColor.value = layer.options.fillColor || '#3388ff';
                 modalBorderColor.value = layer.options.color || '#000000';
-                modalBorderWeight.value = layer.options.weight || 3;
+                modalBorderWeight.value = layer.options.weight || 0;
                 modalBorderStyle.value = layer.options.dashArray ? layer.options.dashArray : 'solid';
                 modalOpacity.value = layer.options.fillOpacity || 1;
 
@@ -699,7 +795,6 @@
         });
 
         map.on('draw:created', function (evt) {
-            console.log(evt, evt.layer)
             var type = evt.layerType,
                 layer = evt.layer;
 

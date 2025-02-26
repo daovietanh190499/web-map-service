@@ -313,7 +313,8 @@ class PredictAreaViewSet(viewsets.ModelViewSet):
                 component_data = {
                     'area': predict_area.id,
                     'geom': GEOSGeometry(json.dumps(feature.get("geom"))),
-                    'options': json.dumps(feature.get('options', {}))
+                    'options': json.dumps(feature.get('options', {})),
+                    'object': feature.get('object')
                 }
                 
                 component_serializer = PredictAreaComponentSerializer(data=component_data)
