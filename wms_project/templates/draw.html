@@ -139,7 +139,7 @@
             height: 100%;
         }
 
-        #style-text-modal {
+        #style-text-modal, #style-arrow-modal {
             display: none;
         }
 
@@ -357,6 +357,104 @@
                         class="block w-24 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
                 </div>
             </div>
+
+            <!-- Arrow head setting -->
+            <div class="flex-1 space-y-4" id="style-arrow-modal">
+                <h4 class="font-medium text-gray-700">Arrow Settings</h4>
+                <div class="flex items-center justify-between">
+                    <label for="modal-arrow" class="text-sm font-medium text-gray-700">Add Arrow :</label>
+                    <select id="modal-arrow"
+                        class="block w-48 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        <option value=true>true</option>
+                        <option value=true>false</option>
+                    </select>
+                </div>
+
+                <div class="flex items-center justify-between">
+                    <label for="modal-arrow-yawn" class="text-sm font-medium text-gray-700">Arrow Yawn:</label>
+                    <select id="modal-arrow-yawn"
+                        class="block w-48 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        <option value=15>15</option>
+                        <option value=20>20</option>
+                        <option value=25>25</option>
+                        <option value=30>30</option>
+                        <option value=35>35</option>
+                        <option value=40>40</option>
+                        <option value=45>45</option>
+                        <option value=50>50</option>
+                        <option value=55>55</option>
+                        <option value=60>60</option>
+                        <option value=65>65</option>
+                        <option value=70>70</option>
+                        <option value=75>75</option>
+                        <option value=80>80</option>
+                        <option value=85>85</option>
+                        <option value=90>90</option>
+                    </select>
+                </div>
+
+                <div class="flex items-center justify-between">
+                    <label for="modal-arrow-size" class="text-sm font-medium text-gray-700">Arrow Size:</label>
+                    <select id="modal-arrow-size"
+                        class="block w-48 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        <option value="15%">15%</option>
+                        <option value="30%">30%</option>
+                        <option value="45%">45%</option>
+                        <option value="60%">60%</option>
+                        <option value="20px">20px</option>
+                        <option value="30px">30px</option>
+                        <option value="50px">50px</option>
+                        <option value="5m">5m</option>
+                        <option value="10m">10m</option>
+                        <option value="60m">60m</option>
+                        <option value="100m">100m</option>
+                        <option value="1000m">1000m</option>
+                    </select>
+                </div>
+
+                <div class="flex items-center justify-between">
+                    <label for="modal-arrow-freq" class="text-sm font-medium text-gray-700">Arrow Frequency:</label>
+                    <select id="modal-arrow-freq"
+                        class="block w-48 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        <option value="allvertices">allvertices</option>
+                        <option value="endonly">endonly</option>
+                        <option value="100m">100m</option>
+                        <option value="200m">200m</option>
+                        <option value="500m">500m</option>
+                        <option value="1000m">1000m</option>
+                        <option value="10000m">10000m</option>
+                        <option value="20">20</option>
+                        <option value="30">30</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                        <option value="20px">20px</option>
+                        <option value="30px">30px</option>
+                        <option value="50px">50px</option>
+                        <option value="100px">100px</option>
+                    </select>
+                </div>
+
+                <div class="flex items-center justify-between">
+                    <label for="modal-arrow-fill" class="text-sm font-medium text-gray-700">Arrow Fill:</label>
+                    <select id="modal-arrow-fill"
+                        class="block w-48 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        <option value=true>true</option>
+                        <option value=true>false</option>
+                    </select>
+                </div>
+
+                <div class="flex items-center justify-between">
+                    <label for="modal-arrow-color" class="text-sm font-medium text-gray-700">Color:</label>
+                    <input type="color" id="modal-arrow-color" value="#000000"
+                        class="h-8 w-16 rounded border border-gray-300">
+                </div>
+
+                <div class="flex items-center justify-between">
+                    <label for="modal-arrow-fill-color" class="text-sm font-medium text-gray-700">Fill Color:</label>
+                    <input type="color" id="modal-arrow-fill-color" value="#000000"
+                        class="h-8 w-16 rounded border border-gray-300">
+                </div>
+            </div>
         </div>
 
         <div class="mt-6 flex justify-end space-x-3">
@@ -521,6 +619,24 @@
                                     latLngs = ele.geometry.coordinates.map(c => L.latLng(c[1], c[0]));
                                     options = JSON.parse(ele.properties.options); delete options['callInitHooks']
                                     layer = L.polyline(latLngs, options);
+                                    if (options["arrow"]){
+                                        layer.options.arrow = options['arrow']
+                                        layer.options.arrowColor = options['arrowColor']
+                                        layer.options.arrowFillColor = options['arrowFillColor']
+                                        layer.options.arrowFill = options['arrowFill']
+                                        layer.options.arrowFreq = options['arrowFreq']
+                                        layer.options.arrowSize = options['arrowSize']
+                                        layer.options.arrowYawn = options['arrowYawn']
+                                        const arrowStyle = {
+                                            yawn: layer.options.arrowYawn,
+                                            size: layer.options.arrowSize,
+                                            frequency: layer.options.arrowFreq,
+                                            fill: layer.options.arrowFill,
+                                            color: layer.options.arrowColor,
+                                            fillColor: layer.options.arrowFillColor
+                                        }
+                                        layer.arrowheads(arrowStyle)
+                                    }
                                     break;
                                 case "L.CircleMarker":
                                     latLngs = L.latLng(ele.geometry.coordinates[1], ele.geometry.coordinates[0]);
@@ -722,6 +838,15 @@
         const applyStyleBtn = document.getElementById('apply-style');
         const cancelStyleBtn = document.getElementById('cancel-style');
 
+        const styleArrowModal = document.getElementById('style-arrow-modal');
+        const modalArrowColor = document.getElementById('modal-arrow-color');
+        const modalArrowFillColor = document.getElementById('modal-arrow-fill-color');
+        const modalArrowYawn = document.getElementById('modal-arrow-yawn');
+        const modalArrowSize = document.getElementById('modal-arrow-size');
+        const modalArrowFreq = document.getElementById('modal-arrow-freq');
+        const modalArrowFill = document.getElementById('modal-arrow-fill');
+        const modalArrow = document.getElementById('modal-arrow');
+
         // Open modal
         function openStyleModal(layer) {
             selectedLayer = layer;
@@ -742,6 +867,17 @@
                     modalTextFont.value = layer.options.textOptions?.font || "arial";
                     modalTextSize.value = layer.options.textOptions?.fontSize || 0;
                 }
+
+                if (layer.arrowheads) {
+                    styleArrowModal.style.display = 'block';
+                    modalArrow.value = layer.options.arrow || false;
+                    modalArrowColor.value = layer.options.arrowColor || "#000000";
+                    modalArrowFillColor.value = layer.options.arrowFillColor || "#000000";
+                    modalArrowFill.value = layer.options.arrowFill || false;
+                    modalArrowFreq.value = layer.options.arrowFreq || "allvertices";
+                    modalArrowSize.value = layer.options.arrowSize || "15%";
+                    modalArrowYawn.value = layer.options.arrowYawn || 60;
+                }
             }
 
             opacityValue.innerText = layer.options.fillOpacity || 1;
@@ -753,6 +889,7 @@
         // Close modal
         function closeStyleModal() {
             styleTextModal.style.display = 'none';
+            styleArrowModal.style.display = 'none';
             styleModal.style.display = 'none';
             styleModalOverlay.style.display = 'none';
             selectedLayer = null;
@@ -778,6 +915,26 @@
                     }
                     selectedLayer.setText && selectedLayer.setText(null);
                     selectedLayer.setText && selectedLayer.setText(modalText.value, newTextStyle);
+                }
+                if (selectedLayer.arrowheads) {
+                    selectedLayer.options.arrow = modalArrow.value
+                    selectedLayer.options.arrowColor = modalArrowColor.value
+                    selectedLayer.options.arrowFillColor = modalArrowFillColor.value
+                    selectedLayer.options.arrowFill = modalArrowFill.value
+                    selectedLayer.options.arrowFreq = modalArrowFreq.value
+                    selectedLayer.options.arrowSize = modalArrowSize.value
+                    selectedLayer.options.arrowYawn = modalArrowYawn.value
+                    if (modalArrow.value){
+                        const arrowStyle = {
+                            yawn: selectedLayer.options.arrowYawn,
+                            size: selectedLayer.options.arrowSize,
+                            frequency: selectedLayer.options.arrowFreq,
+                            fill: selectedLayer.options.arrowFill,
+                            color: selectedLayer.options.arrowColor,
+                            fillColor: selectedLayer.options.arrowFillColor
+                        }
+                        selectedLayer.arrowheads(arrowStyle)
+                    }
                 }
             }
             closeStyleModal();
