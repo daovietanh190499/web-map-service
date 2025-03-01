@@ -967,7 +967,9 @@
                             modalArrowFreq.value = "allvertices"
                             modalArrowFreq.setAttribute("disabled", "disabled")
                         } else {
-                            selectedLayer.setLatLngs(selectedLayer.options.originLatLngs);
+                            if (selectedLayer.options.originLatLngs) {
+                                selectedLayer.setLatLngs(selectedLayer.options.originLatLngs);
+                            }
                             modalArrowFreq.removeAttribute("disabled")
                         }
                         const arrowStyle = {
