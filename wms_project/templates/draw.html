@@ -365,13 +365,22 @@
                     <label for="modal-arrow" class="text-sm font-medium text-gray-700">Add Arrow :</label>
                     <select id="modal-arrow"
                         class="block w-48 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
-                        <option value=true>true</option>
-                        <option value=true>false</option>
+                        <option value=true>True</option>
+                        <option value=false>False</option>
                     </select>
                 </div>
 
                 <div class="flex items-center justify-between">
-                    <label for="modal-arrow-yawn" class="text-sm font-medium text-gray-700">Arrow Yawn:</label>
+                    <label for="modal-arrow-bidirect" class="text-sm font-medium text-gray-700">Bidirect :</label>
+                    <select id="modal-arrow-bidirect"
+                        class="block w-48 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        <option value=true>True</option>
+                        <option value=false>False</option>
+                    </select>
+                </div>
+
+                <div class="flex items-center justify-between">
+                    <label for="modal-arrow-yawn" class="text-sm font-medium text-gray-700">Yawn:</label>
                     <select id="modal-arrow-yawn"
                         class="block w-48 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
                         <option value=15>15</option>
@@ -394,7 +403,7 @@
                 </div>
 
                 <div class="flex items-center justify-between">
-                    <label for="modal-arrow-size" class="text-sm font-medium text-gray-700">Arrow Size:</label>
+                    <label for="modal-arrow-size" class="text-sm font-medium text-gray-700">Size:</label>
                     <select id="modal-arrow-size"
                         class="block w-48 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
                         <option value="15%">15%</option>
@@ -413,7 +422,7 @@
                 </div>
 
                 <div class="flex items-center justify-between">
-                    <label for="modal-arrow-freq" class="text-sm font-medium text-gray-700">Arrow Frequency:</label>
+                    <label for="modal-arrow-freq" class="text-sm font-medium text-gray-700">Frequency:</label>
                     <select id="modal-arrow-freq"
                         class="block w-48 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
                         <option value="allvertices">allvertices</option>
@@ -435,11 +444,11 @@
                 </div>
 
                 <div class="flex items-center justify-between">
-                    <label for="modal-arrow-fill" class="text-sm font-medium text-gray-700">Arrow Fill:</label>
+                    <label for="modal-arrow-fill" class="text-sm font-medium text-gray-700">Fill:</label>
                     <select id="modal-arrow-fill"
                         class="block w-48 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
-                        <option value=true>true</option>
-                        <option value=true>false</option>
+                        <option value=true>True</option>
+                        <option value=false>False</option>
                     </select>
                 </div>
 
@@ -627,6 +636,7 @@
                                         layer.options.arrowFreq = options['arrowFreq']
                                         layer.options.arrowSize = options['arrowSize']
                                         layer.options.arrowYawn = options['arrowYawn']
+                                        layer.options.arrowBidirect = options['arrowBidirect']
                                         const arrowStyle = {
                                             yawn: layer.options.arrowYawn,
                                             size: layer.options.arrowSize,
@@ -634,6 +644,18 @@
                                             fill: layer.options.arrowFill,
                                             color: layer.options.arrowColor,
                                             fillColor: layer.options.arrowFillColor
+                                        }
+                                        if (layer.options.arrowBidirect) {
+                                            let currentLatLngs = layer.getLatLngs();
+                                            let reversedLatLngs = [...currentLatLngs].reverse();
+                                            reversedLatLngs = reversedLatLngs.slice(1);
+                                            let updatedLatLngs = currentLatLngs.concat(reversedLatLngs);
+                                            layer.options.arrowFreq = "allvertices"
+                                            modalArrowFreq.value = "allvertices"
+                                            layer.setLatLngs(updatedLatLngs);
+                                            modalArrowFreq.setAttribute("disabled", "disabled")
+                                        } else {
+                                            modalArrowFreq.removeAttribute("disabled")
                                         }
                                         layer.arrowheads(arrowStyle)
                                     }
@@ -845,6 +867,7 @@
         const modalArrowSize = document.getElementById('modal-arrow-size');
         const modalArrowFreq = document.getElementById('modal-arrow-freq');
         const modalArrowFill = document.getElementById('modal-arrow-fill');
+        const modalArrowBidirect = document.getElementById('modal-arrow-bidirect');
         const modalArrow = document.getElementById('modal-arrow');
 
         // Open modal
@@ -868,15 +891,16 @@
                     modalTextSize.value = layer.options.textOptions?.fontSize || 0;
                 }
 
-                if (layer.arrowheads) {
+                if (layer.arrowheads && !layer.setText) {
                     styleArrowModal.style.display = 'block';
-                    modalArrow.value = layer.options.arrow || false;
+                    modalArrow.value = layer.options.arrow;
                     modalArrowColor.value = layer.options.arrowColor || "#000000";
                     modalArrowFillColor.value = layer.options.arrowFillColor || "#000000";
-                    modalArrowFill.value = layer.options.arrowFill || false;
+                    modalArrowFill.value = layer.options.arrowFill;
                     modalArrowFreq.value = layer.options.arrowFreq || "allvertices";
                     modalArrowSize.value = layer.options.arrowSize || "15%";
                     modalArrowYawn.value = layer.options.arrowYawn || 60;
+                    modalArrowBidirect.value = layer.options.arrowBidirect;
                 }
             }
 
@@ -924,7 +948,20 @@
                     selectedLayer.options.arrowFreq = modalArrowFreq.value
                     selectedLayer.options.arrowSize = modalArrowSize.value
                     selectedLayer.options.arrowYawn = modalArrowYawn.value
+                    selectedLayer.options.arrowBidirect = modalArrowBidirect.value
                     if (modalArrow.value){
+                        if (modalArrowBidirect.value) {
+                            let currentLatLngs = selectedLayer.getLatLngs();
+                            let reversedLatLngs = [...currentLatLngs].reverse();
+                            reversedLatLngs = reversedLatLngs.slice(1);
+                            let updatedLatLngs = currentLatLngs.concat(reversedLatLngs);
+                            selectedLayer.setLatLngs(updatedLatLngs);
+                            selectedLayer.options.arrowFreq = "allvertices"
+                            modalArrowFreq.value = "allvertices"
+                            modalArrowFreq.setAttribute("disabled", "disabled")
+                        } else {
+                            modalArrowFreq.removeAttribute("disabled")
+                        }
                         const arrowStyle = {
                             yawn: selectedLayer.options.arrowYawn,
                             size: selectedLayer.options.arrowSize,
