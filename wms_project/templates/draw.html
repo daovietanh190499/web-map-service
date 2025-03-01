@@ -628,7 +628,7 @@
                                     latLngs = ele.geometry.coordinates.map(c => L.latLng(c[1], c[0]));
                                     options = JSON.parse(ele.properties.options); delete options['callInitHooks']
                                     layer = L.polyline(latLngs, options);
-                                    if (options["arrow"]){
+                                    if (options["arrow"] === 'true'){
                                         layer.options.arrow = options['arrow']
                                         layer.options.arrowColor = options['arrowColor']
                                         layer.options.arrowFillColor = options['arrowFillColor']
@@ -645,9 +645,10 @@
                                             color: layer.options.arrowColor,
                                             fillColor: layer.options.arrowFillColor
                                         }
-                                        if (layer.options.arrowBidirect) {
+                                        if (layer.options.arrowBidirect === 'true') {
                                             let currentLatLngs = layer.getLatLngs();
                                             let reversedLatLngs = [...currentLatLngs].reverse();
+                                            layer.options.originLatLngs = currentLatLngs;
                                             reversedLatLngs = reversedLatLngs.slice(1);
                                             let updatedLatLngs = currentLatLngs.concat(reversedLatLngs);
                                             layer.options.arrowFreq = "allvertices"
@@ -901,6 +902,11 @@
                     modalArrowSize.value = layer.options.arrowSize || "15%";
                     modalArrowYawn.value = layer.options.arrowYawn || 60;
                     modalArrowBidirect.value = layer.options.arrowBidirect;
+                    if (modalArrowBidirect.value === "true") {
+                        modalArrowFreq.setAttribute("disabled", "disabled")
+                    } else {
+                        modalArrowFreq.removeAttribute("disabled")
+                    }
                 }
             }
 
@@ -949,10 +955,11 @@
                     selectedLayer.options.arrowSize = modalArrowSize.value
                     selectedLayer.options.arrowYawn = modalArrowYawn.value
                     selectedLayer.options.arrowBidirect = modalArrowBidirect.value
-                    if (modalArrow.value){
-                        if (modalArrowBidirect.value) {
+                    if (modalArrow.value === 'true'){
+                        if (modalArrowBidirect.value === 'true') {
                             let currentLatLngs = selectedLayer.getLatLngs();
                             let reversedLatLngs = [...currentLatLngs].reverse();
+                            selectedLayer.options.originLatLngs = currentLatLngs;
                             reversedLatLngs = reversedLatLngs.slice(1);
                             let updatedLatLngs = currentLatLngs.concat(reversedLatLngs);
                             selectedLayer.setLatLngs(updatedLatLngs);
@@ -960,6 +967,7 @@
                             modalArrowFreq.value = "allvertices"
                             modalArrowFreq.setAttribute("disabled", "disabled")
                         } else {
+                            selectedLayer.setLatLngs(selectedLayer.options.originLatLngs);
                             modalArrowFreq.removeAttribute("disabled")
                         }
                         const arrowStyle = {
