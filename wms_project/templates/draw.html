@@ -875,6 +875,14 @@
         function openStyleModal(layer) {
             selectedLayer = layer;
 
+            if (selectedLayer.options.arrow === 'true'){
+                modalBorderStyle.value = 'solid'
+                layer.options.dashArray = 'solid'
+                modalBorderStyle.setAttribute("disabled", "disabled")
+            } else {
+                modalBorderStyle.removeAttribute("disabled")
+            }
+
             // Pre-fill current styles
             if (layer.options) {
                 modalColor.value = layer.options.fillColor || '#3388ff';
