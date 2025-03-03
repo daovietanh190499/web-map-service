@@ -17,9 +17,11 @@ from rest_framework_gis.filters import InBBoxFilter
 from django.shortcuts import render
 from PIL import Image as PIL_Image
 import io
-from django.http import HttpResponse
+from django.http import HttpResponse, FileResponse
 from wms_app.generate_tiles import Tiles
 from django.conf import settings
+from binascii import a2b_base64
+import glob
 
 def index(request):
     return render(request, 'index.html')
@@ -320,6 +322,14 @@ class PredictAreaViewSet(viewsets.ModelViewSet):
                 component_serializer = PredictAreaComponentSerializer(data=component_data)
                 if component_serializer.is_valid():
                     component_serializer.save()
+                    image_uri = feature.get('image_uri')
+                    if not ( image_uri is None ):
+                        base64_str = image_uri.split("base64,")
+                        binary_data = a2b_base64(base64_str[1])
+                        image_name = component_serializer.instance.id
+                        with open(f'/mnt/data/prediction_image_{str(image_name)}{".png" if "png" in base64_str[0] else ".jpg"}', 'wb') as fd:
+                            fd.write(binary_data)
+                            fd.close()
                 else:
                     # If component save fails, delete the predict area and return error
                     predict_area.delete()
@@ -327,7 +337,14 @@ class PredictAreaViewSet(viewsets.ModelViewSet):
             
             return Response(area_serializer.data, status=status.HTTP_201_CREATED)
         return Response(area_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
+    
+    @action(detail=True, methods=['GET'], url_name='get-image')
+    def get_image(self, request, pk):
+        list_prediction_image = glob.glob(f'/mnt/data/prediction_image_{str(pk)}.*')
+        if len(list_prediction_image) > 0:
+            return FileResponse(open(list_prediction_image[0], 'rb'))
+        else:
+            Response(status=status.HTTP_404_NOT_FOUND)
 # from django.db.models import F
 # from django.db.models.functions import AsEWKT
 # from django.db import connection

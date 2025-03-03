@@ -500,6 +500,10 @@
             position: 'bottomright'
         }).addTo(map);
 
+        var img = L.distortableImageOverlay('static/css/images/example.jpg', {
+            selected: true,
+        }).addTo(map);
+
         L.control.mousePosition().addTo(map);
 
         L.control.betterscale().addTo(map);
@@ -756,6 +760,17 @@
             var layerImage = document.getElementById('layer-image').layer_id;
 
             let components = [];
+
+            distortableImages.map(layer => {
+                console.log(JSON.stringify(layer.getCorners()))
+                components.push({
+                    geom: null,
+                    options: JSON.stringify({
+                        corners: layer.getCorners()
+                    }),
+                    object: "L.DistortableImage"
+                })
+            })
 
             drawnItems.eachLayer(function (layer) {
                 let geom;
