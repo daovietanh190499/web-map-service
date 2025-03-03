@@ -313,6 +313,15 @@
                         <span id="opacity-value" class="ml-2 text-sm text-gray-700">1.0</span>
                     </div>
                 </div>
+
+                <div class="flex items-center justify-between">
+                    <label for="modal-fill-opacity" class="text-sm font-medium text-gray-700">Fill Opacity:</label>
+                    <div class="flex items-center">
+                        <input type="range" id="modal-fill-opacity" min=0 max=1 step="0.1" value=1
+                            class="w-32 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-500">
+                        <span id="fill-opacity-value" class="ml-2 text-sm text-gray-700">1.0</span>
+                    </div>
+                </div>
             </div>
 
             <!-- Text Style Settings Column -->
@@ -365,8 +374,8 @@
                     <label for="modal-arrow" class="text-sm font-medium text-gray-700">Add Arrow :</label>
                     <select id="modal-arrow"
                         class="block w-48 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
-                        <option value=true>True</option>
                         <option value=false>False</option>
+                        <option value=true>True</option>
                     </select>
                 </div>
 
@@ -652,11 +661,7 @@
                                             reversedLatLngs = reversedLatLngs.slice(1);
                                             let updatedLatLngs = currentLatLngs.concat(reversedLatLngs);
                                             layer.options.arrowFreq = "allvertices"
-                                            modalArrowFreq.value = "allvertices"
                                             layer.setLatLngs(updatedLatLngs);
-                                            modalArrowFreq.setAttribute("disabled", "disabled")
-                                        } else {
-                                            modalArrowFreq.removeAttribute("disabled")
                                         }
                                         layer.arrowheads(arrowStyle)
                                     }
@@ -854,7 +859,9 @@
         const modalTextSize = document.getElementById('modal-text-size');
         const modalTextStyle = document.getElementById('modal-text-style');
         const modalOpacity = document.getElementById('modal-opacity');
+        const modalFillOpacity = document.getElementById('modal-fill-opacity');
         const opacityValue = document.getElementById('opacity-value');
+        const fillOpacityValue = document.getElementById('fill-opacity-value');
         const modalBorderColor = document.getElementById('modal-border-color');
         const modalBorderWeight = document.getElementById('modal-border-weight');
         const modalBorderStyle = document.getElementById('modal-border-style');
@@ -875,21 +882,14 @@
         function openStyleModal(layer) {
             selectedLayer = layer;
 
-            if (selectedLayer.options.arrow === 'true'){
-                modalBorderStyle.value = 'solid'
-                layer.options.dashArray = 'solid'
-                modalBorderStyle.setAttribute("disabled", "disabled")
-            } else {
-                modalBorderStyle.removeAttribute("disabled")
-            }
-
             // Pre-fill current styles
             if (layer.options) {
                 modalColor.value = layer.options.fillColor || '#3388ff';
                 modalBorderColor.value = layer.options.color || '#000000';
                 modalBorderWeight.value = layer.options.weight || 0;
                 modalBorderStyle.value = layer.options.dashArray ? layer.options.dashArray : 'solid';
-                modalOpacity.value = layer.options.fillOpacity || 1;
+                modalOpacity.value = layer.options.opacity || 1;
+                modalFillOpacity.value = layer.options.fillOpacity || 1;
 
                 if (layer.setText) {
                     styleTextModal.style.display = 'block';
@@ -939,7 +939,7 @@
                 const newStyle = {
                     fillColor: modalColor.value,
                     color: modalBorderColor.value,
-                    fillOpacity: modalOpacity.value,
+                    fillOpacity: modalFillOpacity.value,
                     opacity: modalOpacity.value,
                     weight: parseInt(modalBorderWeight.value),
                     dashArray: modalBorderStyle.value === 'solid' ? null : modalBorderStyle.value,
@@ -998,6 +998,10 @@
 
         modalOpacity.oninput = e => {
             opacityValue.innerText = modalOpacity.value
+        }
+
+        modalFillOpacity.oninput = e => {
+            fillOpacityValue.innerText = modalFillOpacity.value
         }
 
         cancelStyleBtn.addEventListener('click', closeStyleModal);
