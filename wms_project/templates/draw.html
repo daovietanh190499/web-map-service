@@ -191,6 +191,16 @@
             height: 100%;
             background-color: rgba(0, 0, 0, 0.5);
         }
+
+        .upload_file_icon {
+            background-repeat: no-repeat;
+            background-image: url("static/css/images/folder.svg");
+            background-position: center center;
+            background-color: transparent;
+            background-size: 75% 75%;
+            width: 100%;
+            height: 100%;
+        }
     </style>
 </head>
 
@@ -487,6 +497,33 @@
         </div>
     </div>
 
+    <div id="upload-modal-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden"></div>
+    <div id="upload-modal"
+        class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-2xl p-8 z-50 w-full max-w-lg hidden">
+        <h3 class="text-2xl font-bold mb-6 text-gray-900">Upload Image</h3>
+
+        <div class="space-y-6">
+            <!-- File Input -->
+            <div class="flex flex-col">
+                <label for="modal-file" class="text-sm font-medium text-gray-700 mb-2">Image File:</label>
+                <input type="file" id="modal-file" accept=".jpg,.png,.jpeg,.JPG,.PNG,.JPEG"
+                    class="w-full h-10 px-3 rounded-md border border-gray-300 focus:ring-blue-500 focus:border-blue-500">
+            </div>
+        </div>
+
+        <!-- Buttons -->
+        <div class="mt-8 flex justify-end space-x-4">
+            <button id="cancel-upload-modal"
+                class="px-5 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400">
+                Cancel
+            </button>
+            <button id="upload-modal-button"
+                class="px-5 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                Save
+            </button>
+        </div>
+    </div>
+
     <script>
         var openPredictions = {}
         var selectType = "SINGLE"
@@ -498,10 +535,6 @@
 
         L.control.zoom({
             position: 'bottomright'
-        }).addTo(map);
-
-        var img = L.distortableImageOverlay('static/css/images/example.jpg', {
-            selected: true,
         }).addTo(map);
 
         L.control.mousePosition().addTo(map);
@@ -573,6 +606,41 @@
         L.easyButton('fa-save', function (btn, map) {
             saveSideBar()
         }, { position: "bottomleft" }).addTo(map);
+
+        L.easyButton('fa-file-image', function (btn, map) {
+            openUploadImageModal()
+        }, { position: "bottomleft" }).addTo(map);
+
+        uploadModal = document.getElementById("upload-modal")
+        uploadModalOverlay = document.getElementById("upload-modal-overlay")
+        const uploadModalBtn = document.getElementById('upload-modal-button');
+        const cancelUploadModalBtn = document.getElementById('cancel-upload-modal');
+
+        function openUploadImageModal() {
+            uploadModal.style.display = 'block';
+            uploadModalOverlay.style.display = 'block';
+        }
+
+        function  closeUploadImageModal() {
+            uploadModal.style.display = 'none';
+            uploadModalOverlay.style.display = 'none';
+        }
+
+        cancelUploadModalBtn.onclick = (e) => {
+            closeUploadImageModal()
+        }
+
+        uploadModalBtn.onclick = async () => {
+            const fileInput = document.getElementById('modal-file').files[0];
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                let new_img = L.distortableImageOverlay(reader.result, {
+                    selected: true,
+                }).addTo(map)
+                closeUploadImageModal()
+            };
+            reader.readAsDataURL(fileInput);
+        };
 
         function saveSideBar() {
             searchSidebar.classList.remove('hidden');
@@ -684,6 +752,11 @@
                                     delete options['icon'];
                                     layer = L.marker(latLngs, options);
                                     break;
+                                case "L.DistortableImage":
+                                    options = JSON.parse(ele.properties.options);
+                                    convertImageToBase64(`/api/predict-area/${ele.id}/get_image/`).then(base64Url => {
+                                        let new_img = L.distortableImageOverlay(base64Url, options).addTo(map)
+                                    })
                                 default:
                                     break;
                             }
@@ -755,21 +828,42 @@
             document.getElementById('app-container').classList.remove('with-sidebar');
         });
 
-        submitLayer.addEventListener('click', function () {
+        async function convertImageToBase64(imageUrl) {
+            try {
+                // Fetch the image
+                const response = await fetch(imageUrl);
+                const blob = await response.blob();
+                
+                // Convert blob to base64
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onloadend = () => resolve(reader.result);
+                    reader.onerror = reject;
+                    reader.readAsDataURL(blob);
+                });
+            } catch (error) {
+                console.error('Error converting image:', error);
+                throw error;
+            }
+        }
+
+        submitLayer.addEventListener('click', async function () {
             var layerName = document.getElementById('layer-name').value;
             var layerImage = document.getElementById('layer-image').layer_id;
 
             let components = [];
 
-            distortableImages.map(layer => {
-                console.log(JSON.stringify(layer.getCorners()))
-                components.push({
-                    geom: null,
-                    options: JSON.stringify({
-                        corners: layer.getCorners()
-                    }),
-                    object: "L.DistortableImage"
-                })
+            map.eachLayer(layer => {
+                if (layer instanceof L.DistortableImageOverlay) {
+                    components.push({
+                        geom: null,
+                        image_uri: layer._url,
+                        options: JSON.stringify({
+                            corners: layer.getCorners()
+                        }),
+                        object: "L.DistortableImage"
+                    })
+                }
             })
 
             drawnItems.eachLayer(function (layer) {
