@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="static/css/leaflet-layer-tree-control.css" />
     <script src="static/js/tailwind.js"></script>
     <link rel="stylesheet" href="static/css/easy-button.css">
+    <link rel="stylesheet" href="static/css/Control.FullScreen.css">
     <style>
         @keyframes fadeInLeft {
             from {
@@ -277,25 +278,65 @@
     class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-2xl p-8 z-50 w-full max-w-lg hidden">
     <h3 class="text-2xl font-bold mb-6 text-gray-900">Upload Image</h3>
 
-    <div class="space-y-6">
-        <!-- Name Input -->
-        <div class="flex flex-col">
-            <label for="modal-name" class="text-sm font-medium text-gray-700 mb-2">Name:</label>
-            <input type="text" id="modal-name" placeholder="Enter image name"
-                class="w-full h-10 px-3 rounded-md border border-gray-300 focus:ring-blue-500 focus:border-blue-500">
+    <div class="flex flex-col gap-6">
+        <div class="flex space-x-4 flex-row">
+            <div class="flex-1 space-y-4 flex-col">
+                <!-- Name Input -->
+                <div class="flex flex-col">
+                    <label for="modal-name" class="text-sm font-medium text-gray-700 mb-2">Name:</label>
+                    <input type="text" id="modal-name" placeholder="Enter image name"
+                        class="w-full h-10 px-3 rounded-md border border-gray-300 focus:ring-blue-500 focus:border-blue-500">
+                </div>
+
+                <div class="flex flex-col">
+                    <label for="modal-time" class="text-sm font-medium text-gray-700 mb-2">Time:</label>
+                    <input type="datetime-local" id="modal-time"
+                        class="w-full h-10 px-3 rounded-md border border-gray-300 focus:ring-blue-500 focus:border-blue-500">
+                </div>
+
+                <div class="flex flex-col">
+                    <label for="modal-source" class="text-sm font-medium text-gray-700 mb-2">Source:</label>
+                    <select id="modal-source"
+                        class="w-full h-10 px-3 rounded-md border border-gray-300 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="commercial">Commercial</option>
+                        <option value="exchange">Exchange</option>
+                        <option value="opensource">Opensource</option>
+                    </select>
+                </div>
+            </div>
+            <div class="flex-1 space-y-4 flex-col">
+                <div class="flex flex-col">
+                    <label for="modal-format" class="text-sm font-medium text-gray-700 mb-2">Format:</label>
+                    <select id="modal-format"
+                        class="w-full h-10 px-3 rounded-md border border-gray-300 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="OPT">OPT</option>
+                        <option value="SAR">SAR</option>
+                        <option value="UAV">UAV</option>
+                        <option value="LIDAR">LIDAR</option>
+                    </select>
+                </div>
+
+                <div class="flex flex-col">
+                    <label for="modal-satellite" class="text-sm font-medium text-gray-700 mb-2">Satellite ID:</label>
+                    <input type="text" id="modal-satellite"
+                        class="w-full h-10 px-3 rounded-md border border-gray-300 focus:ring-blue-500 focus:border-blue-500">
+                </div>
+
+                <!-- File Input -->
+                <div class="flex flex-col">
+                    <label for="modal-file" class="text-sm font-medium text-gray-700 mb-2">Image File:</label>
+                    <input type="file" id="modal-file"
+                        class="w-full h-10 px-3 rounded-md border border-gray-300 focus:ring-blue-500 focus:border-blue-500">
+                </div>
+            </div>
         </div>
 
-        <!-- File Input -->
-        <div class="flex flex-col">
-            <label for="modal-file" class="text-sm font-medium text-gray-700 mb-2">Image File:</label>
-            <input type="file" id="modal-file"
-                class="w-full h-10 px-3 rounded-md border border-gray-300 focus:ring-blue-500 focus:border-blue-500">
-        </div>
-
-        <!-- Progress Bar -->
-        <div class="flex flex-col">
-            <label for="upload-progress" class="text-sm font-medium text-gray-700 mb-2">Upload Progress:</label>
-            <progress id="upload-progress" value="0" max="100" class="w-full h-4"></progress>
+        <div class="flex space-y-4 flex-col">
+            <!-- Progress Bar -->
+            <div class="flex flex-col">
+                <label for="upload-progress" class="text-sm font-medium text-gray-700 mb-2">Upload Progress:</label>
+                <progress id="upload-progress" value="0" max="100" class="w-full h-4"></progress>
+            </div>
         </div>
     </div>
 
@@ -328,12 +369,17 @@
     <script type="text/javascript" src="static/js/leaflet.mouse-position.js"></script>
     <link rel="stylesheet" type="text/css" href="static/css/leaflet.scalebar.css" />
     <script type="text/javascript" src="static/js/leaflet.scalebar.js"></script>
+    <script src="static/js/Control.FullScreen.js"></script>
     <script>
         var selectType = "MULTIPLE"
         var saveSideBar = null
         var map = L.map('map', {
             zoomControl: false,
-            contextmenu: true
+            contextmenu: true,
+            fullscreenControl: true,
+            fullscreenControlOptions: {
+                position: 'bottomright'
+            }
         }).setView([21.148023790045897, 105.62239681777376], 13);
 
         L.control.zoom({
@@ -494,6 +540,10 @@
 
         saveModalBtn.onclick = async () => {
             const name = document.getElementById('modal-name').value;
+            const datetime = document.getElementById('modal-time').value;
+            const source = document.getElementById('modal-source').value;
+            const image_format = document.getElementById('modal-format').value;
+            const satellite_id = document.getElementById('modal-satellite').value;
             const fileInput = document.getElementById('modal-file').files[0];
             const progressBar = document.getElementById('upload-progress');
 
@@ -504,6 +554,10 @@
 
             const formData = new FormData();
             formData.append('name', name);
+            formData.append('datetime', datetime)
+            formData.append('source', source)
+            formData.append('format', image_format)
+            formData.append('satellite_id', satellite_id)
             formData.append('file', fileInput);
 
             const xhr = new XMLHttpRequest();
@@ -677,7 +731,7 @@
                                 </div>
                                 <div class="flex items-center gap-2">
                                     <i class="fas fa-satellite w-4"></i>
-                                    ${feature.properties.source || 'N/A'}
+                                    ${feature.properties.satellite_id || 'N/A'}
                                 </div>
                             </div>
                         </div>

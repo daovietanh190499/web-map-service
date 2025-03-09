@@ -17,6 +17,7 @@
     <link rel="stylesheet" href="static/js/Leaflet.DistortableImage/dist/vendor.css">
     <link rel="stylesheet" href="static/js/Leaflet.DistortableImage/dist/leaflet.distortableimage.css">
     <link rel="stylesheet" href="static/css/leaflet.scalebar.css" />
+    <link rel="stylesheet" href="static/css/Control.FullScreen.css">
 
     <script src="static/js/tailwind.js"></script>
     <script src="static/js/leaflet.js"></script>
@@ -39,6 +40,7 @@
     <script src="static/js/leaflet.measure.js"></script>
     <script src="static/js/leaflet.mouse-position.js"></script>
     <script src="static/js/leaflet.scalebar.js"></script>
+    <script src="static/js/Control.FullScreen.js"></script>
 
     <style>
         @keyframes fadeInLeft {
@@ -531,6 +533,10 @@
             zoomControl: false,
             contextmenu: true,
             editable: true,
+            fullscreenControl: true,
+            fullscreenControlOptions: {
+                position: 'bottomright'
+            }
         }).setView([21.148023790045897, 105.62239681777376], 13);
 
         L.control.zoom({
@@ -756,6 +762,7 @@
                                     options = JSON.parse(ele.properties.options);
                                     convertImageToBase64(`/api/predict-area/${ele.id}/get_image/`).then(base64Url => {
                                         let new_img = L.distortableImageOverlay(base64Url, options).addTo(map)
+                                        openPredictions[id].push(new_img)
                                     })
                                 default:
                                     break;
@@ -772,6 +779,7 @@
                     } else {
                         openPredictions[id].map(ele => {
                             drawnItems.removeLayer(ele);
+                            map.removeLayer(ele);
                         })
                         delete openPredictions[id]
                         document.getElementById(`open-${id}`).classList.remove("fa-eye")

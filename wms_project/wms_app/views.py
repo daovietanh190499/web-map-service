@@ -121,7 +121,7 @@ class ImageViewSet(viewsets.ModelViewSet):
 
         return files_processed
 
-    def _store_jp2_metadata(self, jp2_path, name=None):
+    def _store_jp2_metadata(self, jp2_path, name=None, datetime_=None, format=None, source=None, satellite_id=None):
         """Extract and store JP2 metadata"""
         try:
             ds = gdal.Open(jp2_path)
@@ -161,7 +161,11 @@ class ImageViewSet(viewsets.ModelViewSet):
                     'filepath': jp2_path,
                     'geom': geometry,
                     'resolution': gt[1],  # Pixel size in map units
-                    'bands': ds.RasterCount
+                    'bands': ds.RasterCount,
+                    'datetime': datetime_,
+                    'source': source,
+                    'format': format,
+                    'satellite_id': satellite_id
                 }
             )
 
@@ -178,6 +182,10 @@ class ImageViewSet(viewsets.ModelViewSet):
         if serializer.is_valid():
             name = serializer.validated_data['name']
             uploaded_file = serializer.validated_data['file']
+            datetime_ = serializer.validated_data['datetime']
+            source = serializer.validated_data['source']
+            format = serializer.validated_data['format']
+            satellite_id = serializer.validated_data['satellite_id']
 
             milliseconds = int(datetime.now().timestamp() * 1000)
 
@@ -188,7 +196,7 @@ class ImageViewSet(viewsets.ModelViewSet):
                     f.write(chunk)
 
             # Process the file with GDAL
-            if self._store_jp2_metadata(temp_path, name):
+            if self._store_jp2_metadata(temp_path, name, datetime_, format, source, satellite_id):
                 return Response({'message': 'File processed successfully.'}, status=status.HTTP_201_CREATED)
             else:
                 return Response({'error': 'Failed to process the file.'}, status=status.HTTP_400_BAD_REQUEST)

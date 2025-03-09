@@ -10,6 +10,10 @@ import json
 
 class ImageUploadSerializer(serializers.Serializer):
     name = serializers.CharField(max_length=255)
+    format = serializers.CharField(max_length=255, required=False)
+    source = serializers.CharField(max_length=255, required=False)
+    satellite_id = serializers.CharField(max_length=255, required=False)
+    datetime = serializers.DateTimeField(required=False)
     file = serializers.FileField()
 
 class PredictAreaSerializer(serializers.ModelSerializer):
@@ -43,6 +47,12 @@ class ImageSerializer(GeoFeatureModelSerializer):
         geo_field = 'geom'
         # bbox_geo_field = 'bbox_geom'
         fields = '__all__'
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if data.get("properties", {}).get("resolution"):
+            data["properties"]["resolution"] = data.get("properties", {}).get("resolution")*111000
+        return data
 
 class SearchGeometrySerializer(serializers.Serializer):
     type = serializers.CharField()

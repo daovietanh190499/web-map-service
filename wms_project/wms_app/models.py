@@ -19,6 +19,7 @@ class Image(models.Model):
     topic = models.CharField(max_length=255, null=True)
     source = models.CharField(max_length=255, null=True)
     satellite_id = models.CharField(max_length=255, null=True)
+    format = models.CharField(max_length=255, null=True)
     geom = models.GeometryField(srid=4326, null=True)
 
 class PredictArea(models.Model):
