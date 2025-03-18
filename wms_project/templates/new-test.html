@@ -135,7 +135,7 @@
 <body class="h-screen overflow-hidden" id="app">
     <div id="app-container" class="flex h-full">
         <!-- Sidebar -->
-        <div id="search-sidebar" :class="['w-1/3', 'h-full', 'bg-white', 'shadow-lg', 'z-50', 'flex-shrink-0', {'hidden': !openSideBar, 'with-sidebar': openSideBar}]">
+        <div id="search-sidebar" class="w-1/3 h-full bg-white shadow-lg z-50 flex-shrink-0" v-if="openSideBar">
             <div class="h-full flex flex-col">
 
                 <!-- Header -->
@@ -146,7 +146,7 @@
                             <button id="toggle-filters" class="text-gray-500 hover:text-gray-700">
                                 <i class="fas fa-filter"></i>
                             </button>
-                            <button id="close-search" class="text-gray-500 hover:text-gray-700">
+                            <button id="close-search" class="text-gray-500 hover:text-gray-700" @click="closeSearchSideBar">
                                 <i class="fas fa-times"></i>
                             </button>
                         </div>
@@ -167,12 +167,13 @@
                                 <div class="grid grid-cols-2 gap-2">
                                     <div>
                                         <label class="block text-sm">Start Date</label>
-                                        <input type="datetime-local" name="start_date"
+                                        <input type="datetime-local" name="start_date" v-model="searchForm.startDate"
                                             class="w-full border rounded p-1">
                                     </div>
                                     <div>
                                         <label class="block text-sm">End Date</label>
-                                        <input type="datetime-local" name="end_date" class="w-full border rounded p-1">
+                                        <input type="datetime-local" name="end_date" v-model="searchForm.endDate" 
+                                            class="w-full border rounded p-1">
                                     </div>
                                 </div>
                             </div>
@@ -189,12 +190,12 @@
                                 <div class="grid grid-cols-2 gap-2">
                                     <div>
                                         <label class="block text-sm">Min</label>
-                                        <input type="number" step="0.1" name="resolution_min"
+                                        <input type="number" step="0.1" name="resolution_min" v-model="searchForm.resolutionMin"
                                             class="w-full border rounded p-1">
                                     </div>
                                     <div>
                                         <label class="block text-sm">Max</label>
-                                        <input type="number" step="0.1" name="resolution_max"
+                                        <input type="number" step="0.1" name="resolution_max" v-model="searchForm.resolutionMax"
                                             class="w-full border rounded p-1">
                                     </div>
                                 </div>
@@ -212,15 +213,15 @@
                                 <div class="space-y-2">
                                     <div>
                                         <label class="block text-sm">Topic</label>
-                                        <input type="text" name="topic" class="w-full border rounded p-1">
+                                        <input type="text" name="topic" class="w-full border rounded p-1" v-model="searchForm.topic">
                                     </div>
                                     <div>
                                         <label class="block text-sm">Source</label>
-                                        <input type="text" name="source" class="w-full border rounded p-1">
+                                        <input type="text" name="source" class="w-full border rounded p-1" v-model="searchForm.source">
                                     </div>
                                     <div>
                                         <label class="block text-sm">Satellite ID</label>
-                                        <input type="text" name="satellite_id" class="w-full border rounded p-1">
+                                        <input type="text" name="satellite_id" class="w-full border rounded p-1" v-model="searchForm.satellite">
                                     </div>
                                 </div>
                             </div>
@@ -280,15 +281,15 @@
     
             </div>
         </div>
-        <div id="map-container" class="flex-grow relative">
+        <div id="map-container" class="flex-grow relative" :class="[{'with-sidebar': openSideBar}]">
             <div id="map" class="absolute inset-0 z-10"></div>
         </div>
     </div>
 
 <!-- Modal Overlay -->
-<div id="upload-modal-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden"></div>
+<div id="upload-modal-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden" v-if="openModal"></div>
 
-<div id="upload-modal"
+<div id="upload-modal" v-if="openModal"
     class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-2xl p-8 z-50 w-full max-w-lg hidden">
     <h3 class="text-2xl font-bold mb-6 text-gray-900">Upload Image</h3>
 
@@ -349,18 +350,18 @@
             <!-- Progress Bar -->
             <div class="flex flex-col">
                 <label for="upload-progress" class="text-sm font-medium text-gray-700 mb-2">Upload Progress:</label>
-                <progress id="upload-progress" value="0" max="100" class="w-full h-4"></progress>
+                <progress id="upload-progress" value="0" max="100" class="w-full h-4" v-model="progressBar"></progress>
             </div>
         </div>
     </div>
 
     <!-- Buttons -->
     <div class="mt-8 flex justify-end space-x-4">
-        <button id="cancel-modal"
+        <button id="cancel-modal" @click="closeModal"
             class="px-5 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400">
             Cancel
         </button>
-        <button id="save-modal"
+        <button id="save-modal" @click="submitModal"
             class="px-5 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
             Save
         </button>
@@ -391,6 +392,8 @@
                     features: []
                 },
                 listLayer: [],
+                openModal: false,
+                progressBar: 0,
                 uploadImage: {
                     name: "New Name",
                     datetime: "",
@@ -398,6 +401,16 @@
                     format: "OPT",
                     satellite: "VINASAT1",
                     file: null
+                },
+                expandFilter: false,
+                searchForm: {
+                    startDate: null,
+                    endDate: null,
+                    resolutionMin: 0,
+                    resolutionMax: 10000,
+                    topic: "",
+                    source: "",
+                    satellite: ""
                 }
             }
         },
@@ -444,7 +457,7 @@
                 }).addTo(this.map);
 
                 L.easyButton('fa-file-image', function (btn, map) {
-                    openUploadImageModal()
+                    this.openModal = true;
                 }, { position: "bottomleft" }).addTo(this.map);
 
                 L.Measure = {
@@ -564,8 +577,109 @@
                 if (!this.listLayer) {
                     this.listLayer = {}
                 }
-            }
-        },
+            },
+            toggleFilter() {
+              this.expandFilter = !this.expandFilter  
+            },
+            closeSearchSideBar() {
+                this.openSideBar = false;
+                this.drawnItems.clearLayers();
+            },
+            closeModal() {
+                this.openModal = false;
+            },
+            submitModal() {
+                if (!this.uploadImage.name || !this.uploadImage.file) {
+                    alert('Please provide a name and select a file.');
+                    return;
+                }
+    
+                const formData = new FormData();
+                formData.append('name', this.uploadImage.name);
+                formData.append('datetime', this.uploadImage.datetime)
+                formData.append('source', this.uploadImage.source)
+                formData.append('format', this.uploadImage.format)
+                formData.append('satellite_id', this.uploadImage.satellite)
+                formData.append('file', this.uploadImage.file);
+    
+                const xhr = new XMLHttpRequest();
+                xhr.open('POST', '/api/images/upload_image/', true);
+    
+                // Update progress bar
+                xhr.upload.onprogress = function (event) {
+                    if (event.lengthComputable) {
+                        let percentComplete = (event.loaded / event.total) * 100;
+                        if (percentComplete >= 98) {
+                            percentComplete = 98
+                        }
+                        this.progressBar = percentComplete;
+                    }
+                };
+    
+                // Handle success and error
+                xhr.onload = function () {
+                    if (xhr.status === 200 || xhr.status === 201) {
+                        this.progressBar = 100; // Reset progress bar
+                        alert('Upload successful!');
+                        this.closeModal();
+                    } else {
+                        alert('Upload failed. Please try again.');
+                        this.closeModal();
+                    }
+                };
+    
+                xhr.onerror = function () {
+                    alert('An error occurred during the upload.');
+                    this.closeModal();
+                };
+    
+                xhr.send(formData);
+            },
+            submitSearchForm() {
+                const bounds = this.drawnItems.getBounds();
+                const searchParams = {
+                    bbox: {
+                      north: bounds.getNorth(),
+                      south: bounds.getSouth(),
+                      east: bounds.getEast(),
+                      west: bounds.getWest()
+                    },
+                    datetime: `${this.searchForm.startDate}/${this.searchForm.endDate}`,
+                    resolution: {
+                      min: this.searchForm.resolutionMin,
+                      max: this.searchForm.resolutionMax
+                    }
+                };
+                this.performSearch(searchParams);
+            },
+            submitSearchFormv2() {
+                e.preventDefault();
+                const formData = new FormData(searchForm);
+                const searchData = {
+                    geometry: drawnItems.toGeoJSON().features[0].geometry,
+                    operation: 'intersects'
+                };
+    
+                // Add form fields to search data
+                formData.forEach((value, key) => {
+                    if (value) searchData[key] = value;
+                });
+    
+                try {
+                    const response = await fetch('/api/images/search/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(searchData)
+                    });
+    
+                    const results = await response.json();
+                    this.searchResults = results;
+                } catch (error) {
+                    console.error('Error searching images:', error);
+                }
+            })
         mounted() {
             this.$nextTick(() => {
                 this.initMap()
@@ -573,124 +687,7 @@
             })
         }
     }).mount('#app')
-     
-        var selectType = "MULTIPLE"
-        var saveSideBar = null
 
-        var searchSidebar = document.getElementById('search-sidebar');
-        var searchControl = document.getElementById('search-control');
-        var closeSearch = document.getElementById('close-search');
-        var searchForm = document.getElementById('search-form');
-        var searchResults = document.getElementById('search-results');
-        var isDrawing = false;
-
-        uploadModal = document.getElementById("upload-modal")
-        uploadModalOverlay = document.getElementById("upload-modal-overlay")
-        const saveModalBtn = document.getElementById('save-modal');
-        const cancelModalBtn = document.getElementById('cancel-modal');
-
-        function openUploadImageModal() {
-            uploadModal.style.display = 'block';
-            uploadModalOverlay.style.display = 'block';
-        }
-
-        function  closeUploadImageModal() {
-            uploadModal.style.display = 'none';
-            uploadModalOverlay.style.display = 'none';
-        }
-
-        cancelModalBtn.onclick = (e) => {
-            closeUploadImageModal()
-        }
-
-        saveModalBtn.onclick = async () => {
-            const name = document.getElementById('modal-name').value;
-            const datetime = document.getElementById('modal-time').value;
-            const source = document.getElementById('modal-source').value;
-            const image_format = document.getElementById('modal-format').value;
-            const satellite_id = document.getElementById('modal-satellite').value;
-            const fileInput = document.getElementById('modal-file').files[0];
-            const progressBar = document.getElementById('upload-progress');
-
-            if (!name || !fileInput) {
-                alert('Please provide a name and select a file.');
-                return;
-            }
-
-            const formData = new FormData();
-            formData.append('name', name);
-            formData.append('datetime', datetime)
-            formData.append('source', source)
-            formData.append('format', image_format)
-            formData.append('satellite_id', satellite_id)
-            formData.append('file', fileInput);
-
-            const xhr = new XMLHttpRequest();
-            xhr.open('POST', '/api/images/upload_image/', true);
-
-            // Update progress bar
-            xhr.upload.onprogress = function (event) {
-                if (event.lengthComputable) {
-                    let percentComplete = (event.loaded / event.total) * 100;
-                    if (percentComplete >= 98) {
-                        percentComplete = 98
-                    }
-                    progressBar.value = percentComplete;
-                }
-            };
-
-            // Handle success and error
-            xhr.onload = function () {
-                if (xhr.status === 200 || xhr.status === 201) {
-                    progressBar.value = 100; // Reset progress bar
-                    alert('Upload successful!');
-                    closeUploadImageModal();
-                } else {
-                    alert('Upload failed. Please try again.');
-                    closeUploadImageModal();
-                }
-            };
-
-            xhr.onerror = function () {
-                alert('An error occurred during the upload.');
-                closeUploadImageModal();
-            };
-
-            xhr.send(formData);
-        };
-
-        // Handle form submission for filtered search
-        document.getElementById('search-form').addEventListener('submit', function (e) {
-            e.preventDefault();
-
-            const formData = new FormData(e.target);
-            const bounds = drawnItems.getBounds();
-
-            const searchParams = {
-                bbox: {
-                    north: bounds.getNorth(),
-                    south: bounds.getSouth(),
-                    east: bounds.getEast(),
-                    west: bounds.getWest()
-                },
-                datetime: `${formData.get('start_date')}/${formData.get('end_date')}`,
-                resolution: {
-                    min: formData.get('resolution_min'),
-                    max: formData.get('resolution_max')
-                }
-            };
-
-            performSearch(searchParams);
-        });
-
-        const toggleFiltersBtn = document.getElementById('toggle-filters');
-        const filtersContainer = document.getElementById('filters-container');
-
-        toggleFiltersBtn.addEventListener('click', function () {
-            filtersContainer.classList.toggle('hidden');
-        });
-
-        // Add collapsible functionality to filter sections
         document.querySelectorAll('.filter-header').forEach(header => {
             header.addEventListener('click', function () {
                 const targetId = this.getAttribute('data-target');
@@ -710,43 +707,7 @@
             });
         });
 
-        closeSearch.addEventListener('click', function () {
-            searchSidebar.classList.add('hidden');
-            // document.getElementById('search-vector').classList.remove('hidden');
-            document.getElementById('app-container').classList.remove('with-sidebar');
-            drawnItems.clearLayers();
-        });
-
-        // Search form submission
-        searchForm.addEventListener('submit', async function (e) {
-            e.preventDefault();
-            const formData = new FormData(searchForm);
-            const searchData = {
-                geometry: drawnItems.toGeoJSON().features[0].geometry,
-                operation: 'intersects'
-            };
-
-            // Add form fields to search data
-            formData.forEach((value, key) => {
-                if (value) searchData[key] = value;
-            });
-
-            try {
-                const response = await fetch('/api/images/search/', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(searchData)
-                });
-
-                const results = await response.json();
-                displaySearchResults(results);
-            } catch (error) {
-                console.error('Error searching images:', error);
-            }
-        });
-    </script>
+</script>
 
     <script src="static/js/layer-tree.js"></script>
 
