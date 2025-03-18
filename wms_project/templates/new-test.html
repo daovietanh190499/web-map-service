@@ -29,6 +29,7 @@
     <link rel="stylesheet" type="text/css" href="static/css/leaflet.scalebar.css" />
     <script type="text/javascript" src="static/js/leaflet.scalebar.js"></script>
     <script src="static/js/Control.FullScreen.js"></script>
+    <script src="static/js/vue.js"></script>
 
     <style>
         @keyframes fadeInLeft {
@@ -131,10 +132,10 @@
     </style>
 </head>
 
-<body class="h-screen overflow-hidden">
+<body class="h-screen overflow-hidden" id="app">
     <div id="app-container" class="flex h-full">
         <!-- Sidebar -->
-        <div id="search-sidebar" class="w-1/3 h-full bg-white shadow-lg z-50 hidden flex-shrink-0">
+        <div id="search-sidebar" :class="['w-1/3', 'h-full', 'bg-white', 'shadow-lg', 'z-50', 'flex-shrink-0', {'hidden': !openSideBar, 'with-sidebar': openSideBar}]">
             <div class="h-full flex flex-col">
 
                 <!-- Header -->
@@ -237,9 +238,46 @@
                 <!-- Search Results -->
                 <div class="search-results-container flex-grow p-4">
                     <div id="search-results" class="space-y-2">
-                        <!-- Results will be populated here -->
+                        <div class="flex justify-center items-center py-4" v-if="searchLoading">
+                            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                        </div>
+                        <div class="text-center text-red-500 py-4" v-if="showSearchError">
+                            Error performing search. Please try again.
+                        </div>
+                        <div class="text-center text-gray-500 py-4" v-if="!searchLoading && !showSearchError && searchResults.features.length === 0">
+                            No results found
+                        </div>
+                        <div class="bg-white border rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 mb-3" v-for="(feature, index) in searchResults.features" :key="feature.id">
+                            <div class="flex p-3">
+                                <div class="flex-auto w-4/5">
+                                    <div class="font-semibold text-gray-800">{{ feature.properties.name || feature.properties.filename }}</div>
+                                    <div class="text-sm text-gray-600 mt-1">
+                                        <div class="flex items-center gap-2">
+                                            <i class="far fa-calendar-alt w-4"></i>
+                                            {{ new Date(feature.properties.datetime).toLocaleDateString() }} 
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <i class="fas fa-ruler w-4"></i>
+                                            {{ feature.properties.resolution }} m
+                                        </div>
+                                        <div class="flex items-center gap-2">
+                                            <i class="fas fa-satellite w-4"></i>
+                                            {{ feature.properties.satellite_id || 'N/A' }}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="flex-auto w-1/5">
+                                    <i id="{{ feature.id }}-action"
+                                        class="fas w-8 h-8 text-xl cursor-pointer"
+                                        :class="[{'fa-folder-plus': !(feature.id in listLayer), 'fa-folder-minus': (feature.id in listLayer)}]"
+                                        @click="changeMenu(feature.id, feature.properties.name, [feature.geometry.coordinates])">
+                                    </i>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
+    
             </div>
         </div>
         <div id="map-container" class="flex-grow relative">
@@ -328,119 +366,197 @@
         </button>
     </div>
 </div>
+</body>
 
-    <script>
+ <script>
+    const { createApp } = Vue
+
+    createApp({
+        data() {
+            return {
+                map: L.map('map', {
+                    zoomControl: false,
+                    contextmenu: true,
+                    fullscreenControl: true,
+                    fullscreenControlOptions: {
+                        position: 'bottomright'
+                    }
+                }).setView([21.148023790045897, 105.62239681777376], 13);,
+                drawnItems: new L.FeatureGroup(),
+                drawControl: null,
+                openSideBar: false,
+                searchLoading: false,
+                showSearchError: false,
+                searchResults: {
+                    features: []
+                },
+                listLayer: 
+            }
+        },
+        methods: {
+            initMap() {
+                L.control.zoom({
+                    position: 'bottomright'
+                }).addTo(this.map);
+
+                L.control.mousePosition().addTo(this.map);
+
+                L.control.betterscale().addTo(this.map);
+
+                L.easyButton('fa-columns', function (btn, map) {
+                    window.location.replace('compare')
+                }, { position: "bottomleft" }).addTo(this.map);
+
+                L.easyButton('fa-paint-brush', function (btn, map) {
+                    window.location.replace('draw')
+                }, { position: "bottomleft" }).addTo(this.map);
+
+                L.Control.FileLayerLoad.LABEL = '<div class="upload_file_icon"></div>';
+
+                L.Control.fileLayerLoad({
+                    position: 'bottomleft',
+                    layer: L.geoJson,
+                    layerOptions: {
+                        style: {
+                            color: 'red',
+                            opacity: 1.0,
+                            fillOpacity: 1.0,
+                            weight: 2,
+                            clickable: true
+                        },
+                    },
+                    addToMap: true,
+                    fileSizeLimit: 1024,
+                    formats: [
+                        '.geojson',
+                        '.json',
+                        '.gpx',
+                        '.kml'
+                    ]
+                }).addTo(this.map);
+
+                L.easyButton('fa-file-image', function (btn, map) {
+                    openUploadImageModal()
+                }, { position: "bottomleft" }).addTo(this.map);
+
+                L.Measure = {
+                    linearMeasurement: "Distance measurement",
+                    areaMeasurement: "Area measurement",
+                    start: "Start",
+                    meter: "m",
+                    kilometer: "km",
+                    squareMeter: "m²",
+                    squareKilometers: "km²",
+                };
+
+                var measure = L.control.measure({
+                    position: "bottomleft"
+                }).addTo(this.map);
+
+                this.map.addLayer(this.drawnItems);
+
+                this.drawControl = new L.Control.Draw({
+                    position: 'bottomleft',
+                    draw: {
+                        polygon: {
+                            allowIntersection: false,
+                            drawError: {
+                                color: '#e1e100',
+                                timeout: 1000
+                            },
+                            shapeOptions: {
+                                color: '#3388ff'
+                            },
+                            showArea: true
+                        },
+                        polyline: false,
+                        circle: false,
+                        rectangle: true,
+                        circlemarker: false,
+                        marker: false
+                    },
+                    edit: {
+                        featureGroup: this.drawnItems,
+                        remove: true
+                    }
+                });
+
+                this.map.addControl(this.drawControl);
+
+                this.map.on('draw:created', function (e) {
+                    this.drawnItems.clearLayers();
+                    let layer = e.layer;
+                    this.drawnItems.addLayer(layer);
+                    this.openSideBar = true
+    
+                    const bounds = layer.getBounds();
+                    const searchArea = {
+                        north: bounds.getNorth(),
+                        south: bounds.getSouth(),
+                        east: bounds.getEast(),
+                        west: bounds.getWest()
+                    };
+        
+                    this.performSearch({
+                        bbox: searchArea,
+                        datetime: `${new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()}/${new Date().toISOString()}`
+                    });
+                });
+
+            },
+            async performSearch(searchParams) {
+                try {
+                    this.searchLoading = true;
+    
+                    // Build STAC API search parameters
+                    const searchBody = {
+                        geometry: this.drawnItems.toGeoJSON().features[0].geometry,
+                        operation: 'intersects',
+                        datetime: searchParams.datetime,
+                        collections: ["sentinel-2-l2a"], // Default collection
+                        limit: 50
+                    };
+    
+                    // Add additional parameters if provided
+                    if (searchParams.resolution) {
+                        searchBody.query = {
+                            "eo:gsd": {
+                                gte: parseFloat(searchParams.resolution.min) || 0,
+                                lte: parseFloat(searchParams.resolution.max) || 100
+                            }
+                        };
+                    }
+    
+                    // Make API request
+                    const response = await fetch('/api/images/search/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(searchBody)
+                    });
+    
+                    if (!response.ok) throw new Error('Search request failed');
+    
+                    const results = await response.json();
+                    this.searchLoading = false;
+                    this.searchResults = results
+                } catch (error) {
+                    console.error('Search error:', error);
+                    this.showSearchError = true;
+                    this.searchLoading = false;
+                }
+            }
+        },
+        mounted() {
+            this.$nextTick(() => {
+                this.initMap()
+            })
+        }
+    }).mount('#app')
+     
         var selectType = "MULTIPLE"
         var saveSideBar = null
-        var map = L.map('map', {
-            zoomControl: false,
-            contextmenu: true,
-            fullscreenControl: true,
-            fullscreenControlOptions: {
-                position: 'bottomright'
-            }
-        }).setView([21.148023790045897, 105.62239681777376], 13);
-
-        L.control.zoom({
-            position: 'bottomright'
-        }).addTo(map);
-
-        L.control.mousePosition().addTo(map);
-
-        L.control.betterscale().addTo(map);
-
-        L.easyButton('fa-columns', function (btn, map) {
-            window.location.replace('compare')
-        }, { position: "bottomleft" }).addTo(map);
-
-        L.easyButton('fa-paint-brush', function (btn, map) {
-            window.location.replace('draw')
-        }, { position: "bottomleft" }).addTo(map);
-
-        L.Control.FileLayerLoad.LABEL = '<div class="upload_file_icon"></div>';
-
-        L.Control.fileLayerLoad({
-            // Allows you to use a customized version of L.geoJson.
-            // For example if you are using the Proj4Leaflet leaflet plugin,
-            // you can pass L.Proj.geoJson and load the files into the
-            // L.Proj.GeoJson instead of the L.geoJson.
-            position: 'bottomleft',
-            layer: L.geoJson,
-            // See http://leafletjs.com/reference.html#geojson-options
-            layerOptions: {
-                style: {
-                    color: 'red',
-                    opacity: 1.0,
-                    fillOpacity: 1.0,
-                    weight: 2,
-                    clickable: true
-                },
-                // pointToLayer: function (data, latlng) {
-                //     return L.circleMarker(
-                //         latlng,
-                //         { style: style }
-                //     );
-                // }
-            },
-            // Add to map after loading (default: true) ?
-            addToMap: true,
-            // File size limit in kb (default: 1024) ?
-            fileSizeLimit: 1024,
-            // Restrict accepted file formats (default: .geojson, .json, .kml, and .gpx) ?
-            formats: [
-                '.geojson',
-                '.json',
-                '.gpx',
-                '.kml'
-            ]
-        }).addTo(map);
-
-        L.easyButton('fa-file-image', function (btn, map) {
-            openUploadImageModal()
-        }, { position: "bottomleft" }).addTo(map);
-
-        L.Measure = {
-            linearMeasurement: "Distance measurement",
-            areaMeasurement: "Area measurement",
-            start: "Start",
-            meter: "m",
-            kilometer: "km",
-            squareMeter: "m²",
-            squareKilometers: "km²",
-        };
-
-        var measure = L.control.measure({
-            position: "bottomleft"
-        }).addTo(map);
-
-        var drawnItems = new L.FeatureGroup();
-        map.addLayer(drawnItems);
-
-        var drawControl = new L.Control.Draw({
-            position: 'bottomleft',
-            draw: {
-                polygon: {
-                    allowIntersection: false,
-                    drawError: {
-                        color: '#e1e100',
-                        timeout: 1000
-                    },
-                    shapeOptions: {
-                        color: '#3388ff'
-                    },
-                    showArea: true
-                },
-                polyline: false,
-                circle: false,
-                rectangle: true,
-                circlemarker: false,
-                marker: false
-            },
-            edit: {
-                featureGroup: drawnItems,
-                remove: true
-            }
-        });
 
         var searchSidebar = document.getElementById('search-sidebar');
         var searchControl = document.getElementById('search-control');
@@ -448,35 +564,6 @@
         var searchForm = document.getElementById('search-form');
         var searchResults = document.getElementById('search-results');
         var isDrawing = false;
-
-        map.addControl(drawControl);
-
-        map.on('draw:created', function (e) {
-            drawnItems.clearLayers();
-            let layer = e.layer;
-            drawnItems.addLayer(layer);
-
-            // Show search sidebar
-            document.getElementById('search-sidebar').classList.remove('hidden');
-
-            // document.getElementById('search-vector').classList.add('hidden');
-
-            document.getElementById('app-container').classList.add('with-sidebar');
-
-            // Perform initial search with drawn geometry
-            const bounds = layer.getBounds();
-            const searchArea = {
-                north: bounds.getNorth(),
-                south: bounds.getSouth(),
-                east: bounds.getEast(),
-                west: bounds.getWest()
-            };
-
-            performSearch({
-                bbox: searchArea,
-                datetime: `${new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()}/${new Date().toISOString()}`
-            });
-        });
 
         uploadModal = document.getElementById("upload-modal")
         uploadModalOverlay = document.getElementById("upload-modal-overlay")
@@ -553,59 +640,6 @@
             xhr.send(formData);
         };
 
-        // Search function
-        async function performSearch(searchParams) {
-            try {
-                // Show loading state
-                const searchResults = document.getElementById('search-results');
-                searchResults.innerHTML = `
-                    <div class="flex justify-center items-center py-4">
-                        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-                    </div>
-                `;
-
-                // Build STAC API search parameters
-                const searchBody = {
-                    geometry: drawnItems.toGeoJSON().features[0].geometry,
-                    operation: 'intersects',
-                    datetime: searchParams.datetime,
-                    collections: ["sentinel-2-l2a"], // Default collection
-                    limit: 50
-                };
-
-                // Add additional parameters if provided
-                if (searchParams.resolution) {
-                    searchBody.query = {
-                        "eo:gsd": {
-                            gte: parseFloat(searchParams.resolution.min) || 0,
-                            lte: parseFloat(searchParams.resolution.max) || 100
-                        }
-                    };
-                }
-
-                // Make API request
-                const response = await fetch('/api/images/search/', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(searchBody)
-                });
-
-                if (!response.ok) throw new Error('Search request failed');
-
-                const results = await response.json();
-                displaySearchResults(results);
-            } catch (error) {
-                console.error('Search error:', error);
-                document.getElementById('search-results').innerHTML = `
-                    <div class="text-center text-red-500 py-4">
-                        Error performing search. Please try again.
-                    </div>
-                `;
-            }
-        }
-
         // Handle form submission for filtered search
         document.getElementById('search-form').addEventListener('submit', function (e) {
             e.preventDefault();
@@ -657,58 +691,6 @@
             });
         });
 
-        // Modified displaySearchResults function to include more details
-        function displaySearchResults(results) {
-            list_layer = getListLayer()
-
-            searchResults.innerHTML = '';
-            if (results.features.length === 0) {
-                searchResults.innerHTML = `
-                    <div class="text-center text-gray-500 py-4">
-                        No results found
-                    </div>
-                `;
-                return;
-            }
-
-            results.features.forEach(feature => {
-                console.log(feature)
-                const result = document.createElement('div');
-                result.className = 'bg-white border rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 mb-3';
-                result.innerHTML = `
-                    <div class="flex p-3">
-                        <div class="flex-auto w-4/5">
-                            <div class="font-semibold text-gray-800">${feature.properties.name || feature.properties.filename}</div>
-                            <div class="text-sm text-gray-600 mt-1">
-                                <div class="flex items-center gap-2">
-                                    <i class="far fa-calendar-alt w-4"></i>
-                                    ${new Date(feature.properties.datetime).toLocaleDateString()}
-                                </div>
-                                <div class="flex items-center gap-2">
-                                    <i class="fas fa-ruler w-4"></i>
-                                    ${feature.properties.resolution}m
-                                </div>
-                                <div class="flex items-center gap-2">
-                                    <i class="fas fa-satellite w-4"></i>
-                                    ${feature.properties.satellite_id || 'N/A'}
-                                </div>
-                            </div>
-                        </div>
-                        <div class="flex-auto w-1/5">
-                            <i id="${feature.id}" class="fas fa-folder-${(!(feature.id in list_layer)) ? 'plus' : 'minus'} w-8 h-8 text-xl cursor-pointer" onclick="changeMenu('${feature.id}', '${feature.properties.name}', '[${feature.geometry.coordinates}]')"></i>
-                        </div>
-                    </div>
-                `;
-
-                // result.addEventListener('click', () => {
-                //     const bounds = L.geoJSON(feature.geometry).getBounds();
-                //     map.fitBounds(bounds);
-                // });
-
-                searchResults.appendChild(result);
-            });
-        }
-
         closeSearch.addEventListener('click', function () {
             searchSidebar.classList.add('hidden');
             // document.getElementById('search-vector').classList.remove('hidden');
@@ -748,6 +730,5 @@
     </script>
 
     <script src="static/js/layer-tree.js"></script>
-</body>
 
 </html>
