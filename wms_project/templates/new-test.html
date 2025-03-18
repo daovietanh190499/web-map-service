@@ -546,11 +546,22 @@
                     this.showSearchError = true;
                     this.searchLoading = false;
                 }
+            },
+            getListLayer() {
+                try {
+                    this.listLayer = JSON.parse(window.localStorage.getItem("layers"));
+                } catch (e) {
+                    console.log(e)
+                }
+                if (!this.listLayer) {
+                    this.listLayer = {}
+                }
             }
         },
         mounted() {
             this.$nextTick(() => {
                 this.initMap()
+                this.getListLayer()
             })
         }
     }).mount('#app')
