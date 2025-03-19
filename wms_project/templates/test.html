@@ -1,46 +1,1142 @@
 <!DOCTYPE html>
-<html>
-<head>
-    <title>Leaflet debug page</title>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<html lang="en">
 
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web Map Service</title>
+
+    <link rel="stylesheet" href="static/css/tailwind.min.css">
     <link rel="stylesheet" href="static/css/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <link rel="stylesheet" href="static/css/leaflet-layer-tree-control.css" />
+    <link rel="stylesheet" href="static/css/leaflet.draw.css">
+    <link rel="stylesheet" href="static/css/leaflet.mouse-position.css" />
+    <link rel="stylesheet" href="static/css/leaflet.measure.css" />
+    <link rel="stylesheet" href="static/css/easy-button.css">
+    <link rel="stylesheet" href="static/js/Leaflet.DistortableImage/dist/vendor.css">
+    <link rel="stylesheet" href="static/js/Leaflet.DistortableImage/dist/leaflet.distortableimage.css">
+    <link rel="stylesheet" href="static/css/leaflet.scalebar.css" />
+    <link rel="stylesheet" href="static/css/Control.FullScreen.css">
+
+    <script src="static/js/tailwind.js"></script>
     <script src="static/js/leaflet.js"></script>
+    <script src="static/js/leaflet.draw.js"></script>
+    <script src="static/js/leaflet.geometryutils.js"></script>
+    <script src="static/js/leaflet.arrowhead.js"></script>
+    <!-- <script src="static/js/leaflet.path.transform.js"></script>
+    <script src="static/js/leaflet.rotate.js"></script> -->
+    <script src="static/js/leaflet.draggable.js"></script>
+    <script src="static/js/leaflet.editable.js"></script>
+    <script src="static/js/leaflet.textbox.js"></script>
+    <script src="static/js/leaflet-layer-tree-control.js"></script>
+    <script src="static/js/leaflet-layer-tree-control-wfs-zoom.js"></script>
+    <script src="static/js/easy-button.js"></script>
+    <script src="static/js/jquery.js"></script>
+    <script src="static/js/togeojson.js"></script>
+    <script src="static/js/leaflet.filelayer.js"></script>
+    <script src="static/js/Leaflet.DistortableImage/dist/vendor.js"></script>
+    <script src="static/js/Leaflet.DistortableImage/dist/leaflet.distortableimage.js"></script>
+    <script src="static/js/leaflet.measure.js"></script>
+    <script src="static/js/leaflet.mouse-position.js"></script>
+    <script src="static/js/leaflet.scalebar.js"></script>
+    <script src="static/js/Control.FullScreen.js"></script>
+
+    <style>
+        @keyframes fadeInLeft {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .fade-in-left {
+            animation: fadeInLeft 0.3s ease-out;
+        }
+
+        #sidebar {
+            transition: transform 0.3s ease-in-out;
+        }
+
+        #sidebar.hidden {
+            transform: translateX(-100%);
+        }
+
+        #search-sidebar {
+            transition: transform 0.3s ease-in-out;
+            height: 100vh;
+            width: 360px;
+        }
+
+        #search-sidebar.hidden {
+            transform: translateX(-100%);
+        }
+
+        .filter-section {
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .filter-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out;
+            padding: 0;
+        }
+
+        .filter-content.expanded {
+            max-height: 500px;
+            /* Adjust based on content */
+            padding: 1rem;
+        }
+
+        .filter-header {
+            cursor: pointer;
+            padding: 1rem;
+            user-select: none;
+        }
+
+        .filter-header i {
+            transition: transform 0.3s ease;
+        }
+
+        .filter-header.expanded i {
+            transform: rotate(180deg);
+        }
+
+        .search-results-container {
+            height: calc(100vh - 120px);
+            /* Adjust based on header height */
+            overflow-y: auto;
+        }
+
+        #app-container {
+            display: flex;
+        }
+
+        #map-container {
+            flex-grow: 1;
+        }
+
+        #search-sidebar.hidden {
+            display: none;
+        }
+
+        #app-container.with-sidebar #map-container {
+            width: calc(100% - 33.333%);
+            /* Adjust for the sidebar width */
+        }
+
+        .upload_file_icon {
+            background-repeat: no-repeat;
+            background-image: url("static/css/images/folder.svg");
+            background-position: center center;
+            background-color: transparent;
+            background-size: 75% 75%;
+            width: 100%;
+            height: 100%;
+        }
+
+        #style-text-modal, #style-arrow-modal {
+            display: none;
+        }
+
+        #style-modal,
+        #text-style-modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            background-color: white;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            padding: 20px;
+            border-radius: 8px;
+            width: 600px;
+        }
+
+        #style-modal label,
+        #text-style-modal label {
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        #style-modal input,
+        #text-style-modal input,
+        #style-modal select,
+        #text-style-modal select,
+        #style-modal button,
+        #text-style-modal button {
+            width: 100%;
+            margin-bottom: 10px;
+            padding: 8px;
+        }
+
+        #style-modal button,
+        #text-style-modal button {
+            cursor: pointer;
+        }
+
+        #style-modal-overlay,
+        #text-style-modal-overlay {
+            display: none;
+            position: fixed;
+            z-index: 999;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+
+        .upload_file_icon {
+            background-repeat: no-repeat;
+            background-image: url("static/css/images/folder.svg");
+            background-position: center center;
+            background-color: transparent;
+            background-size: 75% 75%;
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+</head>
+
+<body class="h-screen overflow-hidden">
+    <div id="app-container" class="flex h-full">
+        <div id="search-sidebar" class="w-1/3 h-full bg-white shadow-lg z-50 hidden flex-shrink-0">
+            <div class="h-full flex flex-col">
+
+                <!-- Header -->
+                <div class="p-4 border-b">
+                    <div class="flex justify-between items-center">
+                        <h2 class="text-xl font-bold">Save Layers</h2>
+                        <div class="flex items-center gap-2">
+                            <button id="close-search" class="text-gray-500 hover:text-gray-700">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Collapsible Filters -->
+                <div id="filters-container">
+                    <div class="filter-section">
+                        <div id="metadata-filter" class="filter-content expanded">
+                            <div class="space-y-2">
+                                <div>
+                                    <label class="block text-sm">Name</label>
+                                    <input type="text" name="name" id="layer-name" class="w-full border rounded p-1"
+                                        required>
+                                </div>
+                                <div>
+                                    <label class="block text-sm">Image</label>
+                                    <input disabled type="text" value="test" name="image" id="layer-image"
+                                        class="w-full border rounded p-1" required>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="p-4">
+                        <button type="submit" id="submit-layer"
+                            class="w-full bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600">
+                            Submit
+                        </button>
+                    </div>
+                </div>
+
+                <!-- List -->
+                <div class="search-results-container flex-grow p-4">
+                    <div id="search-results" class="space-y-2">
+                        <!-- Results will be populated here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="map-container" class="flex-grow relative">
+            <div id="map" class="absolute inset-0 z-10"></div>
+        </div>
+    </div>
+
+    <!-- Style Modal -->
+    <div id="style-modal-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden"></div>
+    <div id="style-modal"
+        class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-xl p-6 z-50 w-full max-w-4xl hidden">
+        <h3 class="text-xl font-semibold mb-4 text-gray-800">Change Style</h3>
+
+        <div class="flex gap-6">
+            <!-- Style Settings Column -->
+            <div class="flex-1 space-y-4">
+                <h4 class="font-medium text-gray-700">Style Settings</h4>
+                <div class="flex items-center justify-between">
+                    <label for="modal-color" class="text-sm font-medium text-gray-700">Fill Color:</label>
+                    <input type="color" id="modal-color" value="#3388ff"
+                        class="h-8 w-16 rounded border border-gray-300">
+                </div>
+
+                <div class="flex items-center justify-between">
+                    <label for="modal-border-color" class="text-sm font-medium text-gray-700">Border Color:</label>
+                    <input type="color" id="modal-border-color" value="#000000"
+                        class="h-8 w-16 rounded border border-gray-300">
+                </div>
+
+                <div class="flex items-center justify-between">
+                    <label for="modal-border-weight" class="text-sm font-medium text-gray-700">Border Weight:</label>
+                    <select id="modal-border-weight"
+                        class="block w-32 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        <option value="0">0px</option>
+                        <option value="1">1px</option>
+                        <option value="2">2px</option>
+                        <option value="3">3px</option>
+                        <option value="4">4px</option>
+                        <option value="8">8px</option>
+                        <option value="12">12px</option>
+                    </select>
+                </div>
+
+                <div class="flex items-center justify-between">
+                    <label for="modal-border-style" class="text-sm font-medium text-gray-700">Border Style:</label>
+                    <select id="modal-border-style"
+                        class="block w-32 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        <option value="solid">Solid</option>
+                        <option value="5,5">Dashed 5, 5</option>
+                        <option value="5,10">Dashed 5, 10</option>
+                        <option value="10,5">Dashed 10, 5</option>
+                        <option value="5,1">Dashed 5, 1</option>
+                        <option value="1,5">Dashed 1, 5</option>
+                        <option value="0,9">Dashed 0, 9</option>
+                        <option value="15,10,5">Dashed 15, 10, 5</option>
+                        <option value="15,10,5,10">Dashed 15, 10, 5, 10</option>
+                        <option value="15,10,5,10,15">Dashed 15, 10, 5, 10, 15</option>
+                        <option value="5,5,1,5">Dashed 5, 5, 1, 5 </option>
+                    </select>
+                </div>
+
+                <div class="flex items-center justify-between">
+                    <label for="modal-opacity" class="text-sm font-medium text-gray-700">Opacity:</label>
+                    <div class="flex items-center">
+                        <input type="range" id="modal-opacity" min=0 max=1 step="0.1" value=1
+                            class="w-32 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-500">
+                        <span id="opacity-value" class="ml-2 text-sm text-gray-700">1.0</span>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between">
+                    <label for="modal-fill-opacity" class="text-sm font-medium text-gray-700">Fill Opacity:</label>
+                    <div class="flex items-center">
+                        <input type="range" id="modal-fill-opacity" min=0 max=1 step="0.1" value=1
+                            class="w-32 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-blue-500">
+                        <span id="fill-opacity-value" class="ml-2 text-sm text-gray-700">1.0</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Text Style Settings Column -->
+            <div class="flex-1 space-y-4" id="style-text-modal">
+                <h4 class="font-medium text-gray-700">Text Settings</h4>
+                <div class="flex items-center justify-between">
+                    <label for="modal-text" class="text-sm font-medium text-gray-700">Text:</label>
+                    <input type="text" id="modal-text" value="Change text here"
+                        class="w-48 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                </div>
+
+                <div class="flex items-center justify-between">
+                    <label for="modal-text-style" class="text-sm font-medium text-gray-700">Text Style:</label>
+                    <select id="modal-text-style"
+                        class="block w-48 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        <option value="normal">Normal</option>
+                        <option value="bold">Bold</option>
+                        <option value="italic">Italic</option>
+                    </select>
+                </div>
+
+                <div class="flex items-center justify-between">
+                    <label for="modal-text-font" class="text-sm font-medium text-gray-700">Font:</label>
+                    <select id="modal-text-font"
+                        class="block w-48 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        <option value="arial">Arial</option>
+                        <option value="Verdana">Verdana</option>
+                        <option value="Times New Roman">Times New Roman</option>
+                        <option value="Courier New">Courier New</option>
+                    </select>
+                </div>
+
+                <div class="flex items-center justify-between">
+                    <label for="modal-text-color" class="text-sm font-medium text-gray-700">Color:</label>
+                    <input type="color" id="modal-text-color" value="#000000"
+                        class="h-8 w-16 rounded border border-gray-300">
+                </div>
+
+                <div class="flex items-center justify-between">
+                    <label for="modal-text-size" class="text-sm font-medium text-gray-700">Size (px):</label>
+                    <input type="number" id="modal-text-size" value="0" min="0" max="72"
+                        class="block w-24 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                </div>
+            </div>
+
+            <!-- Arrow head setting -->
+            <div class="flex-1 space-y-4" id="style-arrow-modal">
+                <h4 class="font-medium text-gray-700">Arrow Settings</h4>
+                <div class="flex items-center justify-between">
+                    <label for="modal-arrow" class="text-sm font-medium text-gray-700">Add Arrow :</label>
+                    <select id="modal-arrow"
+                        class="block w-48 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        <option value=false>False</option>
+                        <option value=true>True</option>
+                    </select>
+                </div>
+
+                <div class="flex items-center justify-between">
+                    <label for="modal-arrow-bidirect" class="text-sm font-medium text-gray-700">Bidirect :</label>
+                    <select id="modal-arrow-bidirect"
+                        class="block w-48 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        <option value=true>True</option>
+                        <option value=false>False</option>
+                    </select>
+                </div>
+
+                <div class="flex items-center justify-between">
+                    <label for="modal-arrow-yawn" class="text-sm font-medium text-gray-700">Yawn:</label>
+                    <select id="modal-arrow-yawn"
+                        class="block w-48 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        <option value=15>15</option>
+                        <option value=20>20</option>
+                        <option value=25>25</option>
+                        <option value=30>30</option>
+                        <option value=35>35</option>
+                        <option value=40>40</option>
+                        <option value=45>45</option>
+                        <option value=50>50</option>
+                        <option value=55>55</option>
+                        <option value=60>60</option>
+                        <option value=65>65</option>
+                        <option value=70>70</option>
+                        <option value=75>75</option>
+                        <option value=80>80</option>
+                        <option value=85>85</option>
+                        <option value=90>90</option>
+                    </select>
+                </div>
+
+                <div class="flex items-center justify-between">
+                    <label for="modal-arrow-size" class="text-sm font-medium text-gray-700">Size:</label>
+                    <select id="modal-arrow-size"
+                        class="block w-48 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        <option value="15%">15%</option>
+                        <option value="30%">30%</option>
+                        <option value="45%">45%</option>
+                        <option value="60%">60%</option>
+                        <option value="20px">20px</option>
+                        <option value="30px">30px</option>
+                        <option value="50px">50px</option>
+                        <option value="5m">5m</option>
+                        <option value="10m">10m</option>
+                        <option value="60m">60m</option>
+                        <option value="100m">100m</option>
+                        <option value="1000m">1000m</option>
+                    </select>
+                </div>
+
+                <div class="flex items-center justify-between">
+                    <label for="modal-arrow-freq" class="text-sm font-medium text-gray-700">Frequency:</label>
+                    <select id="modal-arrow-freq"
+                        class="block w-48 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        <option value="allvertices">allvertices</option>
+                        <option value="endonly">endonly</option>
+                        <option value="100m">100m</option>
+                        <option value="200m">200m</option>
+                        <option value="500m">500m</option>
+                        <option value="1000m">1000m</option>
+                        <option value="10000m">10000m</option>
+                        <option value="20">20</option>
+                        <option value="30">30</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                        <option value="20px">20px</option>
+                        <option value="30px">30px</option>
+                        <option value="50px">50px</option>
+                        <option value="100px">100px</option>
+                    </select>
+                </div>
+
+                <div class="flex items-center justify-between">
+                    <label for="modal-arrow-fill" class="text-sm font-medium text-gray-700">Fill:</label>
+                    <select id="modal-arrow-fill"
+                        class="block w-48 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500">
+                        <option value=true>True</option>
+                        <option value=false>False</option>
+                    </select>
+                </div>
+
+                <div class="flex items-center justify-between">
+                    <label for="modal-arrow-color" class="text-sm font-medium text-gray-700">Color:</label>
+                    <input type="color" id="modal-arrow-color" value="#000000"
+                        class="h-8 w-16 rounded border border-gray-300">
+                </div>
+
+                <div class="flex items-center justify-between">
+                    <label for="modal-arrow-fill-color" class="text-sm font-medium text-gray-700">Fill Color:</label>
+                    <input type="color" id="modal-arrow-fill-color" value="#000000"
+                        class="h-8 w-16 rounded border border-gray-300">
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-6 flex justify-end space-x-3">
+            <button id="cancel-style"
+                class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500">
+                Cancel
+            </button>
+            <button id="apply-style"
+                class="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                Apply
+            </button>
+        </div>
+    </div>
+
+    <div id="upload-modal-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden"></div>
+    <div id="upload-modal"
+        class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-2xl p-8 z-50 w-full max-w-lg hidden">
+        <h3 class="text-2xl font-bold mb-6 text-gray-900">Upload Image</h3>
+
+        <div class="space-y-6">
+            <!-- File Input -->
+            <div class="flex flex-col">
+                <label for="modal-file" class="text-sm font-medium text-gray-700 mb-2">Image File:</label>
+                <input type="file" id="modal-file" accept=".jpg,.png,.jpeg,.JPG,.PNG,.JPEG"
+                    class="w-full h-10 px-3 rounded-md border border-gray-300 focus:ring-blue-500 focus:border-blue-500">
+            </div>
+        </div>
+
+        <!-- Buttons -->
+        <div class="mt-8 flex justify-end space-x-4">
+            <button id="cancel-upload-modal"
+                class="px-5 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400">
+                Cancel
+            </button>
+            <button id="upload-modal-button"
+                class="px-5 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                Save
+            </button>
+        </div>
+    </div>
 
     <script>
-        /*
- * Leaflet.TextBox - Shows text inside a box
- * Based on Makina Corpus Leaflet.TextPath library:
- * https://github.com/makinacorpus/Leaflet.TextPath
- * Which was inspired by Tom Mac Wright article :
- * http://mapbox.com/osmdev/2012/11/20/getting-serious-about-svg/
- */
+        var openPredictions = {}
+        var selectType = "SINGLE"
+        var map = L.map('map', {
+            zoomControl: false,
+            contextmenu: true,
+            editable: true,
+            fullscreenControl: true,
+            fullscreenControlOptions: {
+                position: 'bottomright'
+            }
+        }).setView([21.148023790045897, 105.62239681777376], 13);
 
-
-    </script>
-
-</head>
-<body>
-    <div id="map" style='width:800px; height:600px;'></div>
-
-    <script type="text/javascript">
-
-        var map = L.map('map').setView([50.842941, -0.131312], 13);
-
-        L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
+        L.control.zoom({
+            position: 'bottomright'
         }).addTo(map);
 
-        // Create an orange rectangle
-        var bounds = [[50.832941, -0.111312], [50.842941, -0.141312]];
-        var rectangle = L.rectangle(bounds, {
-            color: "#ff7800",
-            weight: 4
-        })
-        rectangle.addTo(map);
-        rectangle.setText("Hello. This is a really long peice of text which should span multiple lines. It should not split words or overflow the box.")
+        L.control.mousePosition().addTo(map);
 
+        L.control.betterscale().addTo(map);
+
+        L.easyButton('fa-home', function (btn, map) {
+            window.location.replace('/')
+        }, { position: "bottomright" }).addTo(map);
+
+        L.Control.FileLayerLoad.LABEL = '<div class="upload_file_icon"></div>';
+
+        L.Control.fileLayerLoad({
+            // Allows you to use a customized version of L.geoJson.
+            // For example if you are using the Proj4Leaflet leaflet plugin,
+            // you can pass L.Proj.geoJson and load the files into the
+            // L.Proj.GeoJson instead of the L.geoJson.
+            position: 'bottomleft',
+            layer: L.geoJson,
+            // See http://leafletjs.com/reference.html#geojson-options
+            layerOptions: {
+                style: {
+                    color: 'red',
+                    opacity: 1.0,
+                    fillOpacity: 1.0,
+                    weight: 2,
+                    clickable: true
+                },
+                // pointToLayer: function (data, latlng) {
+                //     return L.circleMarker(
+                //         latlng,
+                //         { style: style }
+                //     );
+                // }
+            },
+            // Add to map after loading (default: true) ?
+            addToMap: true,
+            // File size limit in kb (default: 1024) ?
+            fileSizeLimit: 1024,
+            // Restrict accepted file formats (default: .geojson, .json, .kml, and .gpx) ?
+            formats: [
+                '.geojson',
+                '.json',
+                '.gpx',
+                '.kml'
+            ]
+        }).addTo(map);
+
+        L.Measure = {
+            linearMeasurement: "Distance measurement",
+            areaMeasurement: "Area measurement",
+            start: "Start",
+            meter: "m",
+            kilometer: "km",
+            squareMeter: "m²",
+            squareKilometers: "km²",
+        };
+
+        var measure = L.control.measure({
+            position: "bottomleft"
+        }).addTo(map);
+
+        var searchSidebar = document.getElementById('search-sidebar');
+        var closeSearch = document.getElementById('close-search');
+        var layerImage = document.getElementById('layer-image');
+        var submitLayer = document.getElementById('submit-layer');
+        layerImage.layer_id = window.localStorage.getItem("currentLayer")
+
+        L.easyButton('fa-save', function (btn, map) {
+            saveSideBar()
+        }, { position: "bottomleft" }).addTo(map);
+
+        L.easyButton('fa-file-image', function (btn, map) {
+            openUploadImageModal()
+        }, { position: "bottomleft" }).addTo(map);
+
+        uploadModal = document.getElementById("upload-modal")
+        uploadModalOverlay = document.getElementById("upload-modal-overlay")
+        const uploadModalBtn = document.getElementById('upload-modal-button');
+        const cancelUploadModalBtn = document.getElementById('cancel-upload-modal');
+
+        function openUploadImageModal() {
+            uploadModal.style.display = 'block';
+            uploadModalOverlay.style.display = 'block';
+        }
+
+        function  closeUploadImageModal() {
+            uploadModal.style.display = 'none';
+            uploadModalOverlay.style.display = 'none';
+        }
+
+        cancelUploadModalBtn.onclick = (e) => {
+            closeUploadImageModal()
+        }
+
+        uploadModalBtn.onclick = async () => {
+            const fileInput = document.getElementById('modal-file').files[0];
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                let new_img = L.distortableImageOverlay(reader.result, {
+                    selected: true,
+                }).addTo(map)
+                closeUploadImageModal()
+            };
+            reader.readAsDataURL(fileInput);
+        };
+
+        function saveSideBar() {
+            searchSidebar.classList.remove('hidden');
+            document.getElementById('app-container').classList.add('with-sidebar');
+            layerImage.layer_id = window.localStorage.getItem("currentLayer")
+            layerImage.value = JSON.parse(window.localStorage.getItem("layers"))[layerImage.layer_id]['name']
+            fetchListPredict()
+        }
+
+        function fetchListPredict() {
+            fetch('api/images/' + layerImage.layer_id)
+                .then(res => res.json())
+                .then(res => {
+                    displaySearchResults(res)
+                })
+        }
+
+        var searchResults = document.getElementById('search-results');
+
+        function deletePrediction(id) {
+            fetch(`api/predict-area/${id}/`, {
+                method: "DELETE"
+            })
+                .then(res => {
+                    fetchListPredict()
+                })
+        }
+
+        function showPrediction(id) {
+            fetch(`api/predict-area/${id}/`, {
+                method: "GET"
+            })
+                .then(res => res.json())
+                .then(res => {
+                    if (!(id in openPredictions)) {
+                        openPredictions[id] = []
+                        res.components.features.map(ele => {
+                            let latLngs = null
+                            let layer = null
+                            let options = null
+                            switch (ele.properties.object) {
+                                case "L.Circle":
+                                    latLngs = L.latLng(ele.geometry.coordinates[1], ele.geometry.coordinates[0]);
+                                    options = JSON.parse(ele.properties.options);
+                                    delete options['callInitHooks'];
+                                    layer = L.circle(latLngs, options);
+                                    break;
+                                case "L.Rectangle":
+                                    latLngs = ele.geometry.coordinates[0].map(c => L.latLng(c[1], c[0]));
+                                    latLngs.pop();
+                                    options = JSON.parse(ele.properties.options);
+                                    console.log(options)
+                                    delete options['callInitHooks']
+                                    layer = L.rectangle(latLngs, options);
+                                    if (options["text"]) {
+                                        layer.setText(options["text"], options["textOptions"])
+                                    }
+                                    break;
+                                case "L.Polygon":
+                                    latLngs = ele.geometry.coordinates[0].map(c => L.latLng(c[1], c[0]));
+                                    latLngs.pop();
+                                    options = JSON.parse(ele.properties.options); delete options['callInitHooks']
+                                    layer = L.polygon(latLngs, options);
+                                    break;
+                                case "L.Polyline":
+                                    latLngs = ele.geometry.coordinates.map(c => L.latLng(c[1], c[0]));
+                                    options = JSON.parse(ele.properties.options); delete options['callInitHooks']
+                                    layer = L.polyline(latLngs, options);
+                                    if (options["arrow"] === 'true'){
+                                        layer.options.arrow = options['arrow']
+                                        layer.options.arrowColor = options['arrowColor']
+                                        layer.options.arrowFillColor = options['arrowFillColor']
+                                        layer.options.arrowFill = options['arrowFill']
+                                        layer.options.arrowFreq = options['arrowFreq']
+                                        layer.options.arrowSize = options['arrowSize']
+                                        layer.options.arrowYawn = options['arrowYawn']
+                                        layer.options.arrowBidirect = options['arrowBidirect']
+                                        const arrowStyle = {
+                                            yawn: layer.options.arrowYawn,
+                                            size: layer.options.arrowSize,
+                                            frequency: layer.options.arrowFreq,
+                                            fill: layer.options.arrowFill,
+                                            color: layer.options.arrowColor,
+                                            fillColor: layer.options.arrowFillColor
+                                        }
+                                        if (layer.options.arrowBidirect === 'true') {
+                                            let currentLatLngs = layer.getLatLngs();
+                                            let reversedLatLngs = [...currentLatLngs].reverse();
+                                            layer.options.originLatLngs = currentLatLngs;
+                                            reversedLatLngs = reversedLatLngs.slice(1);
+                                            let updatedLatLngs = currentLatLngs.concat(reversedLatLngs);
+                                            layer.options.arrowFreq = "allvertices"
+                                            layer.setLatLngs(updatedLatLngs);
+                                        }
+                                        layer.arrowheads(arrowStyle)
+                                    }
+                                    break;
+                                case "L.CircleMarker":
+                                    latLngs = L.latLng(ele.geometry.coordinates[1], ele.geometry.coordinates[0]);
+                                    options = JSON.parse(ele.properties.options);
+                                    delete options['callInitHooks'];
+                                    delete options['icon'];
+                                    layer = L.circleMarker(latLngs, options);
+                                    break;
+                                case "L.Marker":
+                                    latLngs = L.latLng(ele.geometry.coordinates[1], ele.geometry.coordinates[0]);
+                                    options = JSON.parse(ele.properties.options);
+                                    delete options['callInitHooks'];
+                                    delete options['icon'];
+                                    layer = L.marker(latLngs, options);
+                                    break;
+                                case "L.DistortableImage":
+                                    options = JSON.parse(ele.properties.options);
+                                    convertImageToBase64(`/api/predict-area/${ele.id}/get_image/`).then(base64Url => {
+                                        let new_img = L.distortableImageOverlay(base64Url, options).addTo(map)
+                                        openPredictions[id].push(new_img)
+                                    })
+                                default:
+                                    break;
+                            }
+                            if (layer) {
+                                drawnItems.addLayer(layer);
+                                openPredictions[id].push(layer);
+                            }
+                        })
+                        document.getElementById(`open-${id}`).classList.remove("fa-eye-slash")
+                        document.getElementById(`open-${id}`).classList.remove("text-red-500")
+                        document.getElementById(`open-${id}`).classList.add("fa-eye")
+                        document.getElementById(`open-${id}`).classList.add("text-green-500")
+                    } else {
+                        openPredictions[id].map(ele => {
+                            drawnItems.removeLayer(ele);
+                            map.removeLayer(ele);
+                        })
+                        delete openPredictions[id]
+                        document.getElementById(`open-${id}`).classList.remove("fa-eye")
+                        document.getElementById(`open-${id}`).classList.remove("text-green-500")
+                        document.getElementById(`open-${id}`).classList.add("fa-eye-slash")
+                        document.getElementById(`open-${id}`).classList.add("text-red-500")
+                    }
+                })
+        }
+
+        function displaySearchResults(results) {
+            searchResults.innerHTML = '';
+            if (results.properties.predictions.length === 0) {
+                searchResults.innerHTML = `
+                    <div class="text-center text-gray-500 py-4">
+                        No results found
+                    </div>
+                `;
+                return;
+            }
+
+            results.properties.predictions.forEach(feature => {
+                const result = document.createElement('div');
+                result.className = 'bg-white border rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 mb-3';
+                result.innerHTML = `
+                    <div class="flex p-3">
+                        <div class="flex-auto w-4/5">
+                            <div class="font-semibold text-gray-800">${feature.name}</div>
+                            <div class="font-semibold text-gray-800">${feature.id}</div>
+                            <div class="text-sm text-gray-600 mt-1">
+                                <div class="flex items-center gap-2">
+                                    <i class="far fa-calendar-alt w-4"></i>
+                                    ${new Date(feature.created_at).toLocaleDateString()}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex flex-auto flex-col w-1/5 content-between justify-center items-center">
+                            <div>
+                                <i id="delete-${feature.id}" class="fas fa-trash mb-4 w-4 h-4 text-lg cursor-pointer text-red-500" onclick="deletePrediction('${feature.id}')"></i>
+                            </div>
+                            <div>
+                                <i id="open-${feature.id}" class="fas fa-eye${(feature.id in openPredictions) ? '' : '-slash'} mt-4 w-4 h-4 text-lg cursor-pointer text-${(feature.id in openPredictions) ? 'green' : 'red'}-500" onclick="showPrediction('${feature.id}')"></i>
+                            <div>
+                        </div>
+                    </div>
+                `;
+
+                searchResults.appendChild(result);
+            });
+        }
+
+        closeSearch.addEventListener('click', function () {
+            searchSidebar.classList.add('hidden');
+            document.getElementById('app-container').classList.remove('with-sidebar');
+        });
+
+        async function convertImageToBase64(imageUrl) {
+            try {
+                // Fetch the image
+                const response = await fetch(imageUrl);
+                const blob = await response.blob();
+                
+                // Convert blob to base64
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onloadend = () => resolve(reader.result);
+                    reader.onerror = reject;
+                    reader.readAsDataURL(blob);
+                });
+            } catch (error) {
+                console.error('Error converting image:', error);
+                throw error;
+            }
+        }
+
+        submitLayer.addEventListener('click', async function () {
+            var layerName = document.getElementById('layer-name').value;
+            var layerImage = document.getElementById('layer-image').layer_id;
+
+            let components = [];
+
+            map.eachLayer(layer => {
+                if (layer instanceof L.DistortableImageOverlay) {
+                    components.push({
+                        geom: null,
+                        image_uri: layer._url,
+                        options: JSON.stringify({
+                            corners: layer.getCorners()
+                        }),
+                        object: "L.DistortableImage"
+                    })
+                }
+            })
+
+            drawnItems.eachLayer(function (layer) {
+                let geom;
+                let options = {};
+
+                object = null;
+                if (layer instanceof L.Circle) {
+                    object = "L.Circle";
+                } else if (layer instanceof L.Rectangle) {
+                    object = "L.Rectangle";
+                } else if (layer instanceof L.Polygon) {
+                    object = "L.Polygon";
+                } else if (layer instanceof L.Polyline) {
+                    object = "L.Polyline";
+                } else if (layer instanceof L.CircleMarker) {
+                    object = "L.CircleMarker";
+                } else if (layer instanceof L.Marker) {
+                    object = "L.Marker";
+                } else if (layer instanceof L.Point) {
+                    object = "L.Point";
+                }
+
+                geom = layer.toGeoJSON().geometry;
+
+                // Store style options if they exist
+                if (layer.options) {
+                    options = JSON.stringify(layer.options);
+                }
+
+                components.push({
+                    geom: geom,
+                    options: options,
+                    object: object
+                });
+            });
+
+            var data = {
+                name: layerName,
+                image: layerImage,
+                components: components
+            };
+
+            fetch('/api/predict-area/save_area/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data)
+            })
+                .then(response => response.json())
+                .then(data => {
+                    // Optional: Close sidebar after successful save
+                    searchSidebar.classList.add('hidden');
+                    document.getElementById('app-container').classList.remove('with-sidebar');
+
+                })
+                .catch(error => console.error("Error:", error));
+        });
+
+        var drawnItems = new L.FeatureGroup();
+        map.addLayer(drawnItems);
+
+        var drawControl = new L.Control.Draw({
+            position: 'bottomleft',
+            draw: {
+                polygon: {
+                    allowIntersection: false,
+                    drawError: {
+                        color: '#e1e100',
+                        timeout: 1000
+                    },
+                    shapeOptions: {
+                        color: '#3388ff'
+                    },
+                    showArea: true
+                },
+                polyline: true,
+                circle: true,
+                rectangle: true,
+                circlemarker: true,
+                marker: true
+            },
+            edit: {
+                featureGroup: drawnItems,
+                remove: true
+            }
+        });
+
+        map.addControl(drawControl);
+
+        let selectedLayer = null;
+
+        // Modal references
+        const styleModal = document.getElementById('style-modal');
+        const styleModalOverlay = document.getElementById('style-modal-overlay');
+        const styleTextModal = document.getElementById('style-text-modal');
+        const modalColor = document.getElementById('modal-color');
+        const modalText = document.getElementById('modal-text');
+        const modalTextColor = document.getElementById('modal-text-color');
+        const modalTextFont = document.getElementById('modal-text-font');
+        const modalTextSize = document.getElementById('modal-text-size');
+        const modalTextStyle = document.getElementById('modal-text-style');
+        const modalOpacity = document.getElementById('modal-opacity');
+        const modalFillOpacity = document.getElementById('modal-fill-opacity');
+        const opacityValue = document.getElementById('opacity-value');
+        const fillOpacityValue = document.getElementById('fill-opacity-value');
+        const modalBorderColor = document.getElementById('modal-border-color');
+        const modalBorderWeight = document.getElementById('modal-border-weight');
+        const modalBorderStyle = document.getElementById('modal-border-style');
+        const applyStyleBtn = document.getElementById('apply-style');
+        const cancelStyleBtn = document.getElementById('cancel-style');
+
+        const styleArrowModal = document.getElementById('style-arrow-modal');
+        const modalArrowColor = document.getElementById('modal-arrow-color');
+        const modalArrowFillColor = document.getElementById('modal-arrow-fill-color');
+        const modalArrowYawn = document.getElementById('modal-arrow-yawn');
+        const modalArrowSize = document.getElementById('modal-arrow-size');
+        const modalArrowFreq = document.getElementById('modal-arrow-freq');
+        const modalArrowFill = document.getElementById('modal-arrow-fill');
+        const modalArrowBidirect = document.getElementById('modal-arrow-bidirect');
+        const modalArrow = document.getElementById('modal-arrow');
+
+        // Open modal
+        function openStyleModal(layer) {
+            selectedLayer = layer;
+
+            // Pre-fill current styles
+            if (layer.options) {
+                modalColor.value = layer.options.fillColor || '#3388ff';
+                modalBorderColor.value = layer.options.color || '#000000';
+                modalBorderWeight.value = layer.options.weight || 0;
+                modalBorderStyle.value = layer.options.dashArray ? layer.options.dashArray : 'solid';
+                modalOpacity.value = layer.options.opacity || 1;
+                modalFillOpacity.value = layer.options.fillOpacity || 1;
+
+                if (layer.setText) {
+                    styleTextModal.style.display = 'block';
+                    modalText.value = layer.options.text || "Change text here!";
+                    modalTextColor.value = layer.options.textOptions?.color || "#000000";
+                    modalTextStyle.value = layer.options.textOptions?.style || "normal";
+                    modalTextFont.value = layer.options.textOptions?.font || "arial";
+                    modalTextSize.value = layer.options.textOptions?.fontSize || 0;
+                }
+
+                if (layer.arrowheads && !layer.setText) {
+                    styleArrowModal.style.display = 'block';
+                    modalArrow.value = layer.options.arrow;
+                    modalArrowColor.value = layer.options.arrowColor || "#000000";
+                    modalArrowFillColor.value = layer.options.arrowFillColor || "#000000";
+                    modalArrowFill.value = layer.options.arrowFill;
+                    modalArrowFreq.value = layer.options.arrowFreq || "allvertices";
+                    modalArrowSize.value = layer.options.arrowSize || "15%";
+                    modalArrowYawn.value = layer.options.arrowYawn || 60;
+                    modalArrowBidirect.value = layer.options.arrowBidirect;
+                    if (modalArrowBidirect.value === "true") {
+                        modalArrowFreq.setAttribute("disabled", "disabled")
+                    } else {
+                        modalArrowFreq.removeAttribute("disabled")
+                    }
+                }
+            }
+
+            opacityValue.innerText = layer.options.fillOpacity || 1;
+
+            styleModal.style.display = 'block';
+            styleModalOverlay.style.display = 'block';
+        }
+
+        // Close modal
+        function closeStyleModal() {
+            styleTextModal.style.display = 'none';
+            styleArrowModal.style.display = 'none';
+            styleModal.style.display = 'none';
+            styleModalOverlay.style.display = 'none';
+            selectedLayer = null;
+        }
+
+        // Apply styles
+        applyStyleBtn.addEventListener('click', () => {
+            if (selectedLayer) {
+                const newStyle = {
+                    fillColor: modalColor.value,
+                    color: modalBorderColor.value,
+                    fillOpacity: modalFillOpacity.value,
+                    opacity: modalOpacity.value,
+                    weight: parseInt(modalBorderWeight.value),
+                    dashArray: modalBorderStyle.value === 'solid' ? null : modalBorderStyle.value,
+                };
+                selectedLayer.setStyle && selectedLayer.setStyle(newStyle);
+                if (selectedLayer.setText) {
+                    const newTextStyle = {
+                        color: modalTextColor.value,
+                        style: modalTextStyle.value,
+                        font: modalTextFont.value,
+                        fontSize: modalTextSize.value,
+                    }
+                    selectedLayer.setText && selectedLayer.setText(null);
+                    selectedLayer.setText && selectedLayer.setText(modalText.value, newTextStyle);
+                }
+                if (selectedLayer.arrowheads) {
+                    selectedLayer.options.arrow = modalArrow.value
+                    selectedLayer.options.arrowColor = modalArrowColor.value
+                    selectedLayer.options.arrowFillColor = modalArrowFillColor.value
+                    selectedLayer.options.arrowFill = modalArrowFill.value
+                    selectedLayer.options.arrowFreq = modalArrowFreq.value
+                    selectedLayer.options.arrowSize = modalArrowSize.value
+                    selectedLayer.options.arrowYawn = modalArrowYawn.value
+                    selectedLayer.options.arrowBidirect = modalArrowBidirect.value
+                    if (modalArrow.value === 'true'){
+                        if (modalArrowBidirect.value === 'true') {
+                            let currentLatLngs = selectedLayer.getLatLngs();
+                            let reversedLatLngs = [...currentLatLngs].reverse();
+                            selectedLayer.options.originLatLngs = currentLatLngs;
+                            reversedLatLngs = reversedLatLngs.slice(1);
+                            let updatedLatLngs = currentLatLngs.concat(reversedLatLngs);
+                            selectedLayer.setLatLngs(updatedLatLngs);
+                            selectedLayer.options.arrowFreq = "allvertices"
+                            modalArrowFreq.value = "allvertices"
+                            modalArrowFreq.setAttribute("disabled", "disabled")
+                        } else {
+                            if (selectedLayer.options.originLatLngs) {
+                                selectedLayer.setLatLngs(selectedLayer.options.originLatLngs);
+                            }
+                            modalArrowFreq.removeAttribute("disabled")
+                        }
+                        const arrowStyle = {
+                            yawn: selectedLayer.options.arrowYawn,
+                            size: selectedLayer.options.arrowSize,
+                            frequency: selectedLayer.options.arrowFreq,
+                            fill: selectedLayer.options.arrowFill,
+                            color: selectedLayer.options.arrowColor,
+                            fillColor: selectedLayer.options.arrowFillColor
+                        }
+                        selectedLayer.arrowheads(arrowStyle)
+                    }
+                }
+            }
+            closeStyleModal();
+        });
+
+        modalOpacity.oninput = e => {
+            opacityValue.innerText = modalOpacity.value
+        }
+
+        modalFillOpacity.oninput = e => {
+            fillOpacityValue.innerText = modalFillOpacity.value
+        }
+
+        cancelStyleBtn.addEventListener('click', closeStyleModal);
+
+        // Handle right-click on layers
+        drawnItems.on('contextmenu', (e) => {
+            openStyleModal(e.layer);
+        });
+
+        map.on('draw:created', function (evt) {
+            var type = evt.layerType,
+                layer = evt.layer;
+
+            drawnItems.addLayer(layer);
+        });
     </script>
+
+    <script src="static/js/layer-tree.js"></script>
 </body>
+
 </html>
