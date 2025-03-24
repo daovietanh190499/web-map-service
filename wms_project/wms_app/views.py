@@ -33,7 +33,7 @@ def compare_map(request):
     return render(request, 'compare.html')
 
 def test_map(request):
-    return render(request, 'test.html')
+    return render(request, 'new-test.html')
 
 class ImageViewSet(viewsets.ModelViewSet):
     queryset = Image.objects.all()
@@ -354,6 +354,8 @@ class PredictAreaViewSet(viewsets.ModelViewSet):
             return FileResponse(open(list_prediction_image[0], 'rb'))
         else:
             Response(status=status.HTTP_404_NOT_FOUND)
+
+
 # from django.db.models import F
 # from django.db.models.functions import AsEWKT
 # from django.db import connection

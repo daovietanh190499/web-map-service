@@ -132,257 +132,252 @@
     </style>
 </head>
 
-<body class="h-screen overflow-hidden" id="app">
-    <div id="app-container" class="flex h-full">
-        <!-- Sidebar -->
-        <div id="search-sidebar" class="w-1/3 h-full bg-white shadow-lg z-50 flex-shrink-0" v-if="openSideBar">
-            <div class="h-full flex flex-col">
+<body class="h-screen overflow-hidden">
+    <div class="w-100 h-screen overflow-hidden" id="app">
+        <div id="app-container" class="flex h-full">
+            <!-- Sidebar -->
+            <div id="search-sidebar" class="w-1/3 h-full bg-white shadow-lg z-50 flex-shrink-0" v-if="openSideBar">
+                <div class="h-full flex flex-col">
 
-                <!-- Header -->
-                <div class="p-4 border-b">
-                    <div class="flex justify-between items-center">
-                        <h2 class="text-xl font-bold">Search Images</h2>
-                        <div class="flex items-center gap-2">
-                            <button id="toggle-filters" class="text-gray-500 hover:text-gray-700">
-                                <i class="fas fa-filter"></i>
-                            </button>
-                            <button id="close-search" class="text-gray-500 hover:text-gray-700" @click="closeSearchSideBar">
-                                <i class="fas fa-times"></i>
-                            </button>
+                    <!-- Header -->
+                    <div class="p-4 border-b">
+                        <div class="flex justify-between items-center">
+                            <h2 class="text-xl font-bold">Search Images</h2>
+                            <div class="flex items-center gap-2">
+                                <button id="toggle-filters" class="text-gray-500 hover:text-gray-700">
+                                    <i class="fas fa-filter"></i>
+                                </button>
+                                <button id="close-search" class="text-gray-500 hover:text-gray-700" @click="closeSearchSideBar">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Collapsible Filters -->
+                    <div id="filters-container" class="hidden">
+                        <form id="search-form">
+                            <div class="filter-section">
+                                <div class="filter-header" data-target="date-filter">
+                                    <div class="flex justify-between items-center">
+                                        <span class="font-semibold">Date Range</span>
+                                        <i class="fas fa-chevron-down"></i>
+                                    </div>
+                                </div>
+                                <div id="date-filter" class="filter-content">
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <div>
+                                            <label class="block text-sm">Start Date</label>
+                                            <input type="datetime-local" name="start_date" v-model="searchForm.startDate"
+                                                class="w-full border rounded p-1">
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm">End Date</label>
+                                            <input type="datetime-local" name="end_date" v-model="searchForm.endDate" 
+                                                class="w-full border rounded p-1">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="filter-section">
+                                <div class="filter-header" data-target="resolution-filter">
+                                    <div class="flex justify-between items-center">
+                                        <span class="font-semibold">Resolution (meters)</span>
+                                        <i class="fas fa-chevron-down"></i>
+                                    </div>
+                                </div>
+                                <div id="resolution-filter" class="filter-content">
+                                    <div class="grid grid-cols-2 gap-2">
+                                        <div>
+                                            <label class="block text-sm">Min</label>
+                                            <input type="number" step="0.1" name="resolution_min" v-model="searchForm.resolutionMin"
+                                                class="w-full border rounded p-1">
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm">Max</label>
+                                            <input type="number" step="0.1" name="resolution_max" v-model="searchForm.resolutionMax"
+                                                class="w-full border rounded p-1">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="filter-section">
+                                <div class="filter-header" data-target="metadata-filter">
+                                    <div class="flex justify-between items-center">
+                                        <span class="font-semibold">Metadata</span>
+                                        <i class="fas fa-chevron-down"></i>
+                                    </div>
+                                </div>
+                                <div id="metadata-filter" class="filter-content">
+                                    <div class="space-y-2">
+                                        <div>
+                                            <label class="block text-sm">Topic</label>
+                                            <input type="text" name="topic" class="w-full border rounded p-1" v-model="searchForm.topic">
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm">Source</label>
+                                            <input type="text" name="source" class="w-full border rounded p-1" v-model="searchForm.source">
+                                        </div>
+                                        <div>
+                                            <label class="block text-sm">Satellite ID</label>
+                                            <input type="text" name="satellite_id" class="w-full border rounded p-1" v-model="searchForm.satellite">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="p-4">
+                                <button type="submit"
+                                    class="w-full bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600">
+                                    Apply Filters
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Search Results -->
+                    <div class="search-results-container flex-grow p-4">
+                        <div id="search-results" class="space-y-2">
+                            <div class="flex justify-center items-center py-4" v-if="searchLoading">
+                                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                            </div>
+                            <div class="text-center text-red-500 py-4" v-if="showSearchError">
+                                Error performing search. Please try again.
+                            </div>
+                            <div class="text-center text-gray-500 py-4" v-if="!searchLoading && !showSearchError && searchResults.features.length === 0">
+                                No results found
+                            </div>
+                            <div class="bg-white border rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 mb-3" v-for="(feature, index) in searchResults.features" :key="feature.id">
+                                <div class="flex p-3">
+                                    <div class="flex-auto w-4/5">
+                                        <div class="font-semibold text-gray-800">${ feature.properties.name || feature.properties.filename }</div>
+                                        <div class="text-sm text-gray-600 mt-1">
+                                            <div class="flex items-center gap-2">
+                                                <i class="far fa-calendar-alt w-4"></i>
+                                                ${ new Date(feature.properties.datetime).toLocaleDateString() } 
+                                            </div>
+                                            <div class="flex items-center gap-2">
+                                                <i class="fas fa-ruler w-4"></i>
+                                                ${ feature.properties.resolution } m
+                                            </div>
+                                            <div class="flex items-center gap-2">
+                                                <i class="fas fa-satellite w-4"></i>
+                                                ${ feature.properties.satellite_id || 'N/A' }
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="flex-auto w-1/5">
+                                        <i id="${ feature.id }-action"
+                                            class="fas w-8 h-8 text-xl cursor-pointer"
+                                            :class="[{'fa-folder-plus': !(feature.id in listLayer), 'fa-folder-minus': (feature.id in listLayer)}]"
+                                            @click="changeMenu(feature.id, feature.properties.name, [feature.geometry.coordinates])">
+                                        </i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+        
+                </div>
+            </div>
+            <div id="map-container" class="flex-grow relative" :class="[{'with-sidebar': openSideBar}]">
+                <div id="map" class="absolute inset-0 z-10"></div>
+            </div>
+        </div>
+
+        <!-- Modal Overlay -->
+        <div id="upload-modal-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden" v-if="openModal"></div>
+
+        <div id="upload-modal" v-if="openModal"
+            class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-2xl p-8 z-50 w-full max-w-lg hidden">
+            <h3 class="text-2xl font-bold mb-6 text-gray-900">Upload Image</h3>
+
+            <div class="flex flex-col gap-6">
+                <div class="flex space-x-4 flex-row">
+                    <div class="flex-1 space-y-4 flex-col">
+                        <!-- Name Input -->
+                        <div class="flex flex-col">
+                            <label for="modal-name" class="text-sm font-medium text-gray-700 mb-2">Name:</label>
+                            <input type="text" id="modal-name" placeholder="Enter image name" v-model="uploadImage.name"
+                                class="w-full h-10 px-3 rounded-md border border-gray-300 focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+
+                        <div class="flex flex-col">
+                            <label for="modal-time" class="text-sm font-medium text-gray-700 mb-2">Time:</label>
+                            <input type="datetime-local" id="modal-time" v-model="uploadImage.datetime"
+                                class="w-full h-10 px-3 rounded-md border border-gray-300 focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+
+                        <div class="flex flex-col">
+                            <label for="modal-source" class="text-sm font-medium text-gray-700 mb-2">Source:</label>
+                            <select id="modal-source" v-model="uploadImage.source"
+                                class="w-full h-10 px-3 rounded-md border border-gray-300 focus:ring-blue-500 focus:border-blue-500">
+                                <option value="commercial">Commercial</option>
+                                <option value="exchange">Exchange</option>
+                                <option value="opensource">Opensource</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="flex-1 space-y-4 flex-col">
+                        <div class="flex flex-col">
+                            <label for="modal-format" class="text-sm font-medium text-gray-700 mb-2">Format:</label>
+                            <select id="modal-format" v-model="uploadImage.format"
+                                class="w-full h-10 px-3 rounded-md border border-gray-300 focus:ring-blue-500 focus:border-blue-500">
+                                <option value="OPT">OPT</option>
+                                <option value="SAR">SAR</option>
+                                <option value="UAV">UAV</option>
+                                <option value="LIDAR">LIDAR</option>
+                            </select>
+                        </div>
+
+                        <div class="flex flex-col">
+                            <label for="modal-satellite" class="text-sm font-medium text-gray-700 mb-2">Satellite ID:</label>
+                            <input type="text" id="modal-satellite" v-model="uploadImage.satellite"
+                                class="w-full h-10 px-3 rounded-md border border-gray-300 focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+
+                        <!-- File Input -->
+                        <div class="flex flex-col">
+                            <label for="modal-file" class="text-sm font-medium text-gray-700 mb-2">Image File:</label>
+                            <input type="file" id="modal-file" v-model="uploadImage.file"
+                                class="w-full h-10 px-3 rounded-md border border-gray-300 focus:ring-blue-500 focus:border-blue-500">
                         </div>
                     </div>
                 </div>
 
-                <!-- Collapsible Filters -->
-                <div id="filters-container" class="hidden">
-                    <form id="search-form">
-                        <div class="filter-section">
-                            <div class="filter-header" data-target="date-filter">
-                                <div class="flex justify-between items-center">
-                                    <span class="font-semibold">Date Range</span>
-                                    <i class="fas fa-chevron-down"></i>
-                                </div>
-                            </div>
-                            <div id="date-filter" class="filter-content">
-                                <div class="grid grid-cols-2 gap-2">
-                                    <div>
-                                        <label class="block text-sm">Start Date</label>
-                                        <input type="datetime-local" name="start_date" v-model="searchForm.startDate"
-                                            class="w-full border rounded p-1">
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm">End Date</label>
-                                        <input type="datetime-local" name="end_date" v-model="searchForm.endDate" 
-                                            class="w-full border rounded p-1">
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="filter-section">
-                            <div class="filter-header" data-target="resolution-filter">
-                                <div class="flex justify-between items-center">
-                                    <span class="font-semibold">Resolution (meters)</span>
-                                    <i class="fas fa-chevron-down"></i>
-                                </div>
-                            </div>
-                            <div id="resolution-filter" class="filter-content">
-                                <div class="grid grid-cols-2 gap-2">
-                                    <div>
-                                        <label class="block text-sm">Min</label>
-                                        <input type="number" step="0.1" name="resolution_min" v-model="searchForm.resolutionMin"
-                                            class="w-full border rounded p-1">
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm">Max</label>
-                                        <input type="number" step="0.1" name="resolution_max" v-model="searchForm.resolutionMax"
-                                            class="w-full border rounded p-1">
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="filter-section">
-                            <div class="filter-header" data-target="metadata-filter">
-                                <div class="flex justify-between items-center">
-                                    <span class="font-semibold">Metadata</span>
-                                    <i class="fas fa-chevron-down"></i>
-                                </div>
-                            </div>
-                            <div id="metadata-filter" class="filter-content">
-                                <div class="space-y-2">
-                                    <div>
-                                        <label class="block text-sm">Topic</label>
-                                        <input type="text" name="topic" class="w-full border rounded p-1" v-model="searchForm.topic">
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm">Source</label>
-                                        <input type="text" name="source" class="w-full border rounded p-1" v-model="searchForm.source">
-                                    </div>
-                                    <div>
-                                        <label class="block text-sm">Satellite ID</label>
-                                        <input type="text" name="satellite_id" class="w-full border rounded p-1" v-model="searchForm.satellite">
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="p-4">
-                            <button type="submit"
-                                class="w-full bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600">
-                                Apply Filters
-                            </button>
-                        </div>
-                    </form>
-                </div>
-
-                <!-- Search Results -->
-                <div class="search-results-container flex-grow p-4">
-                    <div id="search-results" class="space-y-2">
-                        <div class="flex justify-center items-center py-4" v-if="searchLoading">
-                            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-                        </div>
-                        <div class="text-center text-red-500 py-4" v-if="showSearchError">
-                            Error performing search. Please try again.
-                        </div>
-                        <div class="text-center text-gray-500 py-4" v-if="!searchLoading && !showSearchError && searchResults.features.length === 0">
-                            No results found
-                        </div>
-                        <div class="bg-white border rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 mb-3" v-for="(feature, index) in searchResults.features" :key="feature.id">
-                            <div class="flex p-3">
-                                <div class="flex-auto w-4/5">
-                                    <div class="font-semibold text-gray-800">{{ feature.properties.name || feature.properties.filename }}</div>
-                                    <div class="text-sm text-gray-600 mt-1">
-                                        <div class="flex items-center gap-2">
-                                            <i class="far fa-calendar-alt w-4"></i>
-                                            {{ new Date(feature.properties.datetime).toLocaleDateString() }} 
-                                        </div>
-                                        <div class="flex items-center gap-2">
-                                            <i class="fas fa-ruler w-4"></i>
-                                            {{ feature.properties.resolution }} m
-                                        </div>
-                                        <div class="flex items-center gap-2">
-                                            <i class="fas fa-satellite w-4"></i>
-                                            {{ feature.properties.satellite_id || 'N/A' }}
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="flex-auto w-1/5">
-                                    <i id="{{ feature.id }}-action"
-                                        class="fas w-8 h-8 text-xl cursor-pointer"
-                                        :class="[{'fa-folder-plus': !(feature.id in listLayer), 'fa-folder-minus': (feature.id in listLayer)}]"
-                                        @click="changeMenu(feature.id, feature.properties.name, [feature.geometry.coordinates])">
-                                    </i>
-                                </div>
-                            </div>
-                        </div>
+                <div class="flex space-y-4 flex-col">
+                    <!-- Progress Bar -->
+                    <div class="flex flex-col">
+                        <label for="upload-progress" class="text-sm font-medium text-gray-700 mb-2">Upload Progress:</label>
+                        <progress id="upload-progress" value="0" max="100" class="w-full h-4" v-model="progressBar"></progress>
                     </div>
                 </div>
-    
             </div>
-        </div>
-        <div id="map-container" class="flex-grow relative" :class="[{'with-sidebar': openSideBar}]">
-            <div id="map" class="absolute inset-0 z-10"></div>
-        </div>
-    </div>
 
-<!-- Modal Overlay -->
-<div id="upload-modal-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden" v-if="openModal"></div>
-
-<div id="upload-modal" v-if="openModal"
-    class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-2xl p-8 z-50 w-full max-w-lg hidden">
-    <h3 class="text-2xl font-bold mb-6 text-gray-900">Upload Image</h3>
-
-    <div class="flex flex-col gap-6">
-        <div class="flex space-x-4 flex-row">
-            <div class="flex-1 space-y-4 flex-col">
-                <!-- Name Input -->
-                <div class="flex flex-col">
-                    <label for="modal-name" class="text-sm font-medium text-gray-700 mb-2">Name:</label>
-                    <input type="text" id="modal-name" placeholder="Enter image name" v-model="uploadImage.name"
-                        class="w-full h-10 px-3 rounded-md border border-gray-300 focus:ring-blue-500 focus:border-blue-500">
-                </div>
-
-                <div class="flex flex-col">
-                    <label for="modal-time" class="text-sm font-medium text-gray-700 mb-2">Time:</label>
-                    <input type="datetime-local" id="modal-time" v-model="uploadImage.datetime"
-                        class="w-full h-10 px-3 rounded-md border border-gray-300 focus:ring-blue-500 focus:border-blue-500">
-                </div>
-
-                <div class="flex flex-col">
-                    <label for="modal-source" class="text-sm font-medium text-gray-700 mb-2">Source:</label>
-                    <select id="modal-source" v-model="uploadImage.source"
-                        class="w-full h-10 px-3 rounded-md border border-gray-300 focus:ring-blue-500 focus:border-blue-500">
-                        <option value="commercial">Commercial</option>
-                        <option value="exchange">Exchange</option>
-                        <option value="opensource">Opensource</option>
-                    </select>
-                </div>
-            </div>
-            <div class="flex-1 space-y-4 flex-col">
-                <div class="flex flex-col">
-                    <label for="modal-format" class="text-sm font-medium text-gray-700 mb-2">Format:</label>
-                    <select id="modal-format" v-model="uploadImage.format"
-                        class="w-full h-10 px-3 rounded-md border border-gray-300 focus:ring-blue-500 focus:border-blue-500">
-                        <option value="OPT">OPT</option>
-                        <option value="SAR">SAR</option>
-                        <option value="UAV">UAV</option>
-                        <option value="LIDAR">LIDAR</option>
-                    </select>
-                </div>
-
-                <div class="flex flex-col">
-                    <label for="modal-satellite" class="text-sm font-medium text-gray-700 mb-2">Satellite ID:</label>
-                    <input type="text" id="modal-satellite" v-model="uploadImage.satellite"
-                        class="w-full h-10 px-3 rounded-md border border-gray-300 focus:ring-blue-500 focus:border-blue-500">
-                </div>
-
-                <!-- File Input -->
-                <div class="flex flex-col">
-                    <label for="modal-file" class="text-sm font-medium text-gray-700 mb-2">Image File:</label>
-                    <input type="file" id="modal-file" v-model="uploadImage.file"
-                        class="w-full h-10 px-3 rounded-md border border-gray-300 focus:ring-blue-500 focus:border-blue-500">
-                </div>
-            </div>
-        </div>
-
-        <div class="flex space-y-4 flex-col">
-            <!-- Progress Bar -->
-            <div class="flex flex-col">
-                <label for="upload-progress" class="text-sm font-medium text-gray-700 mb-2">Upload Progress:</label>
-                <progress id="upload-progress" value="0" max="100" class="w-full h-4" v-model="progressBar"></progress>
+            <!-- Buttons -->
+            <div class="mt-8 flex justify-end space-x-4">
+                <button id="cancel-modal" @click="closeModal"
+                    class="px-5 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400">
+                    Cancel
+                </button>
+                <button id="save-modal" @click="submitModal"
+                    class="px-5 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    Save
+                </button>
             </div>
         </div>
     </div>
-
-    <!-- Buttons -->
-    <div class="mt-8 flex justify-end space-x-4">
-        <button id="cancel-modal" @click="closeModal"
-            class="px-5 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400">
-            Cancel
-        </button>
-        <button id="save-modal" @click="submitModal"
-            class="px-5 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-            Save
-        </button>
-    </div>
-</div>
 </body>
 
  <script>
     const { createApp } = Vue
 
-    createApp({
+    let app = createApp({
         data() {
             return {
-                map: L.map('map', {
-                    zoomControl: false,
-                    contextmenu: true,
-                    fullscreenControl: true,
-                    fullscreenControlOptions: {
-                        position: 'bottomright'
-                    }
-                }).setView([21.148023790045897, 105.62239681777376], 13);,
+                map: null,
                 drawnItems: new L.FeatureGroup(),
                 drawControl: null,
                 openSideBar: false,
@@ -411,11 +406,95 @@
                     topic: "",
                     source: "",
                     satellite: ""
-                }
+                },
+                layerTreeControl: null,
+                layerBuilders: {
+                    OSM: function (layerSettings) {
+                        return L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+                            subdomains: ['a', 'b', 'c']
+                        });
+                    },
+                    SATELLITE: function (layerSettings) {
+                        return L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                            attribution: 'Tiles © Esri'
+                        });
+                    }
+                },
+                tree: [
+                    {
+                        code: "root",
+                        name: "All the Layers",
+                        active: true,
+                        selectedByDefault: false,
+                        openByDefault: true,
+                        selectType: "NONE",
+                        serviceType: null,
+                        params: {},
+                        childLayers: [
+                            {
+                                code: "base",
+                                name: "Base layers",
+                                active: true,
+                                selectedByDefault: false,
+                                openByDefault: true,
+                                selectType: "SINGLE",
+                                serviceType: null,
+                                params: {},
+                                childLayers: [
+                                    {
+                                        code: "osm",
+                                        name: "OpenStreetMap",
+                                        active: true,
+                                        selectedByDefault: true,
+                                        openByDefault: true,
+                                        childLayers: [],
+                                        selectType: "NONE",
+                                        serviceType: "OSM",
+                                        params: {}
+                                    }, 
+                                    {
+                                        code: "satellite",
+                                        name: "Satellite",
+                                        active: true,
+                                        selectedByDefault: false,
+                                        openByDefault: true,
+                                        childLayers: [],
+                                        selectType: "NONE",
+                                        serviceType: "SATELLITE",
+                                        params: {}
+                                    }
+                                ],
+                            },
+                            {
+                                code: "overlays",
+                                name: "Overlays",
+                                active: true,
+                                selectedByDefault: false,
+                                openByDefault: true,
+                                selectType: "MULTIPLE",
+                                serviceType: null,
+                                params: {},
+                                childLayers: [
+
+                                ],
+                            }
+                        ],
+                    }
+                ]
             }
         },
         methods: {
             initMap() {
+                this.map = L.map('map', {
+                    zoomControl: false,
+                    contextmenu: true,
+                    fullscreenControl: true,
+                    fullscreenControlOptions: {
+                        position: 'bottomright'
+                    }
+                }).setView([21.148023790045897, 105.62239681777376], 13)
+
                 L.control.zoom({
                     position: 'bottomright'
                 }).addTo(this.map);
@@ -424,11 +503,11 @@
 
                 L.control.betterscale().addTo(this.map);
 
-                L.easyButton('fa-columns', function (btn, map) {
+                L.easyButton('fa-columns', (btn, map) => {
                     window.location.replace('compare')
                 }, { position: "bottomleft" }).addTo(this.map);
 
-                L.easyButton('fa-paint-brush', function (btn, map) {
+                L.easyButton('fa-paint-brush', (btn, map) => {
                     window.location.replace('draw')
                 }, { position: "bottomleft" }).addTo(this.map);
 
@@ -456,7 +535,7 @@
                     ]
                 }).addTo(this.map);
 
-                L.easyButton('fa-file-image', function (btn, map) {
+                L.easyButton('fa-file-image', (btn, map) => {
                     this.openModal = true;
                 }, { position: "bottomleft" }).addTo(this.map);
 
@@ -504,7 +583,7 @@
 
                 this.map.addControl(this.drawControl);
 
-                this.map.on('draw:created', function (e) {
+                this.map.on('draw:created', (e) => {
                     this.drawnItems.clearLayers();
                     let layer = e.layer;
                     this.drawnItems.addLayer(layer);
@@ -524,6 +603,18 @@
                     });
                 });
 
+                this.layerTreeControl = new L.Control.LayerTreeControl({
+                    layerTree: this.tree,
+                    openByDefault: true,
+                    layerBuilders: this.layerBuilders,
+                    featureBuilders: {
+                        WFS: {
+                            zoom: L.Control.LayerTreeControl.WFSZoomFeature
+                        }
+                    }
+                })
+                
+                this.layerTreeControl.addTo(this.map);
             },
             async performSearch(searchParams) {
                 try {
@@ -606,7 +697,7 @@
                 xhr.open('POST', '/api/images/upload_image/', true);
     
                 // Update progress bar
-                xhr.upload.onprogress = function (event) {
+                xhr.upload.onprogress = (event) => {
                     if (event.lengthComputable) {
                         let percentComplete = (event.loaded / event.total) * 100;
                         if (percentComplete >= 98) {
@@ -617,7 +708,7 @@
                 };
     
                 // Handle success and error
-                xhr.onload = function () {
+                xhr.onload = () => {
                     if (xhr.status === 200 || xhr.status === 201) {
                         this.progressBar = 100; // Reset progress bar
                         alert('Upload successful!');
@@ -628,7 +719,7 @@
                     }
                 };
     
-                xhr.onerror = function () {
+                xhr.onerror = () => {
                     alert('An error occurred during the upload.');
                     this.closeModal();
                 };
@@ -652,7 +743,7 @@
                 };
                 this.performSearch(searchParams);
             },
-            submitSearchFormv2() {
+            async submitSearchFormv2() {
                 e.preventDefault();
                 const formData = new FormData(searchForm);
                 const searchData = {
@@ -679,14 +770,18 @@
                 } catch (error) {
                     console.error('Error searching images:', error);
                 }
-            })
+            }
+        },
         mounted() {
             this.$nextTick(() => {
                 this.initMap()
                 this.getListLayer()
             })
         }
-    }).mount('#app')
+    })
+    
+    app.config.compilerOptions.delimiters = ['${', '}']
+    app.mount('#app')
 
         document.querySelectorAll('.filter-header').forEach(header => {
             header.addEventListener('click', function () {
@@ -709,6 +804,6 @@
 
 </script>
 
-    <script src="static/js/layer-tree.js"></script>
+    <!-- <script src="static/js/layer-tree.js"></script> -->
 
 </html>

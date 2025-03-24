@@ -4,6 +4,8 @@ from pathlib import Path
 from typing import Any, Generator, Sequence
 
 from numpy import append, ndarray, uint8, where, zeros
+import numpy as np
+
 from rasterio import (
     Affine,
     Band,

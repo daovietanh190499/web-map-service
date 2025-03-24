@@ -35,6 +35,23 @@
                 this.setText(text, options);
             }
         },
+
+        calculateRectangleRotationAngle: function (nw, ne, sw, se) {
+            // Tính tâm của hình chữ nhật
+            let centerX = (ne.x + sw.x) / 2;
+            let centerY = (ne.y + sw.y) / 2;
+        
+            // Tính góc quay bằng arctan từ NW -> NE
+            let deltaX = ne.x - nw.x;
+            let deltaY = ne.y - nw.y;
+            let angleRad = Math.atan2(deltaY, deltaX); // Góc tính bằng radian
+            let angleDeg = angleRad * (180 / Math.PI); // Chuyển sang độ
+        
+            return {
+                center: { x: centerX, y: centerY },
+                rotationAngle: angleDeg
+            };
+        },
     
         setText: function (text, options) {
             this._text = text;
@@ -83,11 +100,21 @@
             // Get the position of the text node
             var northWest = this.getBounds().getNorthWest();
             var southEast = this.getBounds().getSouthEast();
+            var northEast = this.getBounds().getNorthEast();
+            var southWest = this.getBounds().getSouthWest();
             var northWestPoint = this._map.latLngToLayerPoint(northWest);
             var southEastPoint = this._map.latLngToLayerPoint(southEast);
+            var northEastPoint = this._map.latLngToLayerPoint(northEast);
+            var southWestPoint = this._map.latLngToLayerPoint(southWest);
+
+            var rect_info = this.calculateRectangleRotationAngle(northWestPoint, northEastPoint, southWestPoint, southEastPoint)
+
+            console.log(this)
+
             var width = southEastPoint.x - northWestPoint.x;
             textNode.setAttribute('x', northWestPoint.x);
             textNode.setAttribute('y', northWestPoint.y);
+            textNode.setAttribute('transform', `rotate(${rect_info.rotationAngle} ${rect_info.center.x} ${rect_info.center.y})`);
     
             // Calculate the scale of the text
             var defaultScale = 13;
