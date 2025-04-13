@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ArcGIS Authentication</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f3f4f6;
+        }
+        .container {
+            text-align: center;
+            padding: 2rem;
+            background-color: white;
+            border-radius: 0.5rem;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .message {
+            color: #4b5563;
+            margin-bottom: 1rem;
+        }
+        .error {
+            color: #ef4444;
+            margin-bottom: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="spinner"></div>
+        <div id="message" class="message">Đang xác thực...</div>
+    </div>
+
+    <script>
+        // Configuration
+        const config = {
+            clientId: 'K0LoN8xkKyozyEmw',
+            redirectUri: 'http://localhost/arcgis-authen',
+            portalUrl: 'https://vnseci.maps.arcgis.com'
+        };
+
+        // Handle OAuth callback
+        async function handleCallback() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const code = urlParams.get('code');
+            const state = urlParams.get('state');
+            const error = urlParams.get('error');
+            const errorDescription = urlParams.get('error_description');
+
+            const messageElement = document.getElementById('message');
+
+            if (error) {
+                messageElement.textContent = `Lỗi xác thực: ${errorDescription || error}`;
+                messageElement.className = 'error';
+                return;
+            }
+
+            if (!code || !state) {
+                messageElement.textContent = 'Thiếu thông tin xác thực';
+                messageElement.className = 'error';
+                return;
+            }
+
+            if (state !== localStorage.getItem('oauth_state')) {
+                messageElement.textContent = 'Lỗi bảo mật: State không khớp';
+                messageElement.className = 'error';
+                return;
+            }
+
+            try {
+                const params = new URLSearchParams({
+                    client_id: config.clientId,
+                    grant_type: 'authorization_code',
+                    code: code,
+                    redirect_uri: config.redirectUri
+                });
+
+                const response = await fetch(`${config.portalUrl}/sharing/rest/oauth2/token`, {
+                    method: 'POST',
+                    body: params
+                });
+
+                if (!response.ok) {
+                    throw new Error('Token exchange failed');
+                }
+
+                const data = await response.json();
+                console.log(data)
+                localStorage.setItem('arcgis_token', data.access_token);
+                
+                messageElement.textContent = 'Xác thực thành công! Đang chuyển hướng...';
+                
+                // Redirect back to main page after a short delay
+                setTimeout(() => {
+                    window.location.href = 'arcgis';
+                }, 1500);
+            } catch (error) {
+                console.error('Authentication error:', error);
+                messageElement.textContent = 'Lỗi xác thực: ' + error.message;
+                messageElement.className = 'error';
+            }
+        }
+
+        // Start authentication process
+        document.addEventListener('DOMContentLoaded', handleCallback);
+    </script>
+</body>
+</html>

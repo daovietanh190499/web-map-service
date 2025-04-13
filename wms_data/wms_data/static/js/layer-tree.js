@@ -149,7 +149,7 @@ function updateLayerTree() {
     }, baseLayerId);
 
     for (let layer in list_layer) {
-        let coords = JSON.parse(list_layer[layer]['coords'])
+        let coords = list_layer[layer]['coords'][0]
         theTreeControl.addLayerDynamically({
             code: layer,
             name: list_layer[layer]['name'] ? list_layer[layer]['name'] : layer,
@@ -157,7 +157,7 @@ function updateLayerTree() {
             selectedByDefault: false,
             openByDefault: true,
             childLayers: [],
-            coord: [(coords[5] + coords[1])/2, (coords[0] + coords[4])/2],
+            coord: [(coords[2][1] + coords[0][1])/2, (coords[0][0] + coords[2][0])/2],
             selectType: "NONE",
             serviceType: layer,
             params: {},

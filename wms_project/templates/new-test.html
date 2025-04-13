@@ -272,7 +272,7 @@
                                         <i id="${ feature.id }-action"
                                             class="fas w-8 h-8 text-xl cursor-pointer"
                                             :class="[{'fa-folder-plus': !(feature.id in listLayer), 'fa-folder-minus': (feature.id in listLayer)}]"
-                                            @click="changeMenu(feature.id, feature.properties.name, [feature.geometry.coordinates])">
+                                            @click="changeMenu(feature.id, feature.properties.name || feature.properties.filename, feature.geometry.coordinates)">
                                         </i>
                                     </div>
                                 </div>
@@ -288,10 +288,10 @@
         </div>
 
         <!-- Modal Overlay -->
-        <div id="upload-modal-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-40 hidden" v-if="openModal"></div>
+        <div id="upload-modal-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-40" v-if="openModal"></div>
 
         <div id="upload-modal" v-if="openModal"
-            class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-2xl p-8 z-50 w-full max-w-lg hidden">
+            class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-2xl p-8 z-50 w-full max-w-lg">
             <h3 class="text-2xl font-bold mb-6 text-gray-900">Upload Image</h3>
 
             <div class="flex flex-col gap-6">
@@ -603,18 +603,9 @@
                     });
                 });
 
-                this.layerTreeControl = new L.Control.LayerTreeControl({
-                    layerTree: this.tree,
-                    openByDefault: true,
-                    layerBuilders: this.layerBuilders,
-                    featureBuilders: {
-                        WFS: {
-                            zoom: L.Control.LayerTreeControl.WFSZoomFeature
-                        }
-                    }
-                })
-                
-                this.layerTreeControl.addTo(this.map);
+                this.getListLayer()
+
+                this.updateLayerTree()
             },
             async performSearch(searchParams) {
                 try {
@@ -668,6 +659,78 @@
                 if (!this.listLayer) {
                     this.listLayer = {}
                 }
+            },
+            removeLayer(layer_id) {
+                let list_layer = this.listLayer
+                delete list_layer[layer_id]
+                window.localStorage.setItem("layers", JSON.stringify(list_layer))
+            },
+            addLayer(layer_id, name, coords) {
+                let list_layer = this.listLayer
+                list_layer[layer_id] = {"name":name, "children": [], "coords": coords}
+                window.localStorage.setItem("layers", JSON.stringify(list_layer))
+            },
+            changeMenu(layer_id, name, coords) {
+                console.log(name)
+                let list_layer = this.listLayer
+                if (layer_id in list_layer) {
+                    this.removeLayer(layer_id)
+                } else {
+                    this.addLayer(layer_id, name, coords)
+                }
+                this.getListLayer()
+                this.updateLayerTree()
+            },
+            updateLayerTree() {
+                if (this.layerTreeControl) {
+                    this.layerTreeControl.remove(map);
+                }
+                if (!this.listLayer) {
+                    this.listLayer = {}
+                }
+
+                for (let layer in this.listLayer) {
+                    this.layerBuilders[layer] = function (layerSettings) {
+                        return L.tileLayer(`api/images/${layer}/jp2/tiles/{z}/{x}/{y}.png/`, {
+                            maxZoom: 20,
+                            attribution: `${layer} JP2 Layer`
+                        });
+                    }
+                }
+
+                let custom_layers = []
+
+                for (let layer in this.listLayer) {
+                    let coords = this.listLayer[layer]['coords'][0]
+                    custom_layers.push({
+                        code: layer,
+                        name: this.listLayer[layer]['name'] ? this.listLayer[layer]['name'] : layer,
+                        active: true,
+                        selectedByDefault: false,
+                        openByDefault: true,
+                        childLayers: [],
+                        coord: [(coords[2][1] + coords[0][1])/2, (coords[0][0] + coords[2][0])/2],
+                        selectType: "NONE",
+                        serviceType: layer,
+                        params: {},
+                        callback: () => {
+                            (this.saveSideBar || (() => {}))();
+                        }
+                    })
+                }
+
+                this.tree[0].childLayers[1].childLayers = custom_layers
+                this.layerTreeControl = new L.Control.LayerTreeControl({
+                    layerTree: this.tree,
+                    openByDefault: true,
+                    layerBuilders: this.layerBuilders,
+                    featureBuilders: {
+                        WFS: {
+                            zoom: L.Control.LayerTreeControl.WFSZoomFeature
+                        }
+                    }
+                })
+                this.layerTreeControl.addTo(this.map);
             },
             toggleFilter() {
               this.expandFilter = !this.expandFilter  
@@ -775,7 +838,6 @@
         mounted() {
             this.$nextTick(() => {
                 this.initMap()
-                this.getListLayer()
             })
         }
     })

@@ -35,6 +35,12 @@ def compare_map(request):
 def test_map(request):
     return render(request, 'new-test.html')
 
+def arcgis_map(request):
+    return render(request, 'arcgis.html')
+
+def arcgis_auth(request):
+    return render(request, 'arcgis-authen.html')
+
 class ImageViewSet(viewsets.ModelViewSet):
     queryset = Image.objects.all()
     serializer_class = ImageSerializer

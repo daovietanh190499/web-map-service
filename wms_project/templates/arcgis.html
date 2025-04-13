@@ -252,27 +252,13 @@
                             <div class="bg-white border rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 mb-3" v-for="(feature, index) in searchResults.features" :key="feature.id">
                                 <div class="flex p-3">
                                     <div class="flex-auto w-4/5">
-                                        <div class="font-semibold text-gray-800">${ feature.properties.name || feature.properties.filename }</div>
-                                        <div class="text-sm text-gray-600 mt-1">
-                                            <div class="flex items-center gap-2">
-                                                <i class="far fa-calendar-alt w-4"></i>
-                                                ${ new Date(feature.properties.datetime).toLocaleDateString() } 
-                                            </div>
-                                            <div class="flex items-center gap-2">
-                                                <i class="fas fa-ruler w-4"></i>
-                                                ${ feature.properties.resolution } m
-                                            </div>
-                                            <div class="flex items-center gap-2">
-                                                <i class="fas fa-satellite w-4"></i>
-                                                ${ feature.properties.satellite_id || 'N/A' }
-                                            </div>
-                                        </div>
+                                        <div class="font-semibold text-gray-800">${ feature.title }</div>
                                     </div>
                                     <div class="flex-auto w-1/5">
                                         <i id="${ feature.id }-action"
                                             class="fas w-8 h-8 text-xl cursor-pointer"
                                             :class="[{'fa-folder-plus': !(feature.id in listLayer), 'fa-folder-minus': (feature.id in listLayer)}]"
-                                            @click="changeMenu(feature.id, feature.properties.name || feature.properties.filename, feature.geometry.coordinates)">
+                                            @click="changeMenu(feature.id, feature.url)">
                                         </i>
                                     </div>
                                 </div>
@@ -289,7 +275,6 @@
 
         <!-- Modal Overlay -->
         <div id="upload-modal-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-40" v-if="openModal"></div>
-
         <div id="upload-modal" v-if="openModal"
             class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-2xl p-8 z-50 w-full max-w-lg">
             <h3 class="text-2xl font-bold mb-6 text-gray-900">Upload Image</h3>
@@ -368,6 +353,19 @@
                 </button>
             </div>
         </div>
+
+        <div id="login-modal-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-40" v-if="showLoginButton"></div>
+        <div id="login-modal" v-if="showLoginButton"
+            class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-2xl p-8 z-50 w-full max-w-lg">
+            <h3 class="text-2xl font-bold mb-6 text-gray-900">Login to Arcgis</h3>
+            <!-- Buttons -->
+            <div class="mt-8 flex justify-end space-x-4">
+                <button id="login-button-modal" @click="initiateOAuth()"
+                    class="px-5 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400">
+                    Login
+                </button>
+            </div>
+        </div>
     </div>
 </body>
 
@@ -407,6 +405,15 @@
                     source: "",
                     satellite: ""
                 },
+                arcgisConfig: {
+                    portalUrl: 'https://vnseci.maps.arcgis.com',
+                    clientId: 'K0LoN8xkKyozyEmw',
+                    redirectUri: 'http://localhost/arcgis-authen',
+                    portalUrl: 'https://vnseci.maps.arcgis.com',
+                    apiUrl: 'https://sampleserver6.arcgisonline.com/arcgis/rest/services'
+                },
+                arcgisToken: localStorage.getItem('arcgis_token'),
+                showLoginButton: true,
                 layerTreeControl: null,
                 layerBuilders: {
                     OSM: function (layerSettings) {
@@ -603,9 +610,61 @@
                     });
                 });
 
-                this.getListLayer()
+                this.layerTreeControl = new L.Control.LayerTreeControl({
+                    layerTree: this.tree,
+                    openByDefault: true,
+                    layerBuilders: this.layerBuilders,
+                    featureBuilders: {
+                        WFS: {
+                            zoom: L.Control.LayerTreeControl.WFSZoomFeature
+                        }
+                    }
+                })
+                
+                this.layerTreeControl.addTo(this.map);
+            },
+            initiateOAuth() {
+                const state = btoa(Math.random().toString(36));
+                localStorage.setItem('oauth_state', state);
+                
+                const params = new URLSearchParams({
+                    client_id: this.arcgisConfig.clientId,
+                    response_type: 'code',
+                    redirect_uri: this.arcgisConfig.redirectUri,
+                    state: state,
+                    expiration: 20160
+                });
 
-                this.updateLayerTree()
+                window.location.href = `${this.arcgisConfig.portalUrl}/sharing/rest/oauth2/authorize?${params}`;
+            },
+            async validateToken() {
+                console.log("VALIDATE TOKEN")
+                const storedToken = localStorage.getItem('arcgis_token');
+                if (!storedToken) {
+                    this.showLoginButton = true
+                    return false;
+                }
+
+                try {
+                    const response = await fetch(`${this.arcgisConfig.portalUrl}/sharing/rest/portals/self?f=json&token=${storedToken}`);
+                    const data = await response.json();
+                    if (data.error) {
+                        localStorage.removeItem('arcgis_token');
+                        this.showLoginButton = true
+                        return false;
+                    } else {
+                        this.showLoginButton = false
+                    }
+                    token = storedToken;
+                    this.arcgisToken = storedToken;
+                    // showUserInfo(data.user);
+                    return true;
+                } catch (error) {
+                    console.error('Token validation failed:', error);
+                    localStorage.removeItem('arcgis_token');
+                    this.showLoginButton = true
+                    return false;
+                }
             },
             async performSearch(searchParams) {
                 try {
@@ -629,21 +688,27 @@
                             }
                         };
                     }
+                    
+                    const params = new URLSearchParams({
+                        q: "owner:sonha25",
+                        f: 'json',
+                        token: this.arcgisToken
+                    });
     
                     // Make API request
-                    const response = await fetch('/api/images/search/', {
-                        method: 'POST',
+                    const response = await fetch(`${this.arcgisConfig.portalUrl}/sharing/rest/search?${params}`, {
+                        method: 'GET',
                         headers: {
                             'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify(searchBody)
+                        }
                     });
     
                     if (!response.ok) throw new Error('Search request failed');
     
                     const results = await response.json();
+                    console.log(results)
                     this.searchLoading = false;
-                    this.searchResults = results
+                    this.searchResults = { "features": results.results }
                 } catch (error) {
                     console.error('Search error:', error);
                     this.showSearchError = true;
@@ -659,78 +724,6 @@
                 if (!this.listLayer) {
                     this.listLayer = {}
                 }
-            },
-            removeLayer(layer_id) {
-                let list_layer = this.listLayer
-                delete list_layer[layer_id]
-                window.localStorage.setItem("layers", JSON.stringify(list_layer))
-            },
-            addLayer(layer_id, name, coords) {
-                let list_layer = this.listLayer
-                list_layer[layer_id] = {"name":name, "children": [], "coords": coords}
-                window.localStorage.setItem("layers", JSON.stringify(list_layer))
-            },
-            changeMenu(layer_id, name, coords) {
-                console.log(name)
-                let list_layer = this.listLayer
-                if (layer_id in list_layer) {
-                    this.removeLayer(layer_id)
-                } else {
-                    this.addLayer(layer_id, name, coords)
-                }
-                this.getListLayer()
-                this.updateLayerTree()
-            },
-            updateLayerTree() {
-                if (this.layerTreeControl) {
-                    this.layerTreeControl.remove(map);
-                }
-                if (!this.listLayer) {
-                    this.listLayer = {}
-                }
-
-                for (let layer in this.listLayer) {
-                    this.layerBuilders[layer] = function (layerSettings) {
-                        return L.tileLayer(`api/images/${layer}/jp2/tiles/{z}/{x}/{y}.png/`, {
-                            maxZoom: 20,
-                            attribution: `${layer} JP2 Layer`
-                        });
-                    }
-                }
-
-                let custom_layers = []
-
-                for (let layer in this.listLayer) {
-                    let coords = this.listLayer[layer]['coords'][0]
-                    custom_layers.push({
-                        code: layer,
-                        name: this.listLayer[layer]['name'] ? this.listLayer[layer]['name'] : layer,
-                        active: true,
-                        selectedByDefault: false,
-                        openByDefault: true,
-                        childLayers: [],
-                        coord: [(coords[2][1] + coords[0][1])/2, (coords[0][0] + coords[2][0])/2],
-                        selectType: "NONE",
-                        serviceType: layer,
-                        params: {},
-                        callback: () => {
-                            (this.saveSideBar || (() => {}))();
-                        }
-                    })
-                }
-
-                this.tree[0].childLayers[1].childLayers = custom_layers
-                this.layerTreeControl = new L.Control.LayerTreeControl({
-                    layerTree: this.tree,
-                    openByDefault: true,
-                    layerBuilders: this.layerBuilders,
-                    featureBuilders: {
-                        WFS: {
-                            zoom: L.Control.LayerTreeControl.WFSZoomFeature
-                        }
-                    }
-                })
-                this.layerTreeControl.addTo(this.map);
             },
             toggleFilter() {
               this.expandFilter = !this.expandFilter  
@@ -838,6 +831,8 @@
         mounted() {
             this.$nextTick(() => {
                 this.initMap()
+                this.getListLayer()
+                this.validateToken()
             })
         }
     })
