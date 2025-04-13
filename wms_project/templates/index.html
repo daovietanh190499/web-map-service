@@ -120,6 +120,18 @@
             /* Adjust for the sidebar width */
         }
 
+        .arcgis {
+            background-repeat: no-repeat;
+            background-image: url("static/css/images/ArcGIS_logo.png");
+            background-position: center center;
+            background-color: transparent;
+            background-size: 75% 75%;
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            left: 0
+        }
+
         .upload_file_icon {
             background-repeat: no-repeat;
             background-image: url("static/css/images/folder.svg");
@@ -509,6 +521,10 @@
 
                 L.easyButton('fa-paint-brush', (btn, map) => {
                     window.location.replace('draw')
+                }, { position: "bottomleft" }).addTo(this.map);
+
+                L.easyButton('arcgis', (btn, map) => {
+                    window.location.replace('arcgis')
                 }, { position: "bottomleft" }).addTo(this.map);
 
                 L.Control.FileLayerLoad.LABEL = '<div class="upload_file_icon"></div>';

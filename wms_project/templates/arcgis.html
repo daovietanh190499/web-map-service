@@ -249,7 +249,7 @@
                             <div class="text-center text-gray-500 py-4" v-if="!searchLoading && !showSearchError && searchResults.features.length === 0">
                                 No results found
                             </div>
-                            <div class="bg-white border rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 mb-3" v-for="(feature, index) in searchResults.features" :key="feature.id">
+                            <!-- <div class="bg-white border rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 mb-3" v-for="(feature, index) in searchResults.features" :key="feature.id">
                                 <div class="flex p-3">
                                     <div class="flex-auto w-4/5">
                                         <div class="font-semibold text-gray-800">${ feature.title }</div>
@@ -260,6 +260,62 @@
                                             :class="[{'fa-folder-plus': !(feature.id in listLayer), 'fa-folder-minus': (feature.id in listLayer)}]"
                                             @click="changeMenu(feature.id, feature.url)">
                                         </i>
+                                    </div>
+                                </div>
+                            </div> -->
+                            <div class="bg-white border rounded-lg shadow-sm hover:shadow-lg transition-all duration-300 mb-4" v-for="(feature, index) in searchResults.features" :key="feature.id">
+                                <!-- Header Section -->
+                                <div class="flex items-center justify-between p-4 border-b">
+                                    <div class="flex items-center space-x-3">
+                                        <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                                            <i class="fas fa-layer-group text-blue-600"></i>
+                                        </div>
+                                        <div>
+                                            <h3 class="font-semibold text-lg text-gray-800">${ feature.title }</h3>
+                                            <p class="text-sm text-gray-500">${ feature.type }</p>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <i id="${ feature.id }-action"
+                                            class="fas w-8 h-8 text-xl cursor-pointer hover:text-blue-600 transition-colors duration-200"
+                                            :class="[{'fa-folder-plus': !(feature.id in listLayer), 'fa-folder-minus': (feature.id in listLayer)}]"
+                                            @click="changeMenu(feature.id, feature.url)">
+                                        </i>
+                                    </div>
+                                </div>
+                            
+                                <!-- Content Section -->
+                                <div class="p-4">
+                                    <!-- Description -->
+                                    <div class="mb-3">
+                                        <p class="text-gray-600 text-sm">${ feature.description || 'No description available' }</p>
+                                    </div>
+                            
+                                    <!-- Tags -->
+                                    <div class="flex flex-wrap gap-2 mb-3">
+                                        <template v-for="tag in feature.tags">
+                                            <span class="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full">${ tag }</span>
+                                        </template>
+                                    </div>
+                            
+                                    <!-- Metadata -->
+                                    <div class="grid grid-cols-2 gap-4 text-sm">
+                                        <div>
+                                            <p class="text-gray-500">Owner</p>
+                                            <p class="font-medium">${ feature.owner }</p>
+                                        </div>
+                                        <div>
+                                            <p class="text-gray-500">Last Modified</p>
+                                            <p class="font-medium">${ new Date(feature.modified).toLocaleDateString() }</p>
+                                        </div>
+                                        <div>
+                                            <p class="text-gray-500">Access</p>
+                                            <p class="font-medium capitalize">${ feature.access }</p>
+                                        </div>
+                                        <div>
+                                            <p class="text-gray-500">Views</p>
+                                            <p class="font-medium">${ feature.numViews }</p>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
