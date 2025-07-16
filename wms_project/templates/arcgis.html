@@ -142,7 +142,7 @@
                     <!-- Header -->
                     <div class="p-4 border-b">
                         <div class="flex justify-between items-center">
-                            <h2 class="text-xl font-bold">Search Images</h2>
+                            <h2 class="text-xl font-bold">Search Layers</h2>
                             <div class="flex items-center gap-2">
                                 <button id="toggle-filters" class="text-gray-500 hover:text-gray-700">
                                     <i class="fas fa-filter"></i>
@@ -410,17 +410,63 @@
             </div>
         </div>
 
-        <div id="login-modal-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-40" v-if="showLoginButton"></div>
+        <!-- <div id="login-modal-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-40" v-if="showLoginButton"></div>
         <div id="login-modal" v-if="showLoginButton"
             class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-2xl p-8 z-50 w-full max-w-lg">
             <h3 class="text-2xl font-bold mb-6 text-gray-900">Login to Arcgis</h3>
-            <!-- Buttons -->
             <div class="mt-8 flex justify-end space-x-4">
                 <button id="login-button-modal" @click="initiateOAuth()"
                     class="px-5 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400">
                     Login
                 </button>
             </div>
+        </div> -->
+
+        <div id="login-modal-overlay" 
+            class="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm z-40 transition-opacity duration-300" 
+            v-if="showLoginButton">
+        </div>
+
+        <div id="login-modal" v-if="showLoginButton"
+            class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-2xl shadow-2xl z-50 w-full max-w-md overflow-hidden">
+            
+            <!-- Header with decorative background -->
+            <div class="bg-blue-600 h-32 relative overflow-hidden">
+                <div class="absolute inset-0 opacity-10">
+                    <div class="absolute transform rotate-45 translate-x-1/2 -translate-y-1/2 bg-white w-64 h-64"></div>
+                    <div class="absolute transform -rotate-45 -translate-x-1/2 translate-y-1/2 bg-white w-64 h-64"></div>
+                </div>
+            </div>
+
+            <!-- Logo -->
+            <div class="flex justify-center -mt-16">
+                <div class="w-32 h-32 rounded-full border-4 border-white shadow-lg overflow-hidden bg-white z-10">
+                    <img src="/static/css/images/ArcGIS_logo.png" alt="ArcGIS Logo" class="w-full h-full object-contain">
+                </div>
+            </div>
+
+            <!-- Content -->
+            <div class="px-8 py-6 text-center">
+                <h3 class="text-2xl font-bold text-gray-800 mb-2">Welcome to ArcGIS</h3>
+                <p class="text-gray-600 mb-6">Sign in to access your account and explore geographic information systems</p>
+
+                <!-- Login Button -->
+                <button id="login-button-modal" 
+                    @click="initiateOAuth()"
+                    class="w-full bg-blue-600 text-white py-3 px-6 rounded-lg font-medium
+                        hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-200
+                        transform transition-all duration-200 hover:scale-105
+                        flex items-center justify-center space-x-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                            d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+                    </svg>
+                    <span>Sign in with ArcGIS</span>
+                </button>
+            </div>
+
+            <!-- Bottom decoration -->
+            <div class="h-2 bg-gradient-to-r from-blue-500 via-blue-600 to-blue-700"></div>
         </div>
     </div>
 </body>
@@ -441,6 +487,7 @@
                     features: []
                 },
                 listLayer: [],
+                listVectorLayer: {},
                 openModal: false,
                 progressBar: 0,
                 uploadImage: {
@@ -574,6 +621,10 @@
                     window.location.replace('draw')
                 }, { position: "bottomleft" }).addTo(this.map);
 
+                L.easyButton('fa-home', function (btn, map) {
+                    window.location.replace('/')
+                }, { position: "bottomright" }).addTo(this.map);
+
                 L.Control.FileLayerLoad.LABEL = '<div class="upload_file_icon"></div>';
 
                 L.Control.fileLayerLoad({
@@ -666,6 +717,49 @@
                     });
                 });
 
+                this.getListLayer()
+
+                this.updateLayerTree()
+            },
+            updateLayerTree() {
+                if (this.layerTreeControl) {
+                    this.layerTreeControl.remove(map);
+                }
+                if (!this.listLayer) {
+                    this.listLayer = {}
+                }
+
+                for (let layer in this.listLayer) {
+                    this.layerBuilders[layer] = function (layerSettings) {
+                        return L.tileLayer(`api/images/${layer}/jp2/tiles/{z}/{x}/{y}.png/`, {
+                            maxZoom: 20,
+                            attribution: `${layer} JP2 Layer`
+                        });
+                    }
+                }
+
+                let custom_layers = []
+
+                for (let layer in this.listLayer) {
+                    let coords = this.listLayer[layer]['coords'][0]
+                    custom_layers.push({
+                        code: layer,
+                        name: this.listLayer[layer]['name'] ? this.listLayer[layer]['name'] : layer,
+                        active: true,
+                        selectedByDefault: false,
+                        openByDefault: true,
+                        childLayers: [],
+                        coord: [(coords[2][1] + coords[0][1])/2, (coords[0][0] + coords[2][0])/2],
+                        selectType: "NONE",
+                        serviceType: layer,
+                        params: {},
+                        callback: () => {
+                            (this.saveSideBar || (() => {}))();
+                        }
+                    })
+                }
+
+                this.tree[0].childLayers[1].childLayers = custom_layers
                 this.layerTreeControl = new L.Control.LayerTreeControl({
                     layerTree: this.tree,
                     openByDefault: true,
@@ -676,7 +770,6 @@
                         }
                     }
                 })
-                
                 this.layerTreeControl.addTo(this.map);
             },
             initiateOAuth() {
@@ -765,6 +858,7 @@
                     console.log(results)
                     this.searchLoading = false;
                     this.searchResults = { "features": results.results }
+                    this.getAttachments(this.searchResults.features[0].url, this.searchResults.features[0].id)
                 } catch (error) {
                     console.error('Search error:', error);
                     this.showSearchError = true;
@@ -779,6 +873,25 @@
                 }
                 if (!this.listLayer) {
                     this.listLayer = {}
+                }
+            },
+            addVectorLayerToMap(layerId, layerUrl) {
+                if (layerId in this.listVectorLayer && this.listVectorLayer[layerId]) {
+                    this.listVectorLayer[layerId].remove(this.map)
+                }
+                this.listVectorLayer[layerId] = L.esri.featureLayer({
+                    url: layerUrl + "/0",
+                    token: localStorage.getItem('arcgis_token')
+                }).addTo(this.map);
+            },
+            async getAttachments(layerUrl, featureId) {
+                try {
+                    const response = await fetch(`${layerUrl}/${featureId}/attachments?f=json&token=${this.arcgisToken}`);
+                    const data = await response.json();
+                    console.log(data)
+                    // displayAttachments(data.attachmentInfos);
+                } catch (error) {
+                    console.error('Failed to get attachments:', error);
                 }
             },
             toggleFilter() {
