@@ -30,6 +30,8 @@
     <script type="text/javascript" src="static/js/leaflet.scalebar.js"></script>
     <script src="static/js/Control.FullScreen.js"></script>
     <script src="static/js/vue.js"></script>
+    <script src="https://unpkg.com/esri-leaflet@3.0.10/dist/esri-leaflet.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/esri-leaflet@3.0.10/dist/esri-leaflet.css">
 
     <style>
         @keyframes fadeInLeft {
@@ -136,18 +138,18 @@
     <div class="w-100 h-screen overflow-hidden" id="app">
         <div id="app-container" class="flex h-full">
             <!-- Sidebar -->
-            <div id="search-sidebar" class="w-1/3 h-full bg-white shadow-lg z-50 flex-shrink-0" v-if="openSideBar">
+            <div id="search-sidebar" class="w-1/3 h-full bg-white shadow-lg z-50 flex-shrink-0" v-if="openSideBar || showMenu">
                 <div class="h-full flex flex-col">
 
                     <!-- Header -->
                     <div class="p-4 border-b">
                         <div class="flex justify-between items-center">
-                            <h2 class="text-xl font-bold">Search Layers</h2>
+                            <h2 class="text-xl font-bold">${ showMenu ? 'Layer Menu' : 'Search Layers' }</h2>
                             <div class="flex items-center gap-2">
-                                <button id="toggle-filters" class="text-gray-500 hover:text-gray-700">
+                                <button v-if="!showMenu" id="toggle-filters" class="text-gray-500 hover:text-gray-700">
                                     <i class="fas fa-filter"></i>
                                 </button>
-                                <button id="close-search" class="text-gray-500 hover:text-gray-700" @click="closeSearchSideBar">
+                                <button id="close-search" class="text-gray-500 hover:text-gray-700" @click="closeSideBar">
                                     <i class="fas fa-times"></i>
                                 </button>
                             </div>
@@ -237,8 +239,39 @@
                         </form>
                     </div>
 
+                    <!-- Quick Filters -->
+                    <div class="p-4 border-b">
+                        <h3 class="font-semibold mb-3">Quick Filters</h3>
+                        <div class="space-y-3">
+                            <div>
+                                <label class="block text-sm text-gray-600 mb-1">Name</label>
+                                <input type="text" v-model="filterForm.name" 
+                                    class="w-full border rounded p-2 text-sm"
+                                    placeholder="Filter by name...">
+                            </div>
+                            <div>
+                                <label class="block text-sm text-gray-600 mb-1">Owner</label>
+                                <input type="text" v-model="filterForm.owner" 
+                                    class="w-full border rounded p-2 text-sm"
+                                    placeholder="Filter by owner...">
+                            </div>
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="block text-sm text-gray-600 mb-1">From Date</label>
+                                    <input type="date" v-model="filterForm.dateFrom" 
+                                        class="w-full border rounded p-2 text-sm">
+                                </div>
+                                <div>
+                                    <label class="block text-sm text-gray-600 mb-1">To Date</label>
+                                    <input type="date" v-model="filterForm.dateTo" 
+                                        class="w-full border rounded p-2 text-sm">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Search Results -->
-                    <div class="search-results-container flex-grow p-4">
+                    <div v-if="!showMenu" class="search-results-container flex-grow p-4">
                         <div id="search-results" class="space-y-2">
                             <div class="flex justify-center items-center py-4" v-if="searchLoading">
                                 <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
@@ -249,21 +282,7 @@
                             <div class="text-center text-gray-500 py-4" v-if="!searchLoading && !showSearchError && searchResults.features.length === 0">
                                 No results found
                             </div>
-                            <!-- <div class="bg-white border rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 mb-3" v-for="(feature, index) in searchResults.features" :key="feature.id">
-                                <div class="flex p-3">
-                                    <div class="flex-auto w-4/5">
-                                        <div class="font-semibold text-gray-800">${ feature.title }</div>
-                                    </div>
-                                    <div class="flex-auto w-1/5">
-                                        <i id="${ feature.id }-action"
-                                            class="fas w-8 h-8 text-xl cursor-pointer"
-                                            :class="[{'fa-folder-plus': !(feature.id in listLayer), 'fa-folder-minus': (feature.id in listLayer)}]"
-                                            @click="changeMenu(feature.id, feature.url)">
-                                        </i>
-                                    </div>
-                                </div>
-                            </div> -->
-                            <div class="bg-white border rounded-lg shadow-sm hover:shadow-lg transition-all duration-300 mb-4" v-for="(feature, index) in searchResults.features" :key="feature.id">
+                            <div class="bg-white border rounded-lg shadow-sm hover:shadow-lg transition-all duration-300 mb-4" v-for="(feature, index) in filterSearchResults()" :key="feature.id">
                                 <!-- Header Section -->
                                 <div class="flex items-center justify-between p-4 border-b">
                                     <div class="flex items-center space-x-3">
@@ -278,8 +297,8 @@
                                     <div>
                                         <i id="${ feature.id }-action"
                                             class="fas w-8 h-8 text-xl cursor-pointer hover:text-blue-600 transition-colors duration-200"
-                                            :class="[{'fa-folder-plus': !(feature.id in listLayer), 'fa-folder-minus': (feature.id in listLayer)}]"
-                                            @click="changeMenu(feature.id, feature.url)">
+                                            :class="[{'fa-folder-plus': !isInMenu(feature.id), 'fa-folder-minus': isInMenu(feature.id)}]"
+                                            @click="toggleMenuLayer(feature)">
                                         </i>
                                     </div>
                                 </div>
@@ -321,10 +340,51 @@
                             </div>
                         </div>
                     </div>
+
+                    <!-- Menu Layers -->
+                    <div v-if="showMenu" class="search-results-container flex-grow p-4">
+                        <div v-if="menuLayers.length === 0" class="text-center text-gray-500 py-8">
+                            <i class="fas fa-layer-group text-4xl mb-4"></i>
+                            <p>No layers added to menu yet</p>
+                            <p class="text-sm">Search for layers and click the folder icon to add them</p>
+                        </div>
+                        
+                        <div v-else class="space-y-3">
+                            <div v-for="layer in menuLayers" :key="layer.id" 
+                                class="border rounded-lg p-3 hover:shadow-md transition-shadow duration-200">
+                                <div class="flex items-center justify-between mb-2">
+                                    <h4 class="font-medium text-gray-800">${ layer.name }</h4>
+                                    <div class="flex items-center space-x-2">
+                                        <button @click="toggleLayerVisibility(layer)" 
+                                            :class="[layer.visible ? 'text-green-600' : 'text-gray-400', 'hover:text-green-800']"
+                                            class="p-1 hover:bg-green-50 rounded transition-colors duration-200"
+                                            :title="layer.visible ? 'Hide layer' : 'Show layer'">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        <button @click="removeFromMenu(layer.id)" 
+                                            class="p-1 text-red-600 hover:text-red-800 hover:bg-red-50 rounded transition-colors duration-200"
+                                            title="Remove from menu">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <div class="text-xs text-gray-500 space-y-1">
+                                    <p><strong>Owner:</strong> ${ layer.owner }</p>
+                                    <p><strong>Modified:</strong> ${ new Date(layer.modified).toLocaleDateString() }</p>
+                                    <p><strong>Status:</strong> 
+                                        <span :class="layer.visible ? 'text-green-600' : 'text-gray-500'">
+                                            ${ layer.visible ? 'Visible' : 'Hidden' }
+                                        </span>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
         
                 </div>
             </div>
-            <div id="map-container" class="flex-grow relative" :class="[{'with-sidebar': openSideBar}]">
+            <div id="map-container" class="flex-grow relative" :class="[{'with-sidebar': openSideBar || showMenu}]">
                 <div id="map" class="absolute inset-0 z-10"></div>
             </div>
         </div>
@@ -446,23 +506,39 @@
             </div>
 
             <!-- Content -->
-            <div class="px-8 py-6 text-center">
-                <h3 class="text-2xl font-bold text-gray-800 mb-2">Welcome to ArcGIS</h3>
-                <p class="text-gray-600 mb-6">Sign in to access your account and explore geographic information systems</p>
+            <div class="px-8 py-6">
+                <h3 class="text-2xl font-bold text-gray-800 mb-2 text-center">Welcome to ArcGIS Portal</h3>
+                <p class="text-gray-600 mb-6 text-center">Sign in to access your account and explore geographic information systems</p>
 
-                <!-- Login Button -->
-                <button id="login-button-modal" 
-                    @click="initiateOAuth()"
-                    class="w-full bg-blue-600 text-white py-3 px-6 rounded-lg font-medium
-                        hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-200
-                        transform transition-all duration-200 hover:scale-105
-                        flex items-center justify-center space-x-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                            d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
-                    </svg>
-                    <span>Sign in with ArcGIS</span>
-                </button>
+                <!-- Login Form -->
+                <form @submit.prevent="loginWithCredentials" class="space-y-4">
+                    <div>
+                        <label for="username" class="block text-sm font-medium text-gray-700 mb-1">Username</label>
+                        <input type="text" id="username" v-model="loginForm.username" required
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            placeholder="Enter your username">
+                    </div>
+                    
+                    <div>
+                        <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                        <input type="password" id="password" v-model="loginForm.password" required
+                            class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                            placeholder="Enter your password">
+                    </div>
+
+                    <!-- Login Button -->
+                    <button type="submit"
+                        class="w-full bg-blue-600 text-white py-3 px-6 rounded-lg font-medium
+                            hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-200
+                            transform transition-all duration-200 hover:scale-105
+                            flex items-center justify-center space-x-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+                        </svg>
+                        <span>Sign in</span>
+                    </button>
+                </form>
             </div>
 
             <!-- Bottom decoration -->
@@ -509,14 +585,25 @@
                     satellite: ""
                 },
                 arcgisConfig: {
-                    portalUrl: 'https://vnseci.maps.arcgis.com',
+                    portalUrl: 'https://gissoft.esrivn.net/portal',
                     clientId: 'K0LoN8xkKyozyEmw',
                     redirectUri: 'http://localhost/arcgis-authen',
-                    portalUrl: 'https://vnseci.maps.arcgis.com',
-                    apiUrl: 'https://sampleserver6.arcgisonline.com/arcgis/rest/services'
+                    apiUrl: 'https://gissoft.esrivn.net/server/rest/services'
                 },
                 arcgisToken: localStorage.getItem('arcgis_token'),
                 showLoginButton: true,
+                loginForm: {
+                    username: '',
+                    password: ''
+                },
+                menuLayers: [],
+                showMenu: false,
+                filterForm: {
+                    name: '',
+                    owner: '',
+                    dateFrom: '',
+                    dateTo: ''
+                },
                 layerTreeControl: null,
                 layerBuilders: {
                     OSM: function (layerSettings) {
@@ -653,6 +740,15 @@
                     this.openModal = true;
                 }, { position: "bottomleft" }).addTo(this.map);
 
+                L.easyButton('fa-list', (btn, map) => {
+                    if (this.showMenu) {
+                        this.showMenu = false;
+                    } else {
+                        this.showMenu = true;
+                        this.openSideBar = true;
+                    }
+                }, { position: "bottomleft" }).addTo(this.map);
+
                 L.Measure = {
                     linearMeasurement: "Distance measurement",
                     areaMeasurement: "Area measurement",
@@ -786,6 +882,233 @@
 
                 window.location.href = `${this.arcgisConfig.portalUrl}/sharing/rest/oauth2/authorize?${params}`;
             },
+            
+            async generateToken(username, password) {
+                try {
+                    const params = new URLSearchParams({
+                        username: username,
+                        password: password,
+                        client: 'referer',
+                        referer: window.location.origin,
+                        f: 'json',
+                        expiration: 20160,
+                        portal: this.arcgisConfig.portalUrl
+                    });
+
+                    const response = await fetch(`${this.arcgisConfig.portalUrl}/sharing/rest/generateToken`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                            'Referer': window.location.origin
+                        },
+                        body: params
+                    });
+
+                    if (!response.ok) throw new Error('Token generation failed');
+
+                    const data = await response.json();
+                    if (data.token) {
+                        localStorage.setItem('arcgis_token', data.token);
+                        this.arcgisToken = data.token;
+                        this.showLoginButton = false;
+                        return true;
+                    } else {
+                        throw new Error('No token received');
+                    }
+                } catch (error) {
+                    console.error('Token generation error:', error);
+                    return false;
+                }
+            },
+            
+            async loginWithCredentials() {
+                try {
+                    const success = await this.generateToken(this.loginForm.username, this.loginForm.password);
+                    if (success) {
+                        // Clear form
+                        this.loginForm.username = '';
+                        this.loginForm.password = '';
+                        alert('Login successful!');
+                    } else {
+                        alert('Login failed. Please check your credentials.');
+                    }
+                } catch (error) {
+                    console.error('Login error:', error);
+                    alert('Login failed. Please try again.');
+                }
+            },
+            
+            loadMenuFromStorage() {
+                try {
+                    const stored = localStorage.getItem('menu_layers');
+                    if (stored) {
+                        this.menuLayers = JSON.parse(stored);
+                    }
+                } catch (error) {
+                    console.error('Error loading menu from storage:', error);
+                    this.menuLayers = [];
+                }
+            },
+            
+            saveMenuToStorage() {
+                try {
+                    localStorage.setItem('menu_layers', JSON.stringify(this.menuLayers));
+                } catch (error) {
+                    console.error('Error saving menu to storage:', error);
+                }
+            },
+            
+            addToMenu(feature) {
+                const existingIndex = this.menuLayers.findIndex(layer => layer.id === feature.id);
+                if (existingIndex === -1) {
+                    this.menuLayers.push({
+                        id: feature.id,
+                        name: feature.title,
+                        url: feature.url,
+                        owner: feature.owner,
+                        modified: feature.modified,
+                        visible: false
+                    });
+                    this.saveMenuToStorage();
+                }
+            },
+            
+            removeFromMenu(layerId) {
+                this.menuLayers = this.menuLayers.filter(layer => layer.id !== layerId);
+                this.saveMenuToStorage();
+            },
+            
+            toggleLayerVisibility(layer) {
+                layer.visible = !layer.visible;
+                this.saveMenuToStorage();
+                
+                if (layer.visible) {
+                    this.addFeatureLayerToMap(layer);
+                } else {
+                    this.removeFeatureLayerFromMap(layer.id);
+                }
+            },
+            
+            async addFeatureLayerToMap(layer) {
+                try {
+                    // First, get all layers from the feature service
+                    const layersResponse = await fetch(`${layer.url}/layers?f=json&token=${this.arcgisToken}`, {
+                        headers: {
+                            'Referer': window.location.origin
+                        }
+                    });
+                    
+                    if (!layersResponse.ok) {
+                        throw new Error('Failed to fetch layers from feature service');
+                    }
+                    
+                    const layersData = await layersResponse.json();
+                    console.log('Feature service layers:', layersData);
+                    
+                    // Add each layer to the map
+                    if (layersData.layers && layersData.layers.length > 0) {
+                        for (const serviceLayer of layersData.layers) {
+                            const layerId = serviceLayer.id;
+                            const layerName = serviceLayer.name;
+                            
+                            const esriFeature = L.esri.featureLayer({
+                                url: `${layer.url}/${layerId}?token=${this.arcgisToken}`,
+                                style: {
+                                    color: '#3388ff',
+                                    weight: 2,
+                                    opacity: 0.8,
+                                    fillOpacity: 0.2
+                                },
+                                // Remove any where clause and geometry filters to get all features
+                                where: '1=1'
+                            });
+                            
+                            esriFeature.addTo(this.map);
+                            
+                            // Store reference to remove later
+                            if (!this.listVectorLayer) {
+                                this.listVectorLayer = {};
+                            }
+                            const uniqueLayerKey = `${layer.id}_${layerId}`;
+                            this.listVectorLayer[uniqueLayerKey] = esriFeature;
+                            
+                            console.log(`Added feature layer: ${layerName} (ID: ${layerId}) from service: ${layer.name}`);
+                        }
+                    } else {
+                        console.log('No layers found in feature service');
+                    }
+                    
+                } catch (error) {
+                    console.error('Error adding feature layers to map:', error);
+                }
+            },
+            
+            removeFeatureLayerFromMap(layerId) {
+                if (this.listVectorLayer) {
+                    // Remove all layers that belong to this service
+                    const keysToRemove = Object.keys(this.listVectorLayer).filter(key => key.startsWith(`${layerId}_`));
+                    
+                    keysToRemove.forEach(key => {
+                        this.listVectorLayer[key].remove();
+                        delete this.listVectorLayer[key];
+                        console.log(`Removed feature layer: ${key}`);
+                    });
+                    
+                    if (keysToRemove.length === 0) {
+                        console.log(`No layers found for service: ${layerId}`);
+                    }
+                }
+            },
+            
+            filterSearchResults() {
+                if (!this.searchResults.features) return [];
+                
+                return this.searchResults.features.filter(feature => {
+                    let matches = true;
+                    
+                    if (this.filterForm.name && !feature.title.toLowerCase().includes(this.filterForm.name.toLowerCase())) {
+                        matches = false;
+                    }
+                    
+                    if (this.filterForm.owner && !feature.owner.toLowerCase().includes(this.filterForm.owner.toLowerCase())) {
+                        matches = false;
+                    }
+                    
+                    if (this.filterForm.dateFrom || this.filterForm.dateTo) {
+                        const modifiedDate = new Date(feature.modified);
+                        
+                        if (this.filterForm.dateFrom) {
+                            const fromDate = new Date(this.filterForm.dateFrom);
+                            if (modifiedDate < fromDate) matches = false;
+                        }
+                        
+                        if (this.filterForm.dateTo) {
+                            const toDate = new Date(this.filterForm.dateTo);
+                            if (modifiedDate > toDate) matches = false;
+                        }
+                    }
+                    
+                    return matches;
+                });
+            },
+            
+            isInMenu(featureId) {
+                return this.menuLayers.some(layer => layer.id === featureId);
+            },
+            
+            toggleMenuLayer(feature) {
+                if (this.isInMenu(feature.id)) {
+                    this.removeFromMenu(feature.id);
+                } else {
+                    this.addToMenu(feature);
+                }
+            },
+            
+            closeSideBar() {
+                this.openSideBar = false;
+                this.showMenu = false;
+                this.drawnItems.clearLayers();
+            },
             async validateToken() {
                 console.log("VALIDATE TOKEN")
                 const storedToken = localStorage.getItem('arcgis_token');
@@ -795,7 +1118,11 @@
                 }
 
                 try {
-                    const response = await fetch(`${this.arcgisConfig.portalUrl}/sharing/rest/portals/self?f=json&token=${storedToken}`);
+                    const response = await fetch(`${this.arcgisConfig.portalUrl}/sharing/rest/portals/self?f=json&token=${storedToken}`, {
+                        headers: {
+                            'Referer': window.location.origin
+                        }
+                    });
                     const data = await response.json();
                     if (data.error) {
                         localStorage.removeItem('arcgis_token');
@@ -819,36 +1146,25 @@
                 try {
                     this.searchLoading = true;
     
-                    // Build STAC API search parameters
-                    const searchBody = {
-                        geometry: this.drawnItems.toGeoJSON().features[0].geometry,
-                        operation: 'intersects',
-                        datetime: searchParams.datetime,
-                        collections: ["sentinel-2-l2a"], // Default collection
-                        limit: 50
-                    };
-    
-                    // Add additional parameters if provided
-                    if (searchParams.resolution) {
-                        searchBody.query = {
-                            "eo:gsd": {
-                                gte: parseFloat(searchParams.resolution.min) || 0,
-                                lte: parseFloat(searchParams.resolution.max) || 100
-                            }
-                        };
-                    }
-                    
+                    // Build search parameters for ArcGIS Portal
                     const params = new URLSearchParams({
-                        q: "owner:sonha25",
+                        q: "type:\"Feature Service\"",
                         f: 'json',
-                        token: this.arcgisToken
+                        token: this.arcgisToken,
+                        num: 50
                     });
     
-                    // Make API request
+                    // Add additional search criteria if provided
+                    if (searchParams && searchParams.bbox) {
+                        params.append('bbox', `${searchParams.bbox.west},${searchParams.bbox.south},${searchParams.bbox.east},${searchParams.bbox.north}`);
+                    }
+    
+                    // Make API request to ArcGIS Portal search
                     const response = await fetch(`${this.arcgisConfig.portalUrl}/sharing/rest/search?${params}`, {
                         method: 'GET',
                         headers: {
                             'Content-Type': 'application/json',
+                            'Referer': window.location.origin
                         }
                     });
     
@@ -857,8 +1173,12 @@
                     const results = await response.json();
                     console.log(results)
                     this.searchLoading = false;
-                    this.searchResults = { "features": results.results }
-                    this.getAttachments(this.searchResults.features[0].url, this.searchResults.features[0].id)
+                    this.searchResults = { "features": results.results || [] }
+                    
+                    // If we have results, get attachments for the first one
+                    if (this.searchResults.features.length > 0) {
+                        this.getAttachments(this.searchResults.features[0].url, this.searchResults.features[0].id)
+                    }
                 } catch (error) {
                     console.error('Search error:', error);
                     this.showSearchError = true;
@@ -886,7 +1206,11 @@
             },
             async getAttachments(layerUrl, featureId) {
                 try {
-                    const response = await fetch(`${layerUrl}/${featureId}/attachments?f=json&token=${this.arcgisToken}`);
+                    const response = await fetch(`${layerUrl}/${featureId}/attachments?f=json&token=${this.arcgisToken}`, {
+                        headers: {
+                            'Referer': window.location.origin
+                        }
+                    });
                     const data = await response.json();
                     console.log(data)
                     // displayAttachments(data.attachmentInfos);
@@ -898,8 +1222,7 @@
               this.expandFilter = !this.expandFilter  
             },
             closeSearchSideBar() {
-                this.openSideBar = false;
-                this.drawnItems.clearLayers();
+                this.closeSideBar();
             },
             closeModal() {
                 this.openModal = false;
@@ -1002,6 +1325,7 @@
                 this.initMap()
                 this.getListLayer()
                 this.validateToken()
+                this.loadMenuFromStorage()
             })
         }
     })
