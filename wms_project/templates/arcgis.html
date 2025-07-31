@@ -32,6 +32,8 @@
     <script src="static/js/vue.js"></script>
     <script src="https://unpkg.com/esri-leaflet@3.0.10/dist/esri-leaflet.js"></script>
     <link rel="stylesheet" href="https://unpkg.com/esri-leaflet@3.0.10/dist/esri-leaflet.css">
+    <script src="https://unpkg.com/esri-leaflet-renderers@3.0.1" crossorigin=""></script>
+    <script src="https://unpkg.com/esri-leaflet-vector@4.2.8/dist/esri-leaflet-vector.js" crossorigin=""></script>
 
     <style>
         @keyframes fadeInLeft {
@@ -130,6 +132,293 @@
             background-size: 75% 75%;
             width: 100%;
             height: 100%;
+        }
+
+        /* Feature Tooltip Styles */
+        .feature-tooltip {
+            background: white;
+            border: 2px solid #3388ff;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            padding: 0;
+            max-width: 400px;
+            min-width: 300px;
+        }
+
+        .feature-tooltip .tooltip-header {
+            background: #3388ff;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 6px 6px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .feature-tooltip .tooltip-content {
+            padding: 15px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .feature-tooltip .metadata-section {
+            margin-bottom: 15px;
+        }
+
+        .feature-tooltip .metadata-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .feature-tooltip .metadata-item {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .feature-tooltip .metadata-item label {
+            font-size: 11px;
+            color: #666;
+            margin-bottom: 2px;
+        }
+
+        .feature-tooltip .metadata-item input,
+        .feature-tooltip .metadata-item textarea {
+            padding: 4px 6px;
+            border: 1px solid #ddd;
+            border-radius: 3px;
+            font-size: 12px;
+        }
+
+        .feature-tooltip .attachments-section {
+            border-top: 1px solid #eee;
+            padding-top: 15px;
+        }
+
+        .feature-tooltip .attachment-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 5px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .feature-tooltip .attachment-actions {
+            display: flex;
+            gap: 5px;
+        }
+
+        .feature-tooltip .tooltip-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 15px;
+            justify-content: flex-end;
+        }
+
+        .feature-tooltip .btn {
+            padding: 6px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            border: none;
+        }
+
+        .feature-tooltip .btn-primary {
+            background: #3388ff;
+            color: white;
+        }
+
+        .feature-tooltip .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .feature-tooltip .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+
+        .feature-tooltip .btn-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .feature-tooltip .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
+
+        .feature-tooltip .error {
+            color: #dc3545;
+            font-size: 12px;
+            margin-top: 5px;
+        }
+
+        /* Gallery Styles */
+        .attachments-gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .attachment-gallery-item {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 10px;
+            background-color: #f9f9f9;
+            text-align: center;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .attachment-gallery-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .attachment-gallery-item img {
+            width: 100%;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: opacity 0.2s ease;
+        }
+
+        .attachment-gallery-item img:hover {
+            opacity: 0.8;
+        }
+
+        .attachment-gallery-item video {
+            width: 100%;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 4px;
+        }
+
+        .attachment-gallery-item audio {
+            width: 100%;
+        }
+
+        .attachment-gallery-item .file-icon {
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #e9ecef;
+            border-radius: 4px;
+        }
+
+        .attachment-gallery-item .file-icon i {
+            font-size: 2em;
+            color: #6c757d;
+        }
+
+        /* Media Thumbnail Styles */
+        .media-thumbnail {
+            position: relative;
+            cursor: pointer;
+            border-radius: 4px;
+            overflow: hidden;
+            height: 80px;
+            background: #f8f9fa;
+        }
+
+        .media-thumbnail img,
+        .media-thumbnail video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s ease;
+        }
+
+        .media-thumbnail:hover img,
+        .media-thumbnail:hover video {
+            transform: scale(1.05);
+        }
+
+        .media-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .media-thumbnail:hover .media-overlay {
+            opacity: 1;
+        }
+
+        .media-overlay i {
+            color: white;
+            font-size: 1.5em;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+        }
+
+        .audio-thumbnail {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .audio-thumbnail i {
+            font-size: 2em;
+        }
+
+        .video-thumbnail {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        /* Preview Modal Styles */
+        .preview-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .preview-modal-content {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            max-width: 90%;
+            max-height: 90%;
+            overflow: auto;
+            position: relative;
+        }
+
+        .preview-modal-close {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #666;
+        }
+
+        .preview-modal-close:hover {
+            color: #333;
         }
     </style>
 </head>
@@ -605,6 +894,8 @@
                     dateTo: ''
                 },
                 layerTreeControl: null,
+                currentFeatureTooltip: null,
+                currentFeatureData: null,
                 layerBuilders: {
                     OSM: function (layerSettings) {
                         return L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -811,6 +1102,13 @@
                         bbox: searchArea,
                         datetime: `${new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()}/${new Date().toISOString()}`
                     });
+                });
+
+                // Close feature tooltip when clicking on map
+                this.map.on('click', (e) => {
+                    if (this.currentFeatureTooltip && !e.originalEvent.target.closest('.feature-tooltip')) {
+                        this.closeFeatureTooltip();
+                    }
                 });
 
                 this.getListLayer()
@@ -1023,6 +1321,11 @@
                                 where: '1=1'
                             });
                             
+                            // Add click event handler
+                            esriFeature.on('click', (e) => {
+                                this.handleFeatureClick(e, layer, layerId);
+                            });
+                            
                             esriFeature.addTo(this.map);
                             
                             // Store reference to remove later
@@ -1057,6 +1360,667 @@
                     if (keysToRemove.length === 0) {
                         console.log(`No layers found for service: ${layerId}`);
                     }
+                }
+            },
+
+            async handleFeatureClick(e, layer, layerId) {
+                try {
+                    const feature = e.layer.feature;
+                    const objectId = feature.properties.objectid || feature.properties.OBJECTID;
+                    
+                    if (!objectId) {
+                        console.error('No object ID found in feature');
+                        return;
+                    }
+
+                    // Show loading tooltip
+                    this.showLoadingTooltip(e.latlng);
+
+                    // Get feature details and attachments
+                    const [featureDetails, attachments] = await Promise.all([
+                        this.getFeatureDetails(layer.url, layerId, objectId),
+                        this.getFeatureAttachments(layer.url, layerId, objectId)
+                    ]);
+
+                    if (!featureDetails) {
+                        throw new Error('Feature details not found');
+                    }
+
+                    this.currentFeatureData = {
+                        layer: layer,
+                        layerId: layerId,
+                        objectId: objectId,
+                        feature: featureDetails,
+                        attachments: attachments
+                    };
+
+                    this.showFeatureTooltip(e.latlng, featureDetails, attachments);
+                    
+                } catch (error) {
+                    console.error('Error handling feature click:', error);
+                    this.showErrorTooltip(e.latlng, 'Error loading feature details: ' + error.message);
+                }
+            },
+
+            showLoadingTooltip(latlng) {
+                if (this.currentFeatureTooltip) {
+                    this.map.closePopup();
+                }
+
+                const loadingContent = `
+                    <div class="feature-tooltip">
+                        <div class="tooltip-header">
+                            <span><i class="fas fa-spinner fa-spin"></i> Loading...</span>
+                        </div>
+                        <div class="tooltip-content">
+                            <div class="loading">Loading feature details...</div>
+                        </div>
+                    </div>
+                `;
+
+                this.currentFeatureTooltip = L.popup({
+                    className: 'feature-tooltip',
+                    closeButton: true,
+                    maxWidth: 300
+                })
+                .setLatLng(latlng)
+                .setContent(loadingContent)
+                .openOn(this.map);
+            },
+
+            showErrorTooltip(latlng, message) {
+                if (this.currentFeatureTooltip) {
+                    this.map.closePopup();
+                }
+
+                const errorContent = `
+                    <div class="feature-tooltip">
+                        <div class="tooltip-header">
+                            <span><i class="fas fa-exclamation-triangle"></i> Error</span>
+                        </div>
+                        <div class="tooltip-content">
+                            <div class="error">${message}</div>
+                            <div class="tooltip-actions">
+                                <button class="btn btn-secondary" onclick="app.closeFeatureTooltip()">Close</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                this.currentFeatureTooltip = L.popup({
+                    className: 'feature-tooltip',
+                    closeButton: true,
+                    maxWidth: 300
+                })
+                .setLatLng(latlng)
+                .setContent(errorContent)
+                .openOn(this.map);
+            },
+
+            async getFeatureDetails(layerUrl, layerId, objectId) {
+                try {
+                    const response = await fetch(`${layerUrl}/${layerId}/query?where=OBJECTID=${objectId}&outFields=*&f=json&token=${this.arcgisToken}`, {
+                        headers: {
+                            'Referer': window.location.origin
+                        }
+                    });
+                    
+                    if (!response.ok) throw new Error('Failed to fetch feature details');
+                    
+                    const data = await response.json();
+                    return data.features && data.features.length > 0 ? data.features[0] : null;
+                } catch (error) {
+                    console.error('Error getting feature details:', error);
+                    throw error;
+                }
+            },
+
+            async getFeatureAttachments(layerUrl, layerId, objectId) {
+                try {
+                    const response = await fetch(`${layerUrl}/${layerId}/${objectId}/attachments?f=json&token=${this.arcgisToken}`, {
+                        headers: {
+                            'Referer': window.location.origin
+                        }
+                    });
+                    
+                    if (!response.ok) throw new Error('Failed to fetch attachments');
+                    
+                    const data = await response.json();
+                    return data.attachmentInfos || [];
+                } catch (error) {
+                    console.error('Error getting attachments:', error);
+                    return [];
+                }
+            },
+
+            showFeatureTooltip(latlng, feature, attachments) {
+                // Remove existing tooltip
+                if (this.currentFeatureTooltip) {
+                    this.map.closePopup();
+                    this.currentFeatureTooltip = null;
+                }
+
+                const tooltipContent = this.createTooltipContent(feature, attachments);
+                
+                this.currentFeatureTooltip = L.popup({
+                    className: 'feature-tooltip',
+                    closeButton: true,
+                    maxWidth: 400,
+                    maxHeight: 500
+                })
+                .setLatLng(latlng)
+                .setContent(tooltipContent)
+                .openOn(this.map);
+            },
+
+            createTooltipContent(feature, attachments) {
+                const container = document.createElement('div');
+                container.className = 'feature-tooltip-container';
+                
+                // Header
+                const header = document.createElement('div');
+                header.className = 'tooltip-header';
+                header.innerHTML = `
+                    <span><i class="fas fa-map-marker-alt"></i> Feature Details</span>
+                    <span>ID: ${feature.attributes.objectid || feature.attributes.OBJECTID}</span>
+                `;
+                container.appendChild(header);
+
+                // Content
+                const content = document.createElement('div');
+                content.className = 'tooltip-content';
+                
+                // Metadata section
+                const metadataSection = this.createMetadataSection(feature);
+                content.appendChild(metadataSection);
+                
+                // Attachments section
+                const attachmentsSection = this.createAttachmentsSection(attachments);
+                content.appendChild(attachmentsSection);
+                
+                // Actions
+                const actionsSection = this.createActionsSection();
+                content.appendChild(actionsSection);
+                
+                container.appendChild(content);
+                return container;
+            },
+
+            createMetadataSection(feature) {
+                const section = document.createElement('div');
+                section.className = 'metadata-section';
+                
+                const title = document.createElement('h4');
+                title.textContent = 'Metadata';
+                title.style.marginBottom = '10px';
+                title.style.fontWeight = 'bold';
+                section.appendChild(title);
+                
+                const grid = document.createElement('div');
+                grid.className = 'metadata-grid';
+                
+                const attributes = feature.attributes;
+                const editableFields = ['name_vn', 'name_en', 'name_local', 'code', 'fclass', 'quoc_gia', 'don_vi_quan_ly', 'chuc_nang', 'phan_loai', 'mo_ta', 'nam_xay_dung', 'dien_tich'];
+                
+                editableFields.forEach(field => {
+                    const item = document.createElement('div');
+                    item.className = 'metadata-item';
+                    
+                    const label = document.createElement('label');
+                    label.textContent = field.replace(/_/g, ' ').toUpperCase();
+                    
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.value = attributes[field] || '';
+                    input.dataset.field = field;
+                    input.placeholder = `Enter ${field.replace(/_/g, ' ')}`;
+                    
+                    item.appendChild(label);
+                    item.appendChild(input);
+                    grid.appendChild(item);
+                });
+                
+                section.appendChild(grid);
+                return section;
+            },
+
+            createAttachmentsSection(attachments) {
+                const section = document.createElement('div');
+                section.className = 'attachments-section';
+                
+                const title = document.createElement('h4');
+                title.textContent = 'Attachments';
+                title.style.marginBottom = '10px';
+                title.style.fontWeight = 'bold';
+                section.appendChild(title);
+                
+                if (attachments.length === 0) {
+                    const noAttachments = document.createElement('p');
+                    noAttachments.textContent = 'No attachments found';
+                    noAttachments.style.color = '#666';
+                    noAttachments.style.fontStyle = 'italic';
+                    section.appendChild(noAttachments);
+                } else {
+                    // Create gallery container
+                    const galleryContainer = document.createElement('div');
+                    galleryContainer.className = 'attachments-gallery';
+                    
+                    attachments.forEach(attachment => {
+                        const item = document.createElement('div');
+                        item.className = 'attachment-gallery-item';
+                        
+                        // Determine if it's a media file
+                        const isImage = attachment.contentType && attachment.contentType.startsWith('image/');
+                        const isVideo = attachment.contentType && attachment.contentType.startsWith('video/');
+                        const isAudio = attachment.contentType && attachment.contentType.startsWith('audio/');
+                        
+                        let mediaContent = '';
+                        let isMediaFile = isImage || isVideo || isAudio;
+                        
+                        if (isImage) {
+                            mediaContent = `
+                                <div class="media-thumbnail" style="margin-bottom: 8px;">
+                                    <img src="${this.getAttachmentUrl(attachment.id)}" 
+                                         alt="${attachment.name}" 
+                                         class="preview-img">
+                                    <div class="media-overlay">
+                                        <i class="fas fa-eye"></i>
+                                    </div>
+                                </div>
+                            `;
+                        } else if (isVideo) {
+                            mediaContent = `
+                                <div class="media-thumbnail" style="margin-bottom: 8px;">
+                                    <video class="video-thumbnail">
+                                        <source src="${this.getAttachmentUrl(attachment.id)}" type="${attachment.contentType}">
+                                    </video>
+                                    <div class="media-overlay">
+                                        <i class="fas fa-play"></i>
+                                    </div>
+                                </div>
+                            `;
+                        } else if (isAudio) {
+                            mediaContent = `
+                                <div class="media-thumbnail" style="margin-bottom: 8px;">
+                                    <div class="audio-thumbnail">
+                                        <i class="fas fa-music"></i>
+                                    </div>
+                                    <div class="media-overlay">
+                                        <i class="fas fa-play"></i>
+                                    </div>
+                                </div>
+                            `;
+                        } else {
+                            mediaContent = `
+                                <div class="file-icon">
+                                    <i class="fas fa-file"></i>
+                                </div>
+                            `;
+                        }
+                        
+                        item.innerHTML = `
+                            ${mediaContent}
+                            <div style="font-size: 12px; font-weight: bold; margin-bottom: 5px; word-break: break-word;">
+                                ${attachment.name}
+                            </div>
+                            <div style="display: flex; gap: 5px; justify-content: center;">
+                                <button class="btn btn-secondary download-btn" style="padding: 4px 8px; font-size: 10px;" 
+                                        data-attachment-id="${attachment.id}" 
+                                        title="Download">
+                                    <i class="fas fa-download"></i>
+                                </button>
+                                <button class="btn btn-danger delete-btn" style="padding: 4px 8px; font-size: 10px;" 
+                                        data-attachment-id="${attachment.id}" 
+                                        title="Delete">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        `;
+                        
+                        // Add event listeners after creating the element
+                        const downloadBtn = item.querySelector('.download-btn');
+                        const deleteBtn = item.querySelector('.delete-btn');
+                        const mediaThumbnail = item.querySelector('.media-thumbnail');
+                        
+                        downloadBtn.addEventListener('click', () => {
+                            this.downloadAttachment(attachment.id);
+                        });
+                        
+                        deleteBtn.addEventListener('click', () => {
+                            this.deleteAttachment(attachment.id);
+                        });
+                        
+                        if (mediaThumbnail) {
+                            mediaThumbnail.addEventListener('click', () => {
+                                this.previewAttachment(attachment.id, attachment.name, attachment.contentType);
+                            });
+                        }
+                        
+                        galleryContainer.appendChild(item);
+                    });
+                    
+                    section.appendChild(galleryContainer);
+                }
+                
+                // Add attachment button
+                const addButton = document.createElement('button');
+                addButton.className = 'btn btn-success';
+                addButton.innerHTML = '<i class="fas fa-plus"></i> Add Attachment';
+                addButton.onclick = () => this.addAttachment();
+                addButton.style.marginTop = '10px';
+                section.appendChild(addButton);
+                
+                return section;
+            },
+
+            getAttachmentUrl(attachmentId) {
+                if (!this.currentFeatureData) return '';
+                const { layer, layerId, objectId } = this.currentFeatureData;
+                return `${layer.url}/${layerId}/${objectId}/attachments/${attachmentId}?token=${this.arcgisToken}`;
+            },
+
+            previewAttachment(attachmentId, fileName, contentType) {
+                const url = this.getAttachmentUrl(attachmentId);
+                
+                // Create modal for preview
+                const modal = document.createElement('div');
+                modal.className = 'preview-modal';
+                
+                const modalContent = document.createElement('div');
+                modalContent.className = 'preview-modal-content';
+                
+                const closeBtn = document.createElement('button');
+                closeBtn.className = 'preview-modal-close';
+                closeBtn.innerHTML = '×';
+                closeBtn.onclick = () => document.body.removeChild(modal);
+                
+                const title = document.createElement('h3');
+                title.textContent = fileName;
+                title.style.marginBottom = '15px';
+                
+                let mediaElement = '';
+                
+                if (contentType.startsWith('image/')) {
+                    mediaElement = `
+                        <div style="text-align: center;">
+                            <img src="${url}" style="max-width: 100%; max-height: 70vh; object-fit: contain; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+                        </div>
+                    `;
+                } else if (contentType.startsWith('video/')) {
+                    mediaElement = `
+                        <div style="text-align: center;">
+                            <video controls style="max-width: 100%; max-height: 70vh; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+                                <source src="${url}" type="${contentType}">
+                                Your browser does not support the video tag.
+                            </video>
+                        </div>
+                    `;
+                } else if (contentType.startsWith('audio/')) {
+                    mediaElement = `
+                        <div style="text-align: center; padding: 20px;">
+                            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px; border-radius: 8px; margin-bottom: 20px;">
+                                <i class="fas fa-music" style="font-size: 4em; color: white;"></i>
+                            </div>
+                            <audio controls style="width: 100%; max-width: 400px;">
+                                <source src="${url}" type="${contentType}">
+                                Your browser does not support the audio tag.
+                            </audio>
+                        </div>
+                    `;
+                } else {
+                    mediaElement = `
+                        <div style="text-align: center; padding: 40px;">
+                            <i class="fas fa-file" style="font-size: 3em; color: #6c757d;"></i>
+                            <p>Preview not available for this file type</p>
+                            <a href="${url}" download="${fileName}" class="btn btn-primary">Download File</a>
+                        </div>
+                    `;
+                }
+                
+                modalContent.innerHTML = `
+                    ${closeBtn.outerHTML}
+                    ${title.outerHTML}
+                    ${mediaElement}
+                `;
+                
+                modal.appendChild(modalContent);
+                document.body.appendChild(modal);
+                
+                // Close modal when clicking outside
+                modal.onclick = (e) => {
+                    if (e.target === modal) {
+                        document.body.removeChild(modal);
+                    }
+                };
+            },
+
+            createActionsSection() {
+                const section = document.createElement('div');
+                section.className = 'tooltip-actions';
+                
+                const saveBtn = document.createElement('button');
+                saveBtn.className = 'btn btn-primary';
+                saveBtn.innerHTML = '<i class="fas fa-save"></i> Save Changes';
+                saveBtn.onclick = () => this.saveFeatureChanges();
+                
+                const cancelBtn = document.createElement('button');
+                cancelBtn.className = 'btn btn-secondary';
+                cancelBtn.innerHTML = '<i class="fas fa-times"></i> Cancel';
+                cancelBtn.onclick = () => this.closeFeatureTooltip();
+                
+                section.appendChild(cancelBtn);
+                section.appendChild(saveBtn);
+                
+                return section;
+            },
+
+            async saveFeatureChanges() {
+                if (!this.currentFeatureData) {
+                    alert('No feature data to save');
+                    return;
+                }
+
+                try {
+                    const { layer, layerId, objectId, feature } = this.currentFeatureData;
+                    
+                    // Collect updated attributes from form inputs
+                    const updatedAttributes = { ...feature.attributes };
+                    const inputs = document.querySelectorAll('.feature-tooltip input[data-field]');
+                    
+                    inputs.forEach(input => {
+                        const field = input.dataset.field;
+                        updatedAttributes[field] = input.value;
+                    });
+
+                    // Prepare update payload
+                    const updatePayload = {
+                        features: [{
+                            attributes: {
+                                OBJECTID: objectId,
+                                ...updatedAttributes
+                            },
+                            geometry: feature.geometry
+                        }]
+                    };
+
+                    // Send update request
+                    const response = await fetch(`${layer.url}/${layerId}/updateFeatures`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                            'Referer': window.location.origin
+                        },
+                        body: new URLSearchParams({
+                            f: 'json',
+                            token: this.arcgisToken,
+                            features: JSON.stringify(updatePayload.features)
+                        })
+                    });
+
+                    if (!response.ok) throw new Error('Failed to update feature');
+
+                    const result = await response.json();
+                    
+                    if (result.updateResults && result.updateResults.length > 0 && result.updateResults[0].success) {
+                        alert('Feature updated successfully!');
+                        this.closeFeatureTooltip();
+                    } else {
+                        throw new Error('Update failed');
+                    }
+
+                } catch (error) {
+                    console.error('Error saving feature changes:', error);
+                    alert('Error saving changes: ' + error.message);
+                }
+            },
+
+            closeFeatureTooltip() {
+                if (this.currentFeatureTooltip) {
+                    this.map.closePopup();
+                    this.currentFeatureTooltip = null;
+                    this.currentFeatureData = null;
+                }
+            },
+
+            async downloadAttachment(attachmentId) {
+                if (!this.currentFeatureData) return;
+
+                try {
+                    const { layer, layerId, objectId } = this.currentFeatureData;
+                    const response = await fetch(`${layer.url}/${layerId}/${objectId}/attachments/${attachmentId}?token=${this.arcgisToken}`, {
+                        headers: {
+                            'Referer': window.location.origin
+                        }
+                    });
+
+                    if (!response.ok) throw new Error('Failed to download attachment');
+
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `attachment_${attachmentId}`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    window.URL.revokeObjectURL(url);
+
+                } catch (error) {
+                    console.error('Error downloading attachment:', error);
+                    alert('Error downloading attachment');
+                }
+            },
+
+            async deleteAttachment(attachmentId) {
+                if (!this.currentFeatureData) return;
+
+                if (!confirm('Are you sure you want to delete this attachment?')) return;
+
+                try {
+                    const { layer, layerId, objectId } = this.currentFeatureData;
+                    const response = await fetch(`${layer.url}/${layerId}/${objectId}/deleteAttachments`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                            'Referer': window.location.origin
+                        },
+                        body: new URLSearchParams({
+                            f: 'json',
+                            token: this.arcgisToken,
+                            attachmentIds: attachmentId
+                        })
+                    });
+
+                    if (!response.ok) throw new Error('Failed to delete attachment');
+
+                    const result = await response.json();
+                    
+                    if (result.deleteAttachmentResults && result.deleteAttachmentResults.length > 0 && result.deleteAttachmentResults[0].success) {
+                        alert('Attachment deleted successfully!');
+                        // Refresh the tooltip
+                        this.refreshFeatureTooltip();
+                    } else {
+                        throw new Error('Delete failed');
+                    }
+
+                } catch (error) {
+                    console.error('Error deleting attachment:', error);
+                    alert('Error deleting attachment');
+                }
+            },
+
+            async addAttachment() {
+                if (!this.currentFeatureData) return;
+
+                // Create file input
+                const fileInput = document.createElement('input');
+                fileInput.type = 'file';
+                fileInput.accept = '*/*';
+                fileInput.style.display = 'none';
+                document.body.appendChild(fileInput);
+
+                fileInput.onchange = async (e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+
+                    try {
+                        const { layer, layerId, objectId } = this.currentFeatureData;
+                        const formData = new FormData();
+                        formData.append('attachment', file);
+
+                        const response = await fetch(`${layer.url}/${layerId}/${objectId}/addAttachment`, {
+                            method: 'POST',
+                            headers: {
+                                'Referer': window.location.origin
+                            },
+                            body: formData
+                        });
+
+                        if (!response.ok) throw new Error('Failed to add attachment');
+
+                        const result = await response.json();
+                        
+                        if (result.addAttachmentResult && result.addAttachmentResult.success) {
+                            alert('Attachment added successfully!');
+                            this.refreshFeatureTooltip();
+                        } else {
+                            throw new Error('Add attachment failed');
+                        }
+
+                    } catch (error) {
+                        console.error('Error adding attachment:', error);
+                        alert('Error adding attachment');
+                    } finally {
+                        document.body.removeChild(fileInput);
+                    }
+                };
+
+                fileInput.click();
+            },
+
+            async refreshFeatureTooltip() {
+                if (!this.currentFeatureData) return;
+
+                try {
+                    const { layer, layerId, objectId } = this.currentFeatureData;
+                    
+                    // Get updated feature details and attachments
+                    const [featureDetails, attachments] = await Promise.all([
+                        this.getFeatureDetails(layer.url, layerId, objectId),
+                        this.getFeatureAttachments(layer.url, layerId, objectId)
+                    ]);
+
+                    this.currentFeatureData.feature = featureDetails;
+                    this.currentFeatureData.attachments = attachments;
+
+                    // Update tooltip content
+                    if (this.currentFeatureTooltip) {
+                        const tooltipContent = this.createTooltipContent(featureDetails, attachments);
+                        this.currentFeatureTooltip.setContent(tooltipContent);
+                    }
+
+                } catch (error) {
+                    console.error('Error refreshing tooltip:', error);
                 }
             },
             
@@ -1332,6 +2296,9 @@
     
     app.config.compilerOptions.delimiters = ['${', '}']
     app.mount('#app')
+    
+    // Make app available globally for HTML string function calls
+    window.currentApp = app
 
         document.querySelectorAll('.filter-header').forEach(header => {
             header.addEventListener('click', function () {
