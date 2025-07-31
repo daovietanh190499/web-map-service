@@ -141,8 +141,8 @@
             border-radius: 8px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.15);
             padding: 0;
-            max-width: 400px;
-            min-width: 300px;
+            max-width: 600px;
+            min-width: 450px;
         }
 
         .feature-tooltip .tooltip-header {
@@ -156,8 +156,8 @@
         }
 
         .feature-tooltip .tooltip-content {
-            padding: 15px;
-            max-height: 400px;
+            padding: 20px;
+            max-height: 500px;
             overflow-y: auto;
         }
 
@@ -168,7 +168,7 @@
         .feature-tooltip .metadata-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 8px;
+            gap: 12px;
         }
 
         .feature-tooltip .metadata-item {
@@ -177,17 +177,18 @@
         }
 
         .feature-tooltip .metadata-item label {
-            font-size: 11px;
+            font-size: 12px;
             color: #666;
-            margin-bottom: 2px;
+            margin-bottom: 4px;
+            font-weight: 500;
         }
 
         .feature-tooltip .metadata-item input,
         .feature-tooltip .metadata-item textarea {
-            padding: 4px 6px;
+            padding: 6px 8px;
             border: 1px solid #ddd;
-            border-radius: 3px;
-            font-size: 12px;
+            border-radius: 4px;
+            font-size: 13px;
         }
 
         .feature-tooltip .attachments-section {
@@ -258,9 +259,9 @@
         /* Gallery Styles */
         .attachments-gallery {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 10px;
-            margin-bottom: 15px;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
         }
 
         .attachment-gallery-item {
@@ -1505,8 +1506,8 @@
                 this.currentFeatureTooltip = L.popup({
                     className: 'feature-tooltip',
                     closeButton: true,
-                    maxWidth: 400,
-                    maxHeight: 500
+                    maxWidth: 600,
+                    maxHeight: 600
                 })
                 .setLatLng(latlng)
                 .setContent(tooltipContent)
@@ -1853,21 +1854,50 @@
                     const { layer, layerId, objectId, feature } = this.currentFeatureData;
                     
                     // Collect updated attributes from form inputs and textareas
-                    const updatedAttributes = { ...feature.attributes };
+                    const originalAttributes = feature.attributes;
+                    const updatedAttributes = {};
                     const inputs = document.querySelectorAll('.feature-tooltip input[data-field]');
                     const textareas = document.querySelectorAll('.feature-tooltip textarea[data-field]');
                     
+                    // Helper function to check if value is valid (not empty and not null from beginning)
+                    const isValidValue = (field, value) => {
+                        const originalValue = originalAttributes[field];
+                        const trimmedValue = value.trim();
+                        
+                        // If original value was null/undefined/empty, only send if new value is not empty
+                        if (!originalValue || originalValue === '' || originalValue === null || originalValue === undefined) {
+                            return trimmedValue !== '';
+                        }
+                        
+                        // If original value existed, send if new value is different and not empty
+                        return trimmedValue !== '' && trimmedValue !== originalValue;
+                    };
+                    
                     inputs.forEach(input => {
                         const field = input.dataset.field;
-                        updatedAttributes[field] = input.value;
+                        const value = input.value;
+                        
+                        if (isValidValue(field, value)) {
+                            updatedAttributes[field] = value.trim();
+                        }
                     });
                     
                     textareas.forEach(textarea => {
                         const field = textarea.dataset.field;
-                        updatedAttributes[field] = textarea.value;
+                        const value = textarea.value;
+                        
+                        if (isValidValue(field, value)) {
+                            updatedAttributes[field] = value.trim();
+                        }
                     });
 
-                    // Prepare update payload
+                    // Only proceed if there are valid changes
+                    if (Object.keys(updatedAttributes).length === 0) {
+                        alert('No valid changes to save');
+                        return;
+                    }
+
+                    // Prepare update payload with only valid fields
                     const updatePayload = {
                         features: [{
                             attributes: {
