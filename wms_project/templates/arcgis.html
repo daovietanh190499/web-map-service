@@ -1560,7 +1560,7 @@
                 grid.className = 'metadata-grid';
                 
                 const attributes = feature.attributes;
-                const editableFields = ['name_vn', 'name_en', 'name_local', 'code', 'fclass', 'quoc_gia', 'don_vi_quan_ly', 'chuc_nang', 'phan_loai', 'mo_ta', 'nam_xay_dung', 'dien_tich'];
+                const editableFields = ['name_vn', 'name_en', 'name_local', 'code', 'fclass', 'quoc_gia', 'don_vi_quan_ly', 'chuc_nang', 'phan_loai', 'nam_xay_dung', 'dien_tich'];
                 
                 editableFields.forEach(field => {
                     const item = document.createElement('div');
@@ -1581,6 +1581,35 @@
                 });
                 
                 section.appendChild(grid);
+                
+                // Add MO_TA field as textarea (full width)
+                const moTaSection = document.createElement('div');
+                moTaSection.style.gridColumn = '1 / -1'; // Span full width
+                moTaSection.style.marginTop = '15px';
+                
+                const moTaLabel = document.createElement('label');
+                moTaLabel.textContent = 'MO TA (Description)';
+                moTaLabel.style.display = 'block';
+                moTaLabel.style.marginBottom = '5px';
+                moTaLabel.style.fontWeight = 'bold';
+                
+                const moTaTextarea = document.createElement('textarea');
+                moTaTextarea.value = attributes['mo_ta'] || '';
+                moTaTextarea.dataset.field = 'mo_ta';
+                moTaTextarea.placeholder = 'Enter description...';
+                moTaTextarea.style.width = '100%';
+                moTaTextarea.style.minHeight = '80px';
+                moTaTextarea.style.padding = '8px';
+                moTaTextarea.style.border = '1px solid #ddd';
+                moTaTextarea.style.borderRadius = '4px';
+                moTaTextarea.style.fontSize = '12px';
+                moTaTextarea.style.fontFamily = 'inherit';
+                moTaTextarea.style.resize = 'vertical';
+                
+                moTaSection.appendChild(moTaLabel);
+                moTaSection.appendChild(moTaTextarea);
+                section.appendChild(moTaSection);
+                
                 return section;
             },
 
@@ -1823,13 +1852,19 @@
                 try {
                     const { layer, layerId, objectId, feature } = this.currentFeatureData;
                     
-                    // Collect updated attributes from form inputs
+                    // Collect updated attributes from form inputs and textareas
                     const updatedAttributes = { ...feature.attributes };
                     const inputs = document.querySelectorAll('.feature-tooltip input[data-field]');
+                    const textareas = document.querySelectorAll('.feature-tooltip textarea[data-field]');
                     
                     inputs.forEach(input => {
                         const field = input.dataset.field;
                         updatedAttributes[field] = input.value;
+                    });
+                    
+                    textareas.forEach(textarea => {
+                        const field = textarea.dataset.field;
+                        updatedAttributes[field] = textarea.value;
                     });
 
                     // Prepare update payload
@@ -1931,16 +1966,32 @@
                         })
                     });
 
-                    if (!response.ok) throw new Error('Failed to delete attachment');
+                    console.log('Delete response status:', response.status);
+                    
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        console.error('Delete failed with status:', response.status, 'Error:', errorText);
+                        throw new Error(`Failed to delete attachment: ${response.status} - ${errorText}`);
+                    }
 
                     const result = await response.json();
+                    console.log('Delete response result:', result);
                     
-                    if (result.deleteAttachmentResults && result.deleteAttachmentResults.length > 0 && result.deleteAttachmentResults[0].success) {
+                    // Check different possible success indicators
+                    const isSuccess = (
+                        (result.deleteAttachmentResults && result.deleteAttachmentResults.length > 0 && result.deleteAttachmentResults[0].success === true) ||
+                        (result.success === true) ||
+                        (result.error === undefined && result.deleteAttachmentResults) ||
+                        (response.status >= 200 && response.status < 300)
+                    );
+                    
+                    if (isSuccess) {
                         alert('Attachment deleted successfully!');
                         // Refresh the tooltip
                         this.refreshFeatureTooltip();
                     } else {
-                        throw new Error('Delete failed');
+                        console.error('Delete result indicates failure:', result);
+                        throw new Error('Delete failed - server returned error');
                     }
 
                 } catch (error) {
@@ -1967,8 +2018,9 @@
                         const { layer, layerId, objectId } = this.currentFeatureData;
                         const formData = new FormData();
                         formData.append('attachment', file);
+                        formData.append("f", "json");   
 
-                        const response = await fetch(`${layer.url}/${layerId}/${objectId}/addAttachment`, {
+                        const response = await fetch(`${layer.url}/${layerId}/${objectId}/addAttachment?token=${this.arcgisToken}&f=json`, {
                             method: 'POST',
                             headers: {
                                 'Referer': window.location.origin
@@ -1976,15 +2028,32 @@
                             body: formData
                         });
 
-                        if (!response.ok) throw new Error('Failed to add attachment');
+                        console.log('Upload response status:', response.status);
+                        console.log('Upload response headers:', response.headers);
+                        
+                        if (!response.ok) {
+                            const errorText = await response.text();
+                            console.error('Upload failed with status:', response.status, 'Error:', errorText);
+                            throw new Error(`Failed to add attachment: ${response.status} - ${errorText}`);
+                        }
 
                         const result = await response.json();
+                        console.log('Upload response result:', result);
                         
-                        if (result.addAttachmentResult && result.addAttachmentResult.success) {
+                        // Check different possible success indicators
+                        const isSuccess = (
+                            (result.addAttachmentResult && result.addAttachmentResult.success === true) ||
+                            (result.success === true) ||
+                            (result.error === undefined && result.addAttachmentResult) ||
+                            (response.status >= 200 && response.status < 300)
+                        );
+                        
+                        if (isSuccess) {
                             alert('Attachment added successfully!');
                             this.refreshFeatureTooltip();
                         } else {
-                            throw new Error('Add attachment failed');
+                            console.error('Upload result indicates failure:', result);
+                            throw new Error('Add attachment failed - server returned error');
                         }
 
                     } catch (error) {
