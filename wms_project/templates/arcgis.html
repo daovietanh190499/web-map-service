@@ -31,7 +31,7 @@
     <script src="static/js/Control.FullScreen.js"></script>
     <script src="static/js/vue.js"></script>
     <script src="https://unpkg.com/esri-leaflet@3.0.10/dist/esri-leaflet.js"></script>
-    <link rel="stylesheet" href="https://unpkg.com/esri-leaflet@3.0.10/dist/esri-leaflet.css">
+    <script src="https://unpkg.com/esri-leaflet-renderers@3.0.1/dist/esri-leaflet-renderers.js"></script>
     <script src="https://unpkg.com/esri-leaflet-renderers@3.0.1" crossorigin=""></script>
     <script src="https://unpkg.com/esri-leaflet-vector@4.2.8/dist/esri-leaflet-vector.js" crossorigin=""></script>
 
@@ -530,7 +530,7 @@
                     </div>
 
                     <!-- Quick Filters -->
-                    <div class="p-4 border-b">
+                    <div v-if="!showMenu" class="p-4 border-b">
                         <h3 class="font-semibold mb-3">Quick Filters</h3>
                         <div class="space-y-3">
                             <div>
@@ -917,7 +917,6 @@
                     username: '',
                     password: ''
                 },
-                // Thêm cấu trúc mới cho menu layers với sublayers
                 menuServices: [],
                 showMenu: false,
                 filterForm: {
@@ -1067,6 +1066,7 @@
                 L.easyButton('fa-list', (btn, map) => {
                     if (this.showMenu) {
                         this.showMenu = false;
+                        this.openSideBar = false;
                     } else {
                         this.showMenu = true;
                         this.openSideBar = true;
@@ -1275,13 +1275,38 @@
             },
             
             loadMenuFromStorage() {
-                // Không load từ storage nữa, luôn bắt đầu với menu rỗng
-                this.menuServices = [];
+                try {
+                    const stored = localStorage.getItem('menu_services');
+                    if (stored) {
+                        this.menuServices = JSON.parse(stored);
+                        // Khôi phục trạng thái visible của các services
+                        this.restoreServiceVisibility();
+                    }
+                } catch (error) {
+                    console.error('Error loading menu from storage:', error);
+                    this.menuServices = [];
+                }
+            },
+            
+            restoreServiceVisibility() {
+                this.menuServices.forEach(service => {
+                    if (service.visible) {
+                        // Khôi phục các sublayers đã visible
+                        service.sublayers.forEach(sublayer => {
+                            if (sublayer.visible) {
+                                this.addSublayerToMap(service, sublayer);
+                            }
+                        });
+                    }
+                });
             },
             
             saveMenuToStorage() {
-                // Không lưu vào storage nữa
-                // localStorage.setItem('menu_services', JSON.stringify(this.menuServices));
+                try {
+                    localStorage.setItem('menu_services', JSON.stringify(this.menuServices));
+                } catch (error) {
+                    console.error('Error saving menu to storage:', error);
+                }
             },
             
             addToMenu(feature) {
@@ -1301,7 +1326,7 @@
                     // Lấy thông tin sublayers
                     this.getServiceLayers(service).then(() => {
                         this.menuServices.push(service);
-                        // Không lưu vào storage
+                        this.saveMenuToStorage();
                     });
                 }
             },
@@ -1338,7 +1363,7 @@
                 this.removeServiceFromMap(serviceId);
                 
                 this.menuServices = this.menuServices.filter(service => service.id !== serviceId);
-                // Không lưu vào storage
+                this.saveMenuToStorage();
             },
             
             toggleServiceVisibility(service) {
@@ -1357,6 +1382,9 @@
                         this.removeSublayerFromMap(service.id, sublayer.id);
                     });
                 }
+                
+                // Lưu trạng thái vào storage
+                this.saveMenuToStorage();
             },
             
             toggleSublayerVisibility(service, sublayer) {
@@ -1370,12 +1398,15 @@
                 
                 // Cập nhật trạng thái visible của service dựa trên sublayers
                 service.visible = service.sublayers.some(sl => sl.visible);
+                
+                // Lưu trạng thái vào storage
+                this.saveMenuToStorage();
             },
             
             async addSublayerToMap(service, sublayer) {
                 try {
                     const esriFeature = L.esri.featureLayer({
-                        url: `${service.url}/${sublayer.id}?token=${this.arcgisToken}`,
+                        url: `${service.url}/${sublayer.id}?token=${this.arcgisToken}&f=json`,
                         style: {
                             color: '#3388ff',
                             weight: 2,
@@ -2250,13 +2281,8 @@
                     });
                 }
                 
-                // Reset trạng thái visible của tất cả services và sublayers
-                this.menuServices.forEach(service => {
-                    service.visible = false;
-                    service.sublayers.forEach(sublayer => {
-                        sublayer.visible = false;
-                    });
-                });
+                // Lưu trạng thái hiện tại vào storage
+                this.saveMenuToStorage();
             },
             async validateToken() {
                 console.log("VALIDATE TOKEN")
@@ -2508,8 +2534,30 @@
             },
             
             loadMenuFromStorage() {
-                // Không load từ storage nữa, luôn bắt đầu với menu rỗng
-                this.menuServices = [];
+                try {
+                    const stored = localStorage.getItem('menu_services');
+                    if (stored) {
+                        this.menuServices = JSON.parse(stored);
+                        // Khôi phục trạng thái visible của các services
+                        this.restoreServiceVisibility();
+                    }
+                } catch (error) {
+                    console.error('Error loading menu from storage:', error);
+                    this.menuServices = [];
+                }
+            },
+            
+            restoreServiceVisibility() {
+                this.menuServices.forEach(service => {
+                    if (service.visible) {
+                        // Khôi phục các sublayers đã visible
+                        service.sublayers.forEach(sublayer => {
+                            if (sublayer.visible) {
+                                this.addSublayerToMap(service, sublayer);
+                            }
+                        });
+                    }
+                });
             }
         },
         mounted() {
@@ -2517,8 +2565,7 @@
                 this.initMap()
                 this.getListLayer()
                 this.validateToken()
-                // Không load menu từ storage nữa, luôn bắt đầu với menu rỗng
-                this.menuServices = []
+                this.loadMenuFromStorage()
             })
         }
     })
