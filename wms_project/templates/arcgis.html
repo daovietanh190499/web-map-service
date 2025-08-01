@@ -633,40 +633,71 @@
 
                     <!-- Menu Layers -->
                     <div v-if="showMenu" class="search-results-container flex-grow p-4">
-                        <div v-if="menuLayers.length === 0" class="text-center text-gray-500 py-8">
+                        <div v-if="menuServices.length === 0" class="text-center text-gray-500 py-8">
                             <i class="fas fa-layer-group text-4xl mb-4"></i>
-                            <p>No layers added to menu yet</p>
-                            <p class="text-sm">Search for layers and click the folder icon to add them</p>
+                            <p>No services added to menu yet</p>
+                            <p class="text-sm">Search for services and click the folder icon to add them</p>
                         </div>
                         
-                        <div v-else class="space-y-3">
-                            <div v-for="layer in menuLayers" :key="layer.id" 
-                                class="border rounded-lg p-3 hover:shadow-md transition-shadow duration-200">
-                                <div class="flex items-center justify-between mb-2">
-                                    <h4 class="font-medium text-gray-800">${ layer.name }</h4>
+                        <div v-else class="space-y-4">
+                            <div v-for="service in menuServices" :key="service.id" 
+                                class="border rounded-lg p-4 hover:shadow-md transition-shadow duration-200">
+                                <!-- Service Header -->
+                                <div class="flex items-center justify-between mb-3">
+                                    <div class="flex items-center space-x-3">
+                                        <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                                            <i class="fas fa-server text-blue-600"></i>
+                                        </div>
+                                        <div>
+                                            <h4 class="font-medium text-gray-800">${ service.name }</h4>
+                                            <p class="text-xs text-gray-500">${ service.owner }</p>
+                                        </div>
+                                    </div>
                                     <div class="flex items-center space-x-2">
-                                        <button @click="toggleLayerVisibility(layer)" 
-                                            :class="[layer.visible ? 'text-green-600' : 'text-gray-400', 'hover:text-green-800']"
+                                        <button @click="toggleServiceVisibility(service)" 
+                                            :class="[service.visible ? 'text-green-600' : 'text-gray-400', 'hover:text-green-800']"
                                             class="p-1 hover:bg-green-50 rounded transition-colors duration-200"
-                                            :title="layer.visible ? 'Hide layer' : 'Show layer'">
+                                            :title="service.visible ? 'Hide all layers' : 'Show all layers'">
                                             <i class="fas fa-eye"></i>
                                         </button>
-                                        <button @click="removeFromMenu(layer.id)" 
+                                        <button @click="removeServiceFromMenu(service.id)" 
                                             class="p-1 text-red-600 hover:text-red-800 hover:bg-red-50 rounded transition-colors duration-200"
-                                            title="Remove from menu">
+                                            title="Remove service">
                                             <i class="fas fa-trash"></i>
                                         </button>
                                     </div>
                                 </div>
                                 
-                                <div class="text-xs text-gray-500 space-y-1">
-                                    <p><strong>Owner:</strong> ${ layer.owner }</p>
-                                    <p><strong>Modified:</strong> ${ new Date(layer.modified).toLocaleDateString() }</p>
+                                <!-- Service Info -->
+                                <div class="text-xs text-gray-500 space-y-1 mb-3">
+                                    <p><strong>Modified:</strong> ${ new Date(service.modified).toLocaleDateString() }</p>
                                     <p><strong>Status:</strong> 
-                                        <span :class="layer.visible ? 'text-green-600' : 'text-gray-500'">
-                                            ${ layer.visible ? 'Visible' : 'Hidden' }
+                                        <span :class="service.visible ? 'text-green-600' : 'text-gray-500'">
+                                            ${ service.visible ? 'All layers visible' : 'All layers hidden' }
                                         </span>
                                     </p>
+                                </div>
+                                
+                                <!-- Sublayers -->
+                                <div v-if="service.sublayers && service.sublayers.length > 0" class="border-t pt-3">
+                                    <h5 class="text-sm font-medium text-gray-700 mb-2">Layers:</h5>
+                                    <div class="space-y-2">
+                                        <div v-for="sublayer in service.sublayers" :key="sublayer.id" 
+                                            class="flex items-center justify-between p-2 bg-gray-50 rounded">
+                                            <div class="flex items-center space-x-2">
+                                                <div class="w-4 h-4 bg-gray-200 rounded flex items-center justify-center">
+                                                    <i class="fas fa-layer-group text-xs text-gray-600"></i>
+                                                </div>
+                                                <span class="text-sm text-gray-700">${ sublayer.name }</span>
+                                            </div>
+                                            <button @click="toggleSublayerVisibility(service, sublayer)" 
+                                                :class="[sublayer.visible ? 'text-green-600' : 'text-gray-400', 'hover:text-green-800']"
+                                                class="p-1 hover:bg-green-50 rounded transition-colors duration-200"
+                                                :title="sublayer.visible ? 'Hide layer' : 'Show layer'">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -886,7 +917,8 @@
                     username: '',
                     password: ''
                 },
-                menuLayers: [],
+                // Thêm cấu trúc mới cho menu layers với sublayers
+                menuServices: [],
                 showMenu: false,
                 filterForm: {
                     name: '',
@@ -1039,6 +1071,11 @@
                         this.showMenu = true;
                         this.openSideBar = true;
                     }
+                }, { position: "bottomleft" }).addTo(this.map);
+
+                // Thêm easy button để tìm kiếm tất cả feature service
+                L.easyButton('fa-search', (btn, map) => {
+                    this.searchAllFeatureServices();
                 }, { position: "bottomleft" }).addTo(this.map);
 
                 L.Measure = {
@@ -1238,132 +1275,165 @@
             },
             
             loadMenuFromStorage() {
-                try {
-                    const stored = localStorage.getItem('menu_layers');
-                    if (stored) {
-                        this.menuLayers = JSON.parse(stored);
-                    }
-                } catch (error) {
-                    console.error('Error loading menu from storage:', error);
-                    this.menuLayers = [];
-                }
+                // Không load từ storage nữa, luôn bắt đầu với menu rỗng
+                this.menuServices = [];
             },
             
             saveMenuToStorage() {
-                try {
-                    localStorage.setItem('menu_layers', JSON.stringify(this.menuLayers));
-                } catch (error) {
-                    console.error('Error saving menu to storage:', error);
-                }
+                // Không lưu vào storage nữa
+                // localStorage.setItem('menu_services', JSON.stringify(this.menuServices));
             },
             
             addToMenu(feature) {
-                const existingIndex = this.menuLayers.findIndex(layer => layer.id === feature.id);
+                const existingIndex = this.menuServices.findIndex(service => service.id === feature.id);
                 if (existingIndex === -1) {
-                    this.menuLayers.push({
+                    // Tạo service object với sublayers
+                    const service = {
                         id: feature.id,
                         name: feature.title,
                         url: feature.url,
                         owner: feature.owner,
                         modified: feature.modified,
-                        visible: false
+                        visible: false,
+                        sublayers: []
+                    };
+                    
+                    // Lấy thông tin sublayers
+                    this.getServiceLayers(service).then(() => {
+                        this.menuServices.push(service);
+                        // Không lưu vào storage
                     });
-                    this.saveMenuToStorage();
                 }
             },
             
-            removeFromMenu(layerId) {
-                this.menuLayers = this.menuLayers.filter(layer => layer.id !== layerId);
-                this.saveMenuToStorage();
-            },
-            
-            toggleLayerVisibility(layer) {
-                layer.visible = !layer.visible;
-                this.saveMenuToStorage();
-                
-                if (layer.visible) {
-                    this.addFeatureLayerToMap(layer);
-                } else {
-                    this.removeFeatureLayerFromMap(layer.id);
-                }
-            },
-            
-            async addFeatureLayerToMap(layer) {
+            async getServiceLayers(service) {
                 try {
-                    // First, get all layers from the feature service
-                    const layersResponse = await fetch(`${layer.url}/layers?f=json&token=${this.arcgisToken}`, {
+                    const response = await fetch(`${service.url}/layers?f=json&token=${this.arcgisToken}`, {
                         headers: {
                             'Referer': window.location.origin
                         }
                     });
                     
-                    if (!layersResponse.ok) {
-                        throw new Error('Failed to fetch layers from feature service');
+                    if (!response.ok) {
+                        throw new Error('Failed to fetch service layers');
                     }
                     
-                    const layersData = await layersResponse.json();
-                    console.log('Feature service layers:', layersData);
+                    const layersData = await response.json();
                     
-                    // Add each layer to the map
                     if (layersData.layers && layersData.layers.length > 0) {
-                        for (const serviceLayer of layersData.layers) {
-                            const layerId = serviceLayer.id;
-                            const layerName = serviceLayer.name;
-                            
-                            const esriFeature = L.esri.featureLayer({
-                                url: `${layer.url}/${layerId}?token=${this.arcgisToken}`,
-                                style: {
-                                    color: '#3388ff',
-                                    weight: 2,
-                                    opacity: 0.8,
-                                    fillOpacity: 0.2
-                                },
-                                // Remove any where clause and geometry filters to get all features
-                                where: '1=1'
-                            });
-                            
-                            // Add click event handler
-                            esriFeature.on('click', (e) => {
-                                this.handleFeatureClick(e, layer, layerId);
-                            });
-                            
-                            esriFeature.addTo(this.map);
-                            
-                            // Store reference to remove later
-                            if (!this.listVectorLayer) {
-                                this.listVectorLayer = {};
-                            }
-                            const uniqueLayerKey = `${layer.id}_${layerId}`;
-                            this.listVectorLayer[uniqueLayerKey] = esriFeature;
-                            
-                            console.log(`Added feature layer: ${layerName} (ID: ${layerId}) from service: ${layer.name}`);
-                        }
-                    } else {
-                        console.log('No layers found in feature service');
+                        service.sublayers = layersData.layers.map(layer => ({
+                            id: layer.id,
+                            name: layer.name,
+                            visible: false
+                        }));
                     }
-                    
                 } catch (error) {
-                    console.error('Error adding feature layers to map:', error);
+                    console.error('Error getting service layers:', error);
+                    service.sublayers = [];
                 }
             },
             
-            removeFeatureLayerFromMap(layerId) {
+            removeServiceFromMenu(serviceId) {
+                // Xóa tất cả layers của service khỏi map
+                this.removeServiceFromMap(serviceId);
+                
+                this.menuServices = this.menuServices.filter(service => service.id !== serviceId);
+                // Không lưu vào storage
+            },
+            
+            toggleServiceVisibility(service) {
+                service.visible = !service.visible;
+                
+                if (service.visible) {
+                    // Hiển thị tất cả sublayers
+                    service.sublayers.forEach(sublayer => {
+                        sublayer.visible = true;
+                        this.addSublayerToMap(service, sublayer);
+                    });
+                } else {
+                    // Ẩn tất cả sublayers
+                    service.sublayers.forEach(sublayer => {
+                        sublayer.visible = false;
+                        this.removeSublayerFromMap(service.id, sublayer.id);
+                    });
+                }
+            },
+            
+            toggleSublayerVisibility(service, sublayer) {
+                sublayer.visible = !sublayer.visible;
+                
+                if (sublayer.visible) {
+                    this.addSublayerToMap(service, sublayer);
+                } else {
+                    this.removeSublayerFromMap(service.id, sublayer.id);
+                }
+                
+                // Cập nhật trạng thái visible của service dựa trên sublayers
+                service.visible = service.sublayers.some(sl => sl.visible);
+            },
+            
+            async addSublayerToMap(service, sublayer) {
+                try {
+                    const esriFeature = L.esri.featureLayer({
+                        url: `${service.url}/${sublayer.id}?token=${this.arcgisToken}`,
+                        style: {
+                            color: '#3388ff',
+                            weight: 2,
+                            opacity: 0.8,
+                            fillOpacity: 0.2
+                        },
+                        where: '1=1'
+                    });
+                    
+                    // Add click event handler
+                    esriFeature.on('click', (e) => {
+                        this.handleFeatureClick(e, service, sublayer.id);
+                    });
+                    
+                    esriFeature.addTo(this.map);
+                    
+                    // Store reference to remove later
+                    if (!this.listVectorLayer) {
+                        this.listVectorLayer = {};
+                    }
+                    const uniqueLayerKey = `${service.id}_${sublayer.id}`;
+                    this.listVectorLayer[uniqueLayerKey] = esriFeature;
+                    
+                    console.log(`Added sublayer: ${sublayer.name} (ID: ${sublayer.id}) from service: ${service.name}`);
+                    
+                } catch (error) {
+                    console.error('Error adding sublayer to map:', error);
+                }
+            },
+            
+            removeSublayerFromMap(serviceId, sublayerId) {
+                if (this.listVectorLayer) {
+                    const uniqueLayerKey = `${serviceId}_${sublayerId}`;
+                    if (this.listVectorLayer[uniqueLayerKey]) {
+                        this.listVectorLayer[uniqueLayerKey].remove();
+                        delete this.listVectorLayer[uniqueLayerKey];
+                        console.log(`Removed sublayer: ${uniqueLayerKey}`);
+                    }
+                }
+            },
+            
+            removeServiceFromMap(serviceId) {
                 if (this.listVectorLayer) {
                     // Remove all layers that belong to this service
-                    const keysToRemove = Object.keys(this.listVectorLayer).filter(key => key.startsWith(`${layerId}_`));
+                    const keysToRemove = Object.keys(this.listVectorLayer).filter(key => key.startsWith(`${serviceId}_`));
                     
                     keysToRemove.forEach(key => {
                         this.listVectorLayer[key].remove();
                         delete this.listVectorLayer[key];
-                        console.log(`Removed feature layer: ${key}`);
+                        console.log(`Removed service layer: ${key}`);
                     });
                     
                     if (keysToRemove.length === 0) {
-                        console.log(`No layers found for service: ${layerId}`);
+                        console.log(`No layers found for service: ${serviceId}`);
                     }
                 }
             },
-
+            
             async handleFeatureClick(e, layer, layerId) {
                 try {
                     const feature = e.layer.feature;
@@ -2156,12 +2226,12 @@
             },
             
             isInMenu(featureId) {
-                return this.menuLayers.some(layer => layer.id === featureId);
+                return this.menuServices.some(service => service.id === featureId);
             },
             
             toggleMenuLayer(feature) {
                 if (this.isInMenu(feature.id)) {
-                    this.removeFromMenu(feature.id);
+                    this.removeServiceFromMenu(feature.id);
                 } else {
                     this.addToMenu(feature);
                 }
@@ -2171,6 +2241,22 @@
                 this.openSideBar = false;
                 this.showMenu = false;
                 this.drawnItems.clearLayers();
+                
+                // Xóa tất cả layers khỏi map khi đóng sidebar
+                if (this.listVectorLayer) {
+                    Object.keys(this.listVectorLayer).forEach(key => {
+                        this.listVectorLayer[key].remove();
+                        delete this.listVectorLayer[key];
+                    });
+                }
+                
+                // Reset trạng thái visible của tất cả services và sublayers
+                this.menuServices.forEach(service => {
+                    service.visible = false;
+                    service.sublayers.forEach(sublayer => {
+                        sublayer.visible = false;
+                    });
+                });
             },
             async validateToken() {
                 console.log("VALIDATE TOKEN")
@@ -2381,6 +2467,49 @@
                 } catch (error) {
                     console.error('Error searching images:', error);
                 }
+            },
+            
+            async searchAllFeatureServices() {
+                try {
+                    this.searchLoading = true;
+                    this.showSearchError = false;
+                    this.openSideBar = true;
+                    this.showMenu = false;
+    
+                    // Build search parameters for ArcGIS Portal
+                    const params = new URLSearchParams({
+                        q: "type:\"Feature Service\"",
+                        f: 'json',
+                        token: this.arcgisToken,
+                        num: 100 // Tăng số lượng kết quả
+                    });
+    
+                    // Make API request to ArcGIS Portal search
+                    const response = await fetch(`${this.arcgisConfig.portalUrl}/sharing/rest/search?${params}`, {
+                        method: 'GET',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Referer': window.location.origin
+                        }
+                    });
+    
+                    if (!response.ok) throw new Error('Search request failed');
+    
+                    const results = await response.json();
+                    console.log('All feature services:', results);
+                    this.searchLoading = false;
+                    this.searchResults = { "features": results.results || [] }
+                    
+                } catch (error) {
+                    console.error('Search error:', error);
+                    this.showSearchError = true;
+                    this.searchLoading = false;
+                }
+            },
+            
+            loadMenuFromStorage() {
+                // Không load từ storage nữa, luôn bắt đầu với menu rỗng
+                this.menuServices = [];
             }
         },
         mounted() {
@@ -2388,7 +2517,8 @@
                 this.initMap()
                 this.getListLayer()
                 this.validateToken()
-                this.loadMenuFromStorage()
+                // Không load menu từ storage nữa, luôn bắt đầu với menu rỗng
+                this.menuServices = []
             })
         }
     })
