@@ -643,6 +643,23 @@
 
                     <!-- Menu Layers -->
                     <div v-if="showMenu" class="search-results-container flex-grow p-4">
+                        <!-- Active Layers Info -->
+                        <div v-if="getActiveLayersCount() > 0" class="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                            <div class="flex items-center justify-between">
+                                <div class="flex items-center space-x-2">
+                                    <i class="fas fa-eye text-blue-600"></i>
+                                    <span class="text-sm font-medium text-blue-800">
+                                        ${ getActiveLayersCount() } layers active
+                                    </span>
+                                </div>
+                                <button @click="clearAllLayers" 
+                                    class="text-xs text-red-600 hover:text-red-800 hover:bg-red-50 px-2 py-1 rounded transition-colors duration-200"
+                                    title="Clear all layers">
+                                    <i class="fas fa-trash"></i> Clear All
+                                </button>
+                            </div>
+                        </div>
+                        
                         <div v-if="menuServices.length === 0" class="text-center text-gray-500 py-8">
                             <i class="fas fa-layer-group text-4xl mb-4"></i>
                             <p>No services added to menu yet</p>
@@ -675,6 +692,14 @@
                                             title="Remove service">
                                             <i class="fas fa-trash"></i>
                                         </button>
+                                    </div>
+                                </div>
+                                
+                                <!-- Status indicator -->
+                                <div v-if="service.visible" class="mb-2">
+                                    <div class="flex items-center space-x-1 text-xs text-green-600">
+                                        <i class="fas fa-circle"></i>
+                                        <span>Layers visible on map</span>
                                     </div>
                                 </div>
                                 
@@ -1081,6 +1106,11 @@
                     }
                 }, { position: "bottomleft" }).addTo(this.map);
 
+                // Thêm nút để xóa tất cả layers
+                L.easyButton('fa-trash', (btn, map) => {
+                    this.clearAllLayers();
+                }, { position: "bottomleft" }).addTo(this.map);
+
                 // Thêm easy button để tìm kiếm tất cả feature service
                 L.easyButton('fa-search', (btn, map) => {
                     this.searchAllFeatureServices();
@@ -1257,6 +1287,44 @@
                         });
                     }
                 });
+            },
+
+            clearAllLayers() {
+                if (confirm('Bạn có chắc chắn muốn xóa tất cả layers khỏi map?')) {
+                    if (this.listVectorLayer) {
+                        Object.keys(this.listVectorLayer).forEach(key => {
+                            this.listVectorLayer[key].remove();
+                            delete this.listVectorLayer[key];
+                        });
+                    }
+                    
+                    // Reset trạng thái visible của tất cả services
+                    this.menuServices.forEach(service => {
+                        service.visible = false;
+                        service.sublayers.forEach(sublayer => {
+                            sublayer.visible = false;
+                        });
+                    });
+                    
+                    // Lưu trạng thái mới
+                    this.saveMenuToStorage();
+                    
+                    alert('Đã xóa tất cả layers khỏi map!');
+                }
+            },
+
+            getActiveLayersCount() {
+                let count = 0;
+                this.menuServices.forEach(service => {
+                    if (service.visible) {
+                        service.sublayers.forEach(sublayer => {
+                            if (sublayer.visible) {
+                                count++;
+                            }
+                        });
+                    }
+                });
+                return count;
             },
             
             saveMenuToStorage() {
@@ -2347,13 +2415,8 @@
                 this.openSideBar = false;
                 this.showMenu = false;
                 
-                // Xóa tất cả layers khỏi map khi đóng sidebar
-                if (this.listVectorLayer) {
-                    Object.keys(this.listVectorLayer).forEach(key => {
-                        this.listVectorLayer[key].remove();
-                        delete this.listVectorLayer[key];
-                    });
-                }
+                // KHÔNG xóa layers khỏi map khi đóng sidebar
+                // Chỉ đóng sidebar, giữ nguyên các layers đã hiển thị
                 
                 // Lưu trạng thái hiện tại vào storage
                 this.saveMenuToStorage();
