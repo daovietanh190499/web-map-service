@@ -171,6 +171,16 @@
             gap: 12px;
         }
 
+        .feature-tooltip .metadata-grid .metadata-item:nth-child(odd):last-child {
+            grid-column: 1 / -1;
+        }
+
+        @media (max-width: 600px) {
+            .feature-tooltip .metadata-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
         .feature-tooltip .metadata-item {
             display: flex;
             flex-direction: column;
@@ -875,8 +885,6 @@
         data() {
             return {
                 map: null,
-                drawnItems: new L.FeatureGroup(),
-                drawControl: null,
                 openSideBar: false,
                 searchLoading: false,
                 showSearchError: false,
@@ -1091,56 +1099,6 @@
                 var measure = L.control.measure({
                     position: "bottomleft"
                 }).addTo(this.map);
-
-                this.map.addLayer(this.drawnItems);
-
-                this.drawControl = new L.Control.Draw({
-                    position: 'bottomleft',
-                    draw: {
-                        polygon: {
-                            allowIntersection: false,
-                            drawError: {
-                                color: '#e1e100',
-                                timeout: 1000
-                            },
-                            shapeOptions: {
-                                color: '#3388ff'
-                            },
-                            showArea: true
-                        },
-                        polyline: false,
-                        circle: false,
-                        rectangle: true,
-                        circlemarker: false,
-                        marker: false
-                    },
-                    edit: {
-                        featureGroup: this.drawnItems,
-                        remove: true
-                    }
-                });
-
-                this.map.addControl(this.drawControl);
-
-                this.map.on('draw:created', (e) => {
-                    this.drawnItems.clearLayers();
-                    let layer = e.layer;
-                    this.drawnItems.addLayer(layer);
-                    this.openSideBar = true
-    
-                    const bounds = layer.getBounds();
-                    const searchArea = {
-                        north: bounds.getNorth(),
-                        south: bounds.getSouth(),
-                        east: bounds.getEast(),
-                        west: bounds.getWest()
-                    };
-        
-                    this.performSearch({
-                        bbox: searchArea,
-                        datetime: `${new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()}/${new Date().toISOString()}`
-                    });
-                });
 
                 // Close feature tooltip when clicking on map
                 this.map.on('click', (e) => {
@@ -1407,12 +1365,12 @@
                 try {
                     const esriFeature = L.esri.featureLayer({
                         url: `${service.url}/${sublayer.id}?token=${this.arcgisToken}&f=json`,
-                        style: {
-                            color: '#3388ff',
-                            weight: 2,
-                            opacity: 0.8,
-                            fillOpacity: 0.2
-                        },
+                        // style: {
+                        //     color: '#3388ff',
+                        //     weight: 2,
+                        //     opacity: 0.8,
+                        //     fillOpacity: 0.2
+                        // },
                         where: '1=1'
                     });
                     
@@ -1472,6 +1430,7 @@
                     
                     if (!objectId) {
                         console.error('No object ID found in feature');
+                        this.showErrorTooltip(e.latlng, 'No object ID found in feature');
                         return;
                     }
 
@@ -1622,15 +1581,20 @@
                 // Header
                 const header = document.createElement('div');
                 header.className = 'tooltip-header';
+                const objectId = feature.attributes.objectid || feature.attributes.OBJECTID;
                 header.innerHTML = `
                     <span><i class="fas fa-map-marker-alt"></i> Feature Details</span>
-                    <span>ID: ${feature.attributes.objectid || feature.attributes.OBJECTID}</span>
+                    <span>ID: ${objectId}</span>
                 `;
                 container.appendChild(header);
 
                 // Content
                 const content = document.createElement('div');
                 content.className = 'tooltip-content';
+                
+                // Add feature info section
+                const infoSection = this.createFeatureInfoSection(feature);
+                content.appendChild(infoSection);
                 
                 // Metadata section
                 const metadataSection = this.createMetadataSection(feature);
@@ -1648,6 +1612,63 @@
                 return container;
             },
 
+            createFeatureInfoSection(feature) {
+                const section = document.createElement('div');
+                section.className = 'feature-info-section';
+                section.style.marginBottom = '15px';
+                section.style.padding = '10px';
+                section.style.backgroundColor = '#f8f9fa';
+                section.style.borderRadius = '4px';
+                
+                const title = document.createElement('h4');
+                title.textContent = 'Feature Information';
+                title.style.marginBottom = '8px';
+                title.style.fontWeight = 'bold';
+                title.style.fontSize = '14px';
+                section.appendChild(title);
+                
+                const infoGrid = document.createElement('div');
+                infoGrid.style.display = 'grid';
+                infoGrid.style.gridTemplateColumns = '1fr 1fr';
+                infoGrid.style.gap = '8px';
+                infoGrid.style.fontSize = '12px';
+                
+                const attributes = feature.attributes;
+                const objectId = attributes.objectid || attributes.OBJECTID;
+                const featureType = this.currentFeatureData?.layer?.name || 'Unknown';
+                const layerId = this.currentFeatureData?.layerId || 'Unknown';
+                
+                const infoItems = [
+                    { label: 'Feature ID', value: objectId },
+                    { label: 'Layer', value: featureType },
+                    { label: 'Layer ID', value: layerId },
+                    { label: 'Geometry Type', value: feature.geometry?.type || 'Unknown' }
+                ];
+                
+                infoItems.forEach(item => {
+                    const infoItem = document.createElement('div');
+                    infoItem.style.display = 'flex';
+                    infoItem.style.justifyContent = 'space-between';
+                    
+                    const label = document.createElement('span');
+                    label.textContent = item.label + ':';
+                    label.style.fontWeight = '500';
+                    label.style.color = '#666';
+                    
+                    const value = document.createElement('span');
+                    value.textContent = item.value;
+                    value.style.fontWeight = '600';
+                    value.style.color = '#333';
+                    
+                    infoItem.appendChild(label);
+                    infoItem.appendChild(value);
+                    infoGrid.appendChild(infoItem);
+                });
+                
+                section.appendChild(infoGrid);
+                return section;
+            },
+
             createMetadataSection(feature) {
                 const section = document.createElement('div');
                 section.className = 'metadata-section';
@@ -1662,20 +1683,43 @@
                 grid.className = 'metadata-grid';
                 
                 const attributes = feature.attributes;
-                const editableFields = ['name_vn', 'name_en', 'name_local', 'code', 'fclass', 'quoc_gia', 'don_vi_quan_ly', 'chuc_nang', 'phan_loai', 'nam_xay_dung', 'dien_tich'];
                 
-                editableFields.forEach(field => {
+                // Get all available fields from the feature
+                const allFields = Object.keys(attributes).filter(key => 
+                    key !== 'OBJECTID' && 
+                    key !== 'objectid' && 
+                    key !== 'SHAPE' && 
+                    key !== 'shape' &&
+                    key !== 'FID' &&
+                    key !== 'fid'
+                );
+                
+                // Define special fields that should be textareas (long text fields)
+                const textareaFields = ['mo_ta', 'description', 'desc', 'notes', 'comments', 'remarks', 'mota', 'ghichu'];
+                
+                // Define fields that should be hidden (system fields)
+                const hiddenFields = ['created_user', 'created_date', 'last_edited_user', 'last_edited_date', 'globalid', 'shape_length', 'shape_area'];
+                
+                // Filter out hidden fields
+                const visibleFields = allFields.filter(field => !hiddenFields.includes(field.toLowerCase()));
+                
+                // Sort fields: text fields first, then textarea fields
+                const textFields = visibleFields.filter(field => !textareaFields.includes(field.toLowerCase()));
+                const longTextFields = visibleFields.filter(field => textareaFields.includes(field.toLowerCase()));
+                
+                // Create input fields for regular text fields
+                textFields.forEach(field => {
                     const item = document.createElement('div');
                     item.className = 'metadata-item';
                     
                     const label = document.createElement('label');
-                    label.textContent = field.replace(/_/g, ' ').toUpperCase();
+                    label.textContent = this.formatFieldName(field);
                     
                     const input = document.createElement('input');
                     input.type = 'text';
                     input.value = attributes[field] || '';
                     input.dataset.field = field;
-                    input.placeholder = `Enter ${field.replace(/_/g, ' ')}`;
+                    input.placeholder = `Enter ${this.formatFieldName(field)}`;
                     
                     item.appendChild(label);
                     item.appendChild(input);
@@ -1684,35 +1728,56 @@
                 
                 section.appendChild(grid);
                 
-                // Add MO_TA field as textarea (full width)
-                const moTaSection = document.createElement('div');
-                moTaSection.style.gridColumn = '1 / -1'; // Span full width
-                moTaSection.style.marginTop = '15px';
+                // Create textarea fields for long text
+                longTextFields.forEach(field => {
+                    const textareaSection = document.createElement('div');
+                    textareaSection.style.gridColumn = '1 / -1'; // Span full width
+                    textareaSection.style.marginTop = '15px';
+                    
+                    const textareaLabel = document.createElement('label');
+                    textareaLabel.textContent = this.formatFieldName(field);
+                    textareaLabel.style.display = 'block';
+                    textareaLabel.style.marginBottom = '5px';
+                    textareaLabel.style.fontWeight = 'bold';
+                    
+                    const textarea = document.createElement('textarea');
+                    textarea.value = attributes[field] || '';
+                    textarea.dataset.field = field;
+                    textarea.placeholder = `Enter ${this.formatFieldName(field)}...`;
+                    textarea.style.width = '100%';
+                    textarea.style.minHeight = '80px';
+                    textarea.style.padding = '8px';
+                    textarea.style.border = '1px solid #ddd';
+                    textarea.style.borderRadius = '4px';
+                    textarea.style.fontSize = '12px';
+                    textarea.style.fontFamily = 'inherit';
+                    textarea.style.resize = 'vertical';
+                    
+                    textareaSection.appendChild(textareaLabel);
+                    textareaSection.appendChild(textarea);
+                    section.appendChild(textareaSection);
+                });
                 
-                const moTaLabel = document.createElement('label');
-                moTaLabel.textContent = 'MO TA (Description)';
-                moTaLabel.style.display = 'block';
-                moTaLabel.style.marginBottom = '5px';
-                moTaLabel.style.fontWeight = 'bold';
-                
-                const moTaTextarea = document.createElement('textarea');
-                moTaTextarea.value = attributes['mo_ta'] || '';
-                moTaTextarea.dataset.field = 'mo_ta';
-                moTaTextarea.placeholder = 'Enter description...';
-                moTaTextarea.style.width = '100%';
-                moTaTextarea.style.minHeight = '80px';
-                moTaTextarea.style.padding = '8px';
-                moTaTextarea.style.border = '1px solid #ddd';
-                moTaTextarea.style.borderRadius = '4px';
-                moTaTextarea.style.fontSize = '12px';
-                moTaTextarea.style.fontFamily = 'inherit';
-                moTaTextarea.style.resize = 'vertical';
-                
-                moTaSection.appendChild(moTaLabel);
-                moTaSection.appendChild(moTaTextarea);
-                section.appendChild(moTaSection);
+                // If no fields found, show a message
+                if (visibleFields.length === 0) {
+                    const noFieldsMsg = document.createElement('p');
+                    noFieldsMsg.textContent = 'No editable metadata fields found for this feature.';
+                    noFieldsMsg.style.color = '#666';
+                    noFieldsMsg.style.fontStyle = 'italic';
+                    noFieldsMsg.style.textAlign = 'center';
+                    noFieldsMsg.style.padding = '20px';
+                    section.appendChild(noFieldsMsg);
+                }
                 
                 return section;
+            },
+
+            formatFieldName(fieldName) {
+                // Convert field name to readable format
+                return fieldName
+                    .replace(/_/g, ' ')
+                    .replace(/\b\w/g, l => l.toUpperCase())
+                    .trim();
             },
 
             createAttachmentsSection(attachments) {
@@ -1960,8 +2025,8 @@
                     const inputs = document.querySelectorAll('.feature-tooltip input[data-field]');
                     const textareas = document.querySelectorAll('.feature-tooltip textarea[data-field]');
                     
-                    // Helper function to check if value is valid (not empty and not null from beginning)
-                    const isValidValue = (field, value) => {
+                    // Helper function to check if value is valid and has changed
+                    const hasValidChange = (field, value) => {
                         const originalValue = originalAttributes[field];
                         const trimmedValue = value.trim();
                         
@@ -1970,35 +2035,39 @@
                             return trimmedValue !== '';
                         }
                         
-                        // If original value existed, send if new value is different and not empty
-                        return trimmedValue !== '' && trimmedValue !== originalValue;
+                        // If original value existed, send if new value is different
+                        return trimmedValue !== originalValue;
                     };
                     
+                    // Process all input fields
                     inputs.forEach(input => {
                         const field = input.dataset.field;
                         const value = input.value;
                         
-                        if (isValidValue(field, value)) {
+                        if (hasValidChange(field, value)) {
                             updatedAttributes[field] = value.trim();
                         }
                     });
                     
+                    // Process all textarea fields
                     textareas.forEach(textarea => {
                         const field = textarea.dataset.field;
                         const value = textarea.value;
                         
-                        if (isValidValue(field, value)) {
+                        if (hasValidChange(field, value)) {
                             updatedAttributes[field] = value.trim();
                         }
                     });
 
                     // Only proceed if there are valid changes
                     if (Object.keys(updatedAttributes).length === 0) {
-                        alert('No valid changes to save');
+                        alert('No changes detected to save');
                         return;
                     }
 
-                    // Prepare update payload with only valid fields
+                    console.log('Updating fields:', updatedAttributes);
+
+                    // Prepare update payload with only changed fields
                     const updatePayload = {
                         features: [{
                             attributes: {
@@ -2023,15 +2092,21 @@
                         })
                     });
 
-                    if (!response.ok) throw new Error('Failed to update feature');
+                    if (!response.ok) {
+                        const errorText = await response.text();
+                        console.error('Update failed with status:', response.status, 'Error:', errorText);
+                        throw new Error(`Failed to update feature: ${response.status} - ${errorText}`);
+                    }
 
                     const result = await response.json();
+                    console.log('Update result:', result);
                     
                     if (result.updateResults && result.updateResults.length > 0 && result.updateResults[0].success) {
                         alert('Feature updated successfully!');
                         this.closeFeatureTooltip();
                     } else {
-                        throw new Error('Update failed');
+                        console.error('Update result indicates failure:', result);
+                        throw new Error('Update failed - server returned error');
                     }
 
                 } catch (error) {
@@ -2271,7 +2346,6 @@
             closeSideBar() {
                 this.openSideBar = false;
                 this.showMenu = false;
-                this.drawnItems.clearLayers();
                 
                 // Xóa tất cả layers khỏi map khi đóng sidebar
                 if (this.listVectorLayer) {
@@ -2449,51 +2523,6 @@
     
                 xhr.send(formData);
             },
-            submitSearchForm() {
-                const bounds = this.drawnItems.getBounds();
-                const searchParams = {
-                    bbox: {
-                      north: bounds.getNorth(),
-                      south: bounds.getSouth(),
-                      east: bounds.getEast(),
-                      west: bounds.getWest()
-                    },
-                    datetime: `${this.searchForm.startDate}/${this.searchForm.endDate}`,
-                    resolution: {
-                      min: this.searchForm.resolutionMin,
-                      max: this.searchForm.resolutionMax
-                    }
-                };
-                this.performSearch(searchParams);
-            },
-            async submitSearchFormv2() {
-                e.preventDefault();
-                const formData = new FormData(searchForm);
-                const searchData = {
-                    geometry: drawnItems.toGeoJSON().features[0].geometry,
-                    operation: 'intersects'
-                };
-    
-                // Add form fields to search data
-                formData.forEach((value, key) => {
-                    if (value) searchData[key] = value;
-                });
-    
-                try {
-                    const response = await fetch('/api/images/search/', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify(searchData)
-                    });
-    
-                    const results = await response.json();
-                    this.searchResults = results;
-                } catch (error) {
-                    console.error('Error searching images:', error);
-                }
-            },
             
             async searchAllFeatureServices() {
                 try {
@@ -2596,7 +2625,5 @@
         });
 
 </script>
-
-    <!-- <script src="static/js/layer-tree.js"></script> -->
 
 </html>
