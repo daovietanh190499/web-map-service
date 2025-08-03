@@ -30,10 +30,9 @@
     <script type="text/javascript" src="static/js/leaflet.scalebar.js"></script>
     <script src="static/js/Control.FullScreen.js"></script>
     <script src="static/js/vue.js"></script>
-    <script src="https://unpkg.com/esri-leaflet@3.0.10/dist/esri-leaflet.js"></script>
+    <script src="https://unpkg.com/esri-leaflet@3.0.17/dist/esri-leaflet.js"></script>
     <script src="https://unpkg.com/esri-leaflet-renderers@3.0.1/dist/esri-leaflet-renderers.js"></script>
-    <script src="https://unpkg.com/esri-leaflet-renderers@3.0.1" crossorigin=""></script>
-    <script src="https://unpkg.com/esri-leaflet-vector@4.2.8/dist/esri-leaflet-vector.js" crossorigin=""></script>
+    <script src="https://unpkg.com/esri-leaflet-vector@4.3.0/dist/esri-leaflet-vector.js" crossorigin=""></script>
 
     <style>
         @keyframes fadeInLeft {
@@ -1070,27 +1069,6 @@
 
                 L.Control.FileLayerLoad.LABEL = '<div class="upload_file_icon"></div>';
 
-                L.Control.fileLayerLoad({
-                    position: 'bottomleft',
-                    layer: L.geoJson,
-                    layerOptions: {
-                        style: {
-                            color: 'red',
-                            opacity: 1.0,
-                            fillOpacity: 1.0,
-                            weight: 2,
-                            clickable: true
-                        },
-                    },
-                    addToMap: true,
-                    fileSizeLimit: 1024,
-                    formats: [
-                        '.geojson',
-                        '.json',
-                        '.gpx',
-                        '.kml'
-                    ]
-                }).addTo(this.map);
 
                 L.easyButton('fa-file-image', (btn, map) => {
                     this.openModal = true;
@@ -1432,7 +1410,7 @@
             async addSublayerToMap(service, sublayer) {
                 try {
                     const esriFeature = L.esri.featureLayer({
-                        url: `${service.url}/${sublayer.id}?token=${this.arcgisToken}&f=json`,
+                        url: `${service.url}/${sublayer.id}?token=${this.arcgisToken}`,
                         // style: {
                         //     color: '#3388ff',
                         //     weight: 2,
@@ -2507,15 +2485,6 @@
                     this.listLayer = {}
                 }
             },
-            addVectorLayerToMap(layerId, layerUrl) {
-                if (layerId in this.listVectorLayer && this.listVectorLayer[layerId]) {
-                    this.listVectorLayer[layerId].remove(this.map)
-                }
-                this.listVectorLayer[layerId] = L.esri.featureLayer({
-                    url: layerUrl + "/0",
-                    token: localStorage.getItem('arcgis_token')
-                }).addTo(this.map);
-            },
             async getAttachments(layerUrl, featureId) {
                 try {
                     const response = await fetch(`${layerUrl}/${featureId}/attachments?f=json&token=${this.arcgisToken}`, {
@@ -2623,33 +2592,6 @@
                     this.showSearchError = true;
                     this.searchLoading = false;
                 }
-            },
-            
-            loadMenuFromStorage() {
-                try {
-                    const stored = localStorage.getItem('menu_services');
-                    if (stored) {
-                        this.menuServices = JSON.parse(stored);
-                        // Khôi phục trạng thái visible của các services
-                        this.restoreServiceVisibility();
-                    }
-                } catch (error) {
-                    console.error('Error loading menu from storage:', error);
-                    this.menuServices = [];
-                }
-            },
-            
-            restoreServiceVisibility() {
-                this.menuServices.forEach(service => {
-                    if (service.visible) {
-                        // Khôi phục các sublayers đã visible
-                        service.sublayers.forEach(sublayer => {
-                            if (sublayer.visible) {
-                                this.addSublayerToMap(service, sublayer);
-                            }
-                        });
-                    }
-                });
             }
         },
         mounted() {
