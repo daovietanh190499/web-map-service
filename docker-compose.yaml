@@ -107,36 +107,6 @@ services:
       - ./wms_data/minio:/data
     networks:
     - wms-network
-  
-  wms-elasticsearch:
-    image: opensearchproject/opensearch:latest
-    restart: always
-    environment:
-      OPENSEARCH_INITIAL_ADMIN_PASSWORD: "elastic12!@"
-      bootstrap.memory_lock: "true"
-      OPENSEARCH_JAVA_OPTS: "-Xms512m -Xmx512m"
-    ports:
-      - 9200:9200
-      - 9600:9600
-    expose:
-      - 9200
-      - 9600
-    networks:
-    - wms-network
-    volumes:
-    - ./wms_data/opensearch:/usr/share/opensearch/data
-
-  wms-elasticsearch-dashboards:
-    image: opensearchproject/opensearch-dashboards:latest
-    restart: always
-    ports:
-      - 5601:5601
-    expose:
-      - 5601
-    environment:
-      OPENSEARCH_HOSTS: '["https://wms-elasticsearch:9200"]'
-    networks:
-      - wms-network
 
   wms-redis:
     image: redis:6.2-alpine
