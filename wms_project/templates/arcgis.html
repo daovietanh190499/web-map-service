@@ -431,14 +431,7 @@
             color: #333;
         }
 
-        /* Feature Search Sidebar Styles */
-        #feature-search-sidebar {
-            z-index: 1000;
-        }
 
-        #feature-search-sidebar.hidden {
-            transform: translateX(-100%);
-        }
 
         /* Success Message Styles */
         .success-message {
@@ -477,9 +470,9 @@
                     <!-- Header -->
                     <div class="p-4 border-b">
                         <div class="flex justify-between items-center">
-                            <h2 class="text-xl font-bold">${ showMenu ? 'Layer Menu' : 'Search Layers' }</h2>
+                            <h2 class="text-xl font-bold">${ showMenu ? 'Layer Menu' : showFeatureSearch ? 'Feature Search' : 'Search Layers' }</h2>
                             <div class="flex items-center gap-2">
-                                <button v-if="!showMenu" id="toggle-filters" class="text-gray-500 hover:text-gray-700">
+                                <button v-if="!showMenu && !showFeatureSearch" id="toggle-filters" class="text-gray-500 hover:text-gray-700">
                                     <i class="fas fa-filter"></i>
                                 </button>
                                 <button id="close-search" class="text-gray-500 hover:text-gray-700" @click="closeSideBar">
@@ -572,8 +565,22 @@
                         </form>
                     </div>
 
+                    <!-- Feature Search Bar -->
+                    <div v-if="showFeatureSearch" class="p-4 border-b">
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <i class="fas fa-search text-gray-400"></i>
+                            </div>
+                            <input type="text" 
+                                   v-model="featureSearchQuery" 
+                                   @input="searchFeatureResources"
+                                   placeholder="Tìm kiếm feature resources..."
+                                   class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+                    </div>
+
                     <!-- Quick Filters -->
-                    <div v-if="!showMenu" class="p-4 border-b">
+                    <div v-if="!showMenu && !showFeatureSearch" class="p-4 border-b">
                         <h3 class="font-semibold mb-3">Quick Filters</h3>
                         <div class="space-y-3">
                             <div>
@@ -604,7 +611,7 @@
                     </div>
 
                     <!-- Search Results -->
-                    <div v-if="!showMenu" class="search-results-container flex-grow p-4">
+                    <div v-if="!showMenu && !showFeatureSearch" class="search-results-container flex-grow p-4">
                         <div id="search-results" class="space-y-2">
                             <div class="flex justify-center items-center py-4" v-if="searchLoading">
                                 <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
@@ -667,6 +674,70 @@
                                         <div>
                                             <p class="text-gray-500">Views</p>
                                             <p class="font-medium">${ feature.numViews }</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Feature Search Results -->
+                    <div v-if="showFeatureSearch" class="search-results-container flex-grow p-4">
+                        <div v-if="featureSearchLoading" class="flex justify-center items-center py-8">
+                            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                            <span class="ml-2 text-gray-600">Đang tìm kiếm...</span>
+                        </div>
+                        
+                        <div v-else-if="featureSearchResults.length === 0 && featureSearchQuery" class="text-center py-8 text-gray-500">
+                            <i class="fas fa-search text-4xl mb-4"></i>
+                            <p>Không tìm thấy kết quả nào</p>
+                        </div>
+                        
+                        <div v-else-if="featureSearchResults.length === 0" class="text-center py-8 text-gray-500">
+                            <i class="fas fa-search text-4xl mb-4"></i>
+                            <p>Nhập từ khóa để tìm kiếm feature resources</p>
+                        </div>
+                        
+                        <div v-else class="space-y-4">
+                            <!-- Chỉ hiển thị 2 cấp độ: Layer (với tên service) và Resources -->
+                            <div v-for="service in featureSearchResults" :key="service.id">
+                                <div v-for="layer in service.layers" :key="layer.id" class="border rounded-lg p-4 bg-gray-50 mb-4">
+                                    <!-- Layer Level với tên service -->
+                                    <div class="flex items-center justify-between mb-3">
+                                        <div class="flex items-center space-x-3">
+                                            <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                                                <i class="fas fa-layer-group text-green-600"></i>
+                                            </div>
+                                            <div>
+                                                <h4 class="font-medium text-gray-800">${ layer.name }</h4>
+                                                <p class="text-xs text-gray-500">Service: ${ layer.serviceName }</p>
+                                            </div>
+                                        </div>
+                                        <span class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
+                                            ${ layer.resources.length } resources
+                                        </span>
+                                    </div>
+                                    
+                                    <!-- Resources -->
+                                    <div class="space-y-2">
+                                        <div v-for="resource in layer.resources" :key="resource.objectid" 
+                                             class="flex items-center justify-between p-2 bg-white rounded border hover:bg-blue-50 cursor-pointer transition-colors duration-200"
+                                             @click="focusOnResource(service, layer, resource)">
+                                            <div class="flex items-center space-x-2">
+                                                <div class="w-4 h-4 bg-orange-100 rounded-full flex items-center justify-center">
+                                                    <i class="fas fa-map-marker-alt text-orange-600 text-xs"></i>
+                                                </div>
+                                                <div>
+                                                    <span class="text-xs font-medium text-gray-800">${ resource.displayName }</span>
+                                                    <p class="text-xs text-gray-500">ID: ${ resource.objectid }</p>
+                                                </div>
+                                            </div>
+                                            <div class="flex items-center space-x-1">
+                                                <span class="text-xs text-green-600 bg-green-100 px-2 py-1 rounded-full">
+                                                    <i class="fas fa-eye"></i> Focus
+                                                </span>
+                                                <i class="fas fa-external-link-alt text-xs text-gray-400"></i>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -778,100 +849,7 @@
             </div>
         </div>
 
-        <!-- Feature Search Sidebar -->
-        <div id="feature-search-sidebar" class="w-1/3 h-full bg-white shadow-lg z-50 flex-shrink-0 absolute left-0 top-0" 
-             v-if="showFeatureSearch" 
-             style="transform: translateX(0); transition: transform 0.3s ease-in-out;">
-            <div class="h-full flex flex-col">
-                <!-- Header -->
-                <div class="p-4 border-b">
-                    <div class="flex justify-between items-center">
-                        <h2 class="text-xl font-bold">Tìm kiếm Feature Resources</h2>
-                        <button @click="closeFeatureSearchSidebar" class="text-gray-500 hover:text-gray-700">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Search Bar -->
-                <div class="p-4 border-b">
-                    <div class="relative">
-                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <i class="fas fa-search text-gray-400"></i>
-                        </div>
-                        <input type="text" 
-                               v-model="featureSearchQuery" 
-                               @input="searchFeatureResources"
-                               placeholder="Tìm kiếm feature resources..."
-                               class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                    </div>
-                </div>
-
-                <!-- Search Results -->
-                <div class="flex-grow overflow-y-auto p-4">
-                    <div v-if="featureSearchLoading" class="flex justify-center items-center py-8">
-                        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-                        <span class="ml-2 text-gray-600">Đang tìm kiếm...</span>
-                    </div>
-                    
-                    <div v-else-if="featureSearchResults.length === 0 && featureSearchQuery" class="text-center py-8 text-gray-500">
-                        <i class="fas fa-search text-4xl mb-4"></i>
-                        <p>Không tìm thấy kết quả nào</p>
-                    </div>
-                    
-                    <div v-else-if="featureSearchResults.length === 0" class="text-center py-8 text-gray-500">
-                        <i class="fas fa-search text-4xl mb-4"></i>
-                        <p>Nhập từ khóa để tìm kiếm feature resources</p>
-                    </div>
-                    
-                    <div v-else class="space-y-4">
-                        <!-- Chỉ hiển thị 2 cấp độ: Layer (với tên service) và Resources -->
-                        <div v-for="service in featureSearchResults" :key="service.id">
-                            <div v-for="layer in service.layers" :key="layer.id" class="border rounded-lg p-4 bg-gray-50 mb-4">
-                                <!-- Layer Level với tên service -->
-                                <div class="flex items-center justify-between mb-3">
-                                    <div class="flex items-center space-x-3">
-                                        <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
-                                            <i class="fas fa-layer-group text-green-600"></i>
-                                        </div>
-                                        <div>
-                                            <h4 class="font-medium text-gray-800">${ layer.name }</h4>
-                                            <p class="text-xs text-gray-500">Service: ${ layer.serviceName }</p>
-                                        </div>
-                                    </div>
-                                    <span class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded-full">
-                                        ${ layer.resources.length } resources
-                                    </span>
-                                </div>
-                                
-                                <!-- Resources -->
-                                <div class="space-y-2">
-                                    <div v-for="resource in layer.resources" :key="resource.objectid" 
-                                         class="flex items-center justify-between p-2 bg-white rounded border hover:bg-blue-50 cursor-pointer transition-colors duration-200"
-                                         @click="focusOnResource(service, layer, resource)">
-                                        <div class="flex items-center space-x-2">
-                                            <div class="w-4 h-4 bg-orange-100 rounded-full flex items-center justify-center">
-                                                <i class="fas fa-map-marker-alt text-orange-600 text-xs"></i>
-                                            </div>
-                                            <div>
-                                                <span class="text-xs font-medium text-gray-800">${ resource.displayName }</span>
-                                                <p class="text-xs text-gray-500">ID: ${ resource.objectid }</p>
-                                            </div>
-                                        </div>
-                                        <div class="flex items-center space-x-1">
-                                            <span class="text-xs text-green-600 bg-green-100 px-2 py-1 rounded-full">
-                                                <i class="fas fa-eye"></i> Focus
-                                            </span>
-                                            <i class="fas fa-external-link-alt text-xs text-gray-400"></i>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+        
 
         <!-- Modal Overlay -->
         <div id="upload-modal-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-40" v-if="openModal"></div>
@@ -2532,6 +2510,7 @@
             closeSideBar() {
                 this.openSideBar = false;
                 this.showMenu = false;
+                this.showFeatureSearch = false;
                 
                 // KHÔNG xóa layers khỏi map khi đóng sidebar
                 // Chỉ đóng sidebar, giữ nguyên các layers đã hiển thị
@@ -2735,10 +2714,11 @@
             },
             openFeatureSearchSidebar() {
                 this.showFeatureSearch = true;
+                this.openSideBar = true;
+                this.showMenu = false;
             },
             closeFeatureSearchSidebar() {
-                this.showFeatureSearch = false;
-                // Không cần xóa layers tạm thời nữa vì chúng ta sử dụng geometry có sẵn
+                this.closeSideBar();
             },
             
             async searchFeatureResources() {
