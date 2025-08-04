@@ -551,44 +551,6 @@
             window.location.replace('/')
         }, { position: "bottomright" }).addTo(map);
 
-        L.Control.FileLayerLoad.LABEL = '<div class="upload_file_icon"></div>';
-
-        L.Control.fileLayerLoad({
-            // Allows you to use a customized version of L.geoJson.
-            // For example if you are using the Proj4Leaflet leaflet plugin,
-            // you can pass L.Proj.geoJson and load the files into the
-            // L.Proj.GeoJson instead of the L.geoJson.
-            position: 'bottomleft',
-            layer: L.geoJson,
-            // See http://leafletjs.com/reference.html#geojson-options
-            layerOptions: {
-                style: {
-                    color: 'red',
-                    opacity: 1.0,
-                    fillOpacity: 1.0,
-                    weight: 2,
-                    clickable: true
-                },
-                // pointToLayer: function (data, latlng) {
-                //     return L.circleMarker(
-                //         latlng,
-                //         { style: style }
-                //     );
-                // }
-            },
-            // Add to map after loading (default: true) ?
-            addToMap: true,
-            // File size limit in kb (default: 1024) ?
-            fileSizeLimit: 1024,
-            // Restrict accepted file formats (default: .geojson, .json, .kml, and .gpx) ?
-            formats: [
-                '.geojson',
-                '.json',
-                '.gpx',
-                '.kml'
-            ]
-        }).addTo(map);
-
         L.Measure = {
             linearMeasurement: "Distance measurement",
             areaMeasurement: "Area measurement",

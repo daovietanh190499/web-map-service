@@ -133,6 +133,30 @@
             height: 100%;
         }
 
+        .arcgis-service {
+            background-repeat: no-repeat;
+            background-image: url("static/css/images/arcgis_service.webp");
+            background-position: center center;
+            background-color: transparent;
+            background-size: 75% 75%;
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            left: 0
+        }
+
+        .arcgis-feature {
+            background-repeat: no-repeat;
+            background-image: url("static/css/images/arcgis_service.webp");
+            background-position: center center;
+            background-color: transparent;
+            background-size: 75% 75%;
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            left: 0
+        }
+
         /* Feature Tooltip Styles */
         .feature-tooltip {
             background: white;
@@ -1197,18 +1221,14 @@
                     }
                 }, { position: "bottomleft" }).addTo(this.map);
 
-                // Thêm nút để xóa tất cả layers
-                L.easyButton('fa-trash', (btn, map) => {
-                    this.clearAllLayers();
-                }, { position: "bottomleft" }).addTo(this.map);
 
                 // Thêm easy button để tìm kiếm tất cả feature service
-                L.easyButton('fa-search', (btn, map) => {
+                L.easyButton('arcgis-service', (btn, map) => {
                     this.searchAllFeatureServices();
                 }, { position: "bottomleft" }).addTo(this.map);
 
                 // Thêm easy button để tìm kiếm feature resources trong menu services
-                L.easyButton('fa-search-plus', (btn, map) => {
+                L.easyButton('fa-search', (btn, map) => {
                     this.openFeatureSearchSidebar();
                 }, { position: "bottomleft" }).addTo(this.map);
 

@@ -527,29 +527,29 @@
                     window.location.replace('arcgis')
                 }, { position: "bottomright" }).addTo(this.map);
 
-                L.Control.FileLayerLoad.LABEL = '<div class="upload_file_icon"></div>';
+                // L.Control.FileLayerLoad.LABEL = '<div class="upload_file_icon"></div>';
 
-                L.Control.fileLayerLoad({
-                    position: 'bottomleft',
-                    layer: L.geoJson,
-                    layerOptions: {
-                        style: {
-                            color: 'red',
-                            opacity: 1.0,
-                            fillOpacity: 1.0,
-                            weight: 2,
-                            clickable: true
-                        },
-                    },
-                    addToMap: true,
-                    fileSizeLimit: 1024,
-                    formats: [
-                        '.geojson',
-                        '.json',
-                        '.gpx',
-                        '.kml'
-                    ]
-                }).addTo(this.map);
+                // L.Control.fileLayerLoad({
+                //     position: 'bottomleft',
+                //     layer: L.geoJson,
+                //     layerOptions: {
+                //         style: {
+                //             color: 'red',
+                //             opacity: 1.0,
+                //             fillOpacity: 1.0,
+                //             weight: 2,
+                //             clickable: true
+                //         },
+                //     },
+                //     addToMap: true,
+                //     fileSizeLimit: 1024,
+                //     formats: [
+                //         '.geojson',
+                //         '.json',
+                //         '.gpx',
+                //         '.kml'
+                //     ]
+                // }).addTo(this.map);
 
                 L.easyButton('fa-file-image', (btn, map) => {
                     this.openModal = true;
