@@ -1168,16 +1168,16 @@
 
                 L.control.betterscale().addTo(this.map);
 
+                L.easyButton('fa-home', function (btn, map) {
+                    window.location.replace('/')
+                }, { position: "bottomright" }).addTo(this.map);
+
                 L.easyButton('fa-columns', (btn, map) => {
                     window.location.replace('compare')
-                }, { position: "bottomleft" }).addTo(this.map);
+                }, { position: "bottomright" }).addTo(this.map);
 
                 L.easyButton('fa-paint-brush', (btn, map) => {
                     window.location.replace('draw')
-                }, { position: "bottomleft" }).addTo(this.map);
-
-                L.easyButton('fa-home', function (btn, map) {
-                    window.location.replace('/')
                 }, { position: "bottomright" }).addTo(this.map);
 
                 L.Control.FileLayerLoad.LABEL = '<div class="upload_file_icon"></div>';
