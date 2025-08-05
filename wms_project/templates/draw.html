@@ -549,7 +549,7 @@
 
         L.easyButton('fa-home', function (btn, map) {
             window.location.replace('/')
-        }, { position: "bottomright" }).addTo(map);
+        }, "Go Home", { position: "bottomright" }).addTo(map);
 
         L.Measure = {
             linearMeasurement: "Distance measurement",
@@ -573,11 +573,11 @@
 
         L.easyButton('fa-save', function (btn, map) {
             saveSideBar()
-        }, { position: "bottomleft" }).addTo(map);
+        }, "Save Vectors Layer", { position: "bottomleft" }).addTo(map);
 
         L.easyButton('fa-file-image', function (btn, map) {
             openUploadImageModal()
-        }, { position: "bottomleft" }).addTo(map);
+        }, "Upload new Sattelite Image", { position: "bottomleft" }).addTo(map);
 
         uploadModal = document.getElementById("upload-modal")
         uploadModalOverlay = document.getElementById("upload-modal-overlay")

@@ -1194,22 +1194,22 @@
 
                 L.easyButton('fa-home', function (btn, map) {
                     window.location.replace('/')
-                }, { position: "bottomright" }).addTo(this.map);
+                }, "Go Home", { position: "bottomright" }).addTo(this.map);
 
                 L.easyButton('fa-columns', (btn, map) => {
                     window.location.replace('compare')
-                }, { position: "bottomright" }).addTo(this.map);
+                }, "Go to Compare Map", { position: "bottomright" }).addTo(this.map);
 
                 L.easyButton('fa-paint-brush', (btn, map) => {
                     window.location.replace('draw')
-                }, { position: "bottomright" }).addTo(this.map);
+                }, "Go to Draw Vector", { position: "bottomright" }).addTo(this.map);
 
                 L.Control.FileLayerLoad.LABEL = '<div class="upload_file_icon"></div>';
 
 
                 L.easyButton('fa-file-image', (btn, map) => {
                     this.openModal = true;
-                }, { position: "bottomleft" }).addTo(this.map);
+                }, "Upload new Sattelite Image", { position: "bottomleft" }).addTo(this.map);
 
                 L.easyButton('fa-list', (btn, map) => {
                     if (this.showMenu) {
@@ -1219,18 +1219,18 @@
                         this.showMenu = true;
                         this.openSideBar = true;
                     }
-                }, { position: "bottomleft" }).addTo(this.map);
+                }, "List all layers", { position: "bottomleft" }).addTo(this.map);
 
 
                 // Thêm easy button để tìm kiếm tất cả feature service
                 L.easyButton('arcgis-service', (btn, map) => {
                     this.searchAllFeatureServices();
-                }, { position: "bottomleft" }).addTo(this.map);
+                }, "Search all feature services", { position: "bottomleft" }).addTo(this.map);
 
                 // Thêm easy button để tìm kiếm feature resources trong menu services
                 L.easyButton('fa-search', (btn, map) => {
                     this.openFeatureSearchSidebar();
-                }, { position: "bottomleft" }).addTo(this.map);
+                }, "Search feature resources", { position: "bottomleft" }).addTo(this.map);
 
                 L.Measure = {
                     linearMeasurement: "Distance measurement",
