@@ -1204,13 +1204,6 @@
                     window.location.replace('draw')
                 }, "Go to Draw Vector", { position: "bottomright" }).addTo(this.map);
 
-                L.Control.FileLayerLoad.LABEL = '<div class="upload_file_icon"></div>';
-
-
-                L.easyButton('fa-file-image', (btn, map) => {
-                    this.openModal = true;
-                }, "Upload new Sattelite Image", { position: "bottomleft" }).addTo(this.map);
-
                 L.easyButton('fa-list', (btn, map) => {
                     if (this.showMenu) {
                         this.showMenu = false;
@@ -1220,7 +1213,6 @@
                         this.openSideBar = true;
                     }
                 }, "List all layers", { position: "bottomleft" }).addTo(this.map);
-
 
                 // Thêm easy button để tìm kiếm tất cả feature service
                 L.easyButton('arcgis-service', (btn, map) => {
