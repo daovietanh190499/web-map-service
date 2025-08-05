@@ -590,7 +590,7 @@
                     </div>
 
                     <!-- Feature Search Bar -->
-                    <div v-if="showFeatureSearch" class="p-4 border-b">
+                    <div v-if="showFeatureSearch && !showAdvancedSearch" class="p-4 border-b">
                         <div class="relative mb-3">
                             <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                                 <i class="fas fa-search text-gray-400"></i>
@@ -606,14 +606,24 @@
                         <div class="flex justify-between items-center">
                             <button @click="toggleAdvancedSearch" 
                                     class="text-sm text-blue-600 hover:text-blue-800 flex items-center space-x-1">
-                                <i class="fas" :class="showAdvancedSearch ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
-                                <span>${ showAdvancedSearch ? 'Hide' : 'Show' } Advanced Search</span>
+                                <i class="fas fa-chevron-down"></i>
+                                <span>Show Advanced Search</span>
                             </button>
                         </div>
                     </div>
 
                     <!-- Advanced Search Panel -->
                     <div v-if="showFeatureSearch && showAdvancedSearch" class="p-4 border-b bg-gray-50">
+                        <!-- Advanced Search Header with Toggle -->
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-sm font-medium text-gray-700">Advanced Search</h3>
+                            <button @click="toggleAdvancedSearch" 
+                                    class="text-sm text-blue-600 hover:text-blue-800 flex items-center space-x-1">
+                                <i class="fas fa-chevron-up"></i>
+                                <span>Switch to Simple Search</span>
+                            </button>
+                        </div>
+                        
                         <div class="space-y-4">
                             <!-- Layer Selection -->
                             <div>
@@ -621,8 +631,8 @@
                                 <select v-model="selectedFilterLayer" @change="onFilterLayerChange" 
                                         class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                                     <option value="">Choose a layer...</option>
-                                    <option v-for="service in getVisibleServices()" :key="service.id" :value="service.id">
-                                        ${ service.name }
+                                    <option v-for="layer in getVisibleLayers()" :key="layer.key" :value="layer.key">
+                                        ${ layer.serviceName } - ${ layer.layerName }
                                     </option>
                                 </select>
                             </div>
@@ -1185,6 +1195,7 @@
                 // Advanced search variables
                 showAdvancedSearch: false,
                 selectedFilterLayer: '',
+                selectedFilterLayerInfo: null,
                 filterFields: [],
                 filterConditions: [],
                 advancedFilterActive: false,
@@ -3119,31 +3130,49 @@
                 }
             },
             
-            getVisibleServices() {
-                return this.menuServices.filter(service => service.visible);
+            getVisibleLayers() {
+                const layers = [];
+                this.menuServices.forEach(service => {
+                    if (service.visible) {
+                        service.sublayers.forEach(layer => {
+                            if (layer.visible) {
+                                layers.push({
+                                    key: `${service.id}_${layer.id}`,
+                                    serviceId: service.id,
+                                    layerId: layer.id,
+                                    serviceName: service.name,
+                                    layerName: layer.name,
+                                    serviceUrl: service.url
+                                });
+                            }
+                        });
+                    }
+                });
+                return layers;
             },
             
             async onFilterLayerChange() {
                 if (!this.selectedFilterLayer) {
                     this.filterFields = [];
                     this.filterConditions = [];
+                    this.selectedFilterLayerInfo = null;
                     return;
                 }
                 
                 try {
-                    // Find the selected service
-                    const service = this.menuServices.find(s => s.id === this.selectedFilterLayer);
-                    if (!service) return;
+                    // Find the selected layer from visible layers
+                    const visibleLayers = this.getVisibleLayers();
+                    const selectedLayer = visibleLayers.find(layer => layer.key === this.selectedFilterLayer);
                     
-                    // Get the first visible layer from the service
-                    const visibleLayer = service.sublayers.find(layer => layer.visible);
-                    if (!visibleLayer) {
-                        alert('No visible layers found in the selected service');
+                    if (!selectedLayer) {
+                        alert('Selected layer not found');
                         return;
                     }
                     
+                    this.selectedFilterLayerInfo = selectedLayer;
+                    
                     // Get layer information to extract fields
-                    const layerInfo = await this.getLayerInfo(service.url, visibleLayer.id);
+                    const layerInfo = await this.getLayerInfo(selectedLayer.serviceUrl, selectedLayer.layerId);
                     if (layerInfo && layerInfo.fields) {
                         this.filterFields = layerInfo.fields.filter(field => 
                             field.name !== 'OBJECTID' && 
@@ -3228,11 +3257,8 @@
                     this.featureSearchLoading = true;
                     this.advancedFilterActive = true;
                     
-                    const service = this.menuServices.find(s => s.id === this.selectedFilterLayer);
-                    const visibleLayer = service.sublayers.find(layer => layer.visible);
-                    
-                    if (!visibleLayer) {
-                        alert('No visible layers found in the selected service');
+                    if (!this.selectedFilterLayerInfo) {
+                        alert('Selected layer information not found');
                         return;
                     }
                     
@@ -3240,7 +3266,7 @@
                     console.log('Advanced filter WHERE clause:', whereClause);
                     
                     // Query features with the advanced filter
-                    const response = await fetch(`${service.url}/${visibleLayer.id}/query?where=${encodeURIComponent(whereClause)}&outFields=*&f=json&token=${this.arcgisToken}`, {
+                    const response = await fetch(`${this.selectedFilterLayerInfo.serviceUrl}/${this.selectedFilterLayerInfo.layerId}/query?where=${encodeURIComponent(whereClause)}&outFields=*&f=json&token=${this.arcgisToken}`, {
                         headers: {
                             'Referer': window.location.origin
                         }
@@ -3252,7 +3278,7 @@
                     const features = data.features || [];
                     
                     // Convert to display format
-                    const layerInfo = await this.getLayerInfo(service.url, visibleLayer.id);
+                    const layerInfo = await this.getLayerInfo(this.selectedFilterLayerInfo.serviceUrl, this.selectedFilterLayerInfo.layerId);
                     const filteredFeatures = features.map(feature => {
                         const attributes = feature.attributes || {};
                         const objectid = attributes.objectid || attributes.OBJECTID || 'Unknown';
@@ -3268,14 +3294,14 @@
                     
                     // Update search results with filtered features
                     this.featureSearchResults = [{
-                        id: service.id,
-                        name: service.name,
-                        owner: service.owner,
-                        url: service.url,
+                        id: this.selectedFilterLayerInfo.serviceId,
+                        name: this.selectedFilterLayerInfo.serviceName,
+                        owner: 'Unknown', // We don't have owner info for individual layers
+                        url: this.selectedFilterLayerInfo.serviceUrl,
                         layers: [{
-                            id: visibleLayer.id,
-                            name: visibleLayer.name,
-                            serviceName: service.name,
+                            id: this.selectedFilterLayerInfo.layerId,
+                            name: this.selectedFilterLayerInfo.layerName,
+                            serviceName: this.selectedFilterLayerInfo.serviceName,
                             resources: filteredFeatures
                         }]
                     }];
@@ -3292,6 +3318,7 @@
             
             clearAdvancedFilter() {
                 this.selectedFilterLayer = '';
+                this.selectedFilterLayerInfo = null;
                 this.filterFields = [];
                 this.filterConditions = [];
                 this.advancedFilterActive = false;
