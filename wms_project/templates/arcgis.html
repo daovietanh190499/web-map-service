@@ -2619,6 +2619,7 @@
                     this.listLayer = JSON.parse(window.localStorage.getItem("layers"));
                 } catch (e) {
                     console.log(e)
+                    this.listLayer = {}
                 }
                 if (!this.listLayer) {
                     this.listLayer = {}

@@ -281,7 +281,7 @@
                                         </div>
                                     </div>
                                     <div class="flex-auto w-1/5">
-                                        <i id="${ feature.id }-action"
+                                        <i :key="feature.id + '-action'"
                                             class="fas w-8 h-8 text-xl cursor-pointer"
                                             :class="[{'fa-folder-plus': !(feature.id in listLayer), 'fa-folder-minus': (feature.id in listLayer)}]"
                                             @click="changeMenu(feature.id, feature.properties.name || feature.properties.filename, feature.geometry.coordinates)">
@@ -671,6 +671,7 @@
                     this.listLayer = JSON.parse(window.localStorage.getItem("layers"));
                 } catch (e) {
                     console.log(e)
+                    this.listLayer = {}
                 }
                 if (!this.listLayer) {
                     this.listLayer = {}
@@ -684,10 +685,9 @@
             addLayer(layer_id, name, coords) {
                 let list_layer = this.listLayer
                 list_layer[layer_id] = {"name":name, "children": [], "coords": coords}
-                window.localStorage.setItem("layers", JSON.stringify(list_layer))
+                window.localStorage.setItem("layers", JSON.stringify({ ...list_layer }))
             },
             changeMenu(layer_id, name, coords) {
-                console.log(name)
                 let list_layer = this.listLayer
                 if (layer_id in list_layer) {
                     this.removeLayer(layer_id)
