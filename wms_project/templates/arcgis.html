@@ -2856,7 +2856,7 @@
                     
                     try {
                         const results = [];
-                        const query = this.featureSearchQuery;
+                        const query = this.featureSearchQuery.toLowerCase();
                         
                         // Tìm kiếm trong tất cả services đã được thêm vào menu
                         for (const service of this.menuServices) {
@@ -2986,7 +2986,7 @@
                 }
                 
                 // Tạo WHERE clause với các trường có sẵn
-                const conditions = availableFields.map(field => `${field} LIKE '%${query}%'`);
+                const conditions = availableFields.map(field => `LOWER(${field}) LIKE '%${query}%'`);
                 return conditions.join(' OR ');
             },
             
@@ -3223,11 +3223,11 @@
                         
                         // Handle different data types and operators
                         if (operator === 'LIKE' || operator === 'NOT LIKE') {
-                            return `${field} ${operator} '%${value}%'`;
+                            return `LOWER(${field}) ${operator} '%${value.toLowerCase()}%'`;
                         } else if (operator === 'IN' || operator === 'NOT IN') {
                             // Handle comma-separated values for IN clause
-                            const values = value.split(',').map(v => `'${v.trim()}'`).join(',');
-                            return `${field} ${operator} (${values})`;
+                            const values = value.split(',').map(v => `'${v.trim().toLowerCase()}'`).join(',');
+                            return `LOWER(${field}) ${operator} (${values})`;
                         } else {
                             // For numeric fields, don't quote the value
                             const fieldInfo = this.filterFields.find(f => f.name === field);
