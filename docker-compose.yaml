@@ -35,7 +35,7 @@ services:
     networks:
     - wms-network
 
-  wms-celery: &backend
+  wms-backend: &backend
     build:
       context: wms_project
       dockerfile: Dockerfile
@@ -54,19 +54,6 @@ services:
       AWS_S3_ENDPOINT: ${AWS_S3_ENDPOINT}
       ELASTICSEARCH_HOST: ${ELASTICSEARCH_HOST}
       REDIS_HOST: ""
-    command: [
-      "/bin/bash",
-      "-c",
-      "sleep 10 && python -m celery -A wms_project worker --loglevel info"
-    ]
-    volumes:
-      - ./wms_data/wms_data/data:/mnt/data
-    networks:
-    - wms-network
-
-  wms-backend:
-    << : *backend
-    restart: always
     ports:
       - 80:8000
     expose:
