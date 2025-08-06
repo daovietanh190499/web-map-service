@@ -33,7 +33,10 @@
     <script src="https://unpkg.com/esri-leaflet@3.0.17/dist/esri-leaflet.js"></script>
     <script src="https://unpkg.com/esri-leaflet-renderers@3.0.1/dist/esri-leaflet-renderers.js"></script>
     <script src="https://unpkg.com/esri-leaflet-vector@4.3.0/dist/esri-leaflet-vector.js" crossorigin=""></script>
-
+    <script
+  src="https://unpkg.com/esri-leaflet-static-basemap-tile@1.1.1/dist/esri-leaflet-static-basemap-tile.js"
+  integrity="sha512-qau4BpQ1dy05lvhLEb8lgDd5lEhHq4RXjEzLKY8v0ZAdNq3rCxZF9JA4COQx9FKF1aQ8sYgdbN7cPgOCLmYiSQ=="
+  crossorigin=""></script>
     <style>
         @keyframes fadeInLeft {
             from {
@@ -748,8 +751,18 @@
                                 <!-- Header Section -->
                                 <div class="flex items-center justify-between p-4 border-b">
                                     <div class="flex items-center space-x-3">
-                                        <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                                            <i class="fas fa-layer-group text-blue-600"></i>
+                                        <div class="w-10 h-10 rounded-full flex items-center justify-center"
+                                             :class="[
+                                                 feature.serviceType === 'feature' ? 'bg-blue-100' : '',
+                                                 feature.serviceType === 'vectorTile' ? 'bg-purple-100' : '',
+                                                 feature.serviceType === 'mapService' ? 'bg-orange-100' : ''
+                                             ]">
+                                            <i class="fas text-xl"
+                                               :class="[
+                                                   feature.serviceType === 'feature' ? 'fa-layer-group text-blue-600' : '',
+                                                   feature.serviceType === 'vectorTile' ? 'fa-cubes text-purple-600' : '',
+                                                   feature.serviceType === 'mapService' ? 'fa-map text-orange-600' : ''
+                                               ]"></i>
                                         </div>
                                         <div>
                                             <h3 class="font-semibold text-lg text-gray-800">${ feature.title }</h3>
@@ -757,10 +770,15 @@
                                         </div>
                                     </div>
                                     <div>
-                                        <i id="${ feature.id }-action"
-                                            class="fas w-8 h-8 text-xl cursor-pointer hover:text-blue-600 transition-colors duration-200"
-                                            :class="[{'fa-folder-plus': !isInMenu(feature.id), 'fa-folder-minus': isInMenu(feature.id)}]"
-                                            @click="toggleMenuLayer(feature)">
+                                        <i :id="feature.id + '-action'"
+                                            class="fas w-8 h-8 text-xl cursor-pointer transition-colors duration-200"
+                                            :class="[
+                                                feature.serviceType === 'feature' ? 'hover:text-blue-600' : '',
+                                                feature.serviceType === 'vectorTile' ? 'hover:text-purple-600' : '',
+                                                feature.serviceType === 'mapService' ? 'hover:text-orange-600' : '',
+                                                {'fa-folder-plus': !isServiceInMenu(feature), 'fa-folder-minus': isServiceInMenu(feature)}
+                                            ]"
+                                            @click="toggleServiceLayer(feature)">
                                         </i>
                                     </div>
                                 </div>
@@ -886,13 +904,14 @@
                             </div>
                         </div>
                         
-                        <div v-if="menuServices.length === 0" class="text-center text-gray-500 py-8">
+                        <div v-if="menuServices.length === 0 && vectorTileServices.length === 0 && mapServices.length === 0" class="text-center text-gray-500 py-8">
                             <i class="fas fa-layer-group text-4xl mb-4"></i>
                             <p>No services added to menu yet</p>
                             <p class="text-sm">Search for services and click the folder icon to add them</p>
                         </div>
                         
                         <div v-else class="space-y-4">
+                            <!-- Feature Services -->
                             <div v-for="service in menuServices" :key="service.id" 
                                 class="border rounded-lg p-4 hover:shadow-md transition-shadow duration-200">
                                 <!-- Service Header -->
@@ -961,8 +980,106 @@
                                     </div>
                                 </div>
                             </div>
+
+                            <!-- Vector Tile Services -->
+                            <div v-for="service in vectorTileServices" :key="service.id" 
+                                class="border rounded-lg p-4 hover:shadow-md transition-shadow duration-200">
+                                <!-- Service Header -->
+                                <div class="flex items-center justify-between mb-3">
+                                    <div class="flex items-center space-x-3">
+                                        <div class="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
+                                            <i class="fas fa-cubes text-purple-600"></i>
+                                        </div>
+                                        <div>
+                                            <h4 class="font-medium text-gray-800">${ service.name }</h4>
+                                            <p class="text-xs text-gray-500">${ service.owner }</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center space-x-2">
+                                        <button @click="toggleVectorTileVisibility(service)" 
+                                            :class="[service.visible ? 'text-green-600' : 'text-gray-400', 'hover:text-green-800']"
+                                            class="p-1 hover:bg-green-50 rounded transition-colors duration-200"
+                                            :title="service.visible ? 'Hide vector tile layer' : 'Show vector tile layer'">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        <button @click="removeVectorTileFromMenu(service.id)" 
+                                            class="p-1 text-red-600 hover:text-red-800 hover:bg-red-50 rounded transition-colors duration-200"
+                                            title="Remove vector tile service">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <!-- Status indicator -->
+                                <div v-if="service.visible" class="mb-2">
+                                    <div class="flex items-center space-x-1 text-xs text-green-600">
+                                        <i class="fas fa-circle"></i>
+                                        <span>Vector tile layer visible on map</span>
+                                    </div>
+                                </div>
+                                
+                                <!-- Service Info -->
+                                <div class="text-xs text-gray-500 space-y-1 mb-3">
+                                    <p><strong>Modified:</strong> ${ new Date(service.modified).toLocaleDateString() }</p>
+                                    <p><strong>Status:</strong> 
+                                        <span :class="service.visible ? 'text-green-600' : 'text-gray-500'">
+                                            ${ service.visible ? 'Vector tile layer visible' : 'Vector tile layer hidden' }
+                                        </span>
+                                    </p>
+                                </div>
+                            </div>
+
+                            <!-- Map Services -->
+                            <div v-for="service in mapServices" :key="service.id" 
+                                class="border rounded-lg p-4 hover:shadow-md transition-shadow duration-200">
+                                <!-- Service Header -->
+                                <div class="flex items-center justify-between mb-3">
+                                    <div class="flex items-center space-x-3">
+                                        <div class="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
+                                            <i class="fas fa-map text-orange-600"></i>
+                                        </div>
+                                        <div>
+                                            <h4 class="font-medium text-gray-800">${ service.name }</h4>
+                                            <p class="text-xs text-gray-500">${ service.owner }</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center space-x-2">
+                                        <button @click="toggleMapServiceVisibility(service)" 
+                                            :class="[service.visible ? 'text-green-600' : 'text-gray-400', 'hover:text-green-800']"
+                                            class="p-1 hover:bg-green-50 rounded transition-colors duration-200"
+                                            :title="service.visible ? 'Hide map service layer' : 'Show map service layer'">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        <button @click="removeMapServiceFromMenu(service.id)" 
+                                            class="p-1 text-red-600 hover:text-red-800 hover:bg-red-50 rounded transition-colors duration-200"
+                                            title="Remove map service">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <!-- Status indicator -->
+                                <div v-if="service.visible" class="mb-2">
+                                    <div class="flex items-center space-x-1 text-xs text-green-600">
+                                        <i class="fas fa-circle"></i>
+                                        <span>Map service layer visible on map</span>
+                                    </div>
+                                </div>
+                                
+                                <!-- Service Info -->
+                                <div class="text-xs text-gray-500 space-y-1 mb-3">
+                                    <p><strong>Modified:</strong> ${ new Date(service.modified).toLocaleDateString() }</p>
+                                    <p><strong>Status:</strong> 
+                                        <span :class="service.visible ? 'text-green-600' : 'text-gray-500'">
+                                            ${ service.visible ? 'Map service layer visible' : 'Map service layer hidden' }
+                                        </span>
+                                    </p>
+                                </div>
+                            </div>
                         </div>
                     </div>
+
+
         
                 </div>
             </div>
@@ -1202,6 +1319,15 @@
                 layerTreeControl: null,
                 currentFeatureTooltip: null,
                 currentFeatureData: null,
+                // Thêm biến cho Vector Tile Service và Map Service
+                vectorTileServices: [],
+                mapServices: [],
+                showVectorTileSearch: false,
+                showMapServiceSearch: false,
+                vectorTileSearchLoading: false,
+                mapServiceSearchLoading: false,
+                vectorTileSearchResults: { "features": [] },
+                mapServiceSearchResults: { "features": [] },
                 layerBuilders: {
                     OSM: function (layerSettings) {
                         return L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -1281,6 +1407,7 @@
         methods: {
             initMap() {
                 this.map = L.map('map', {
+                    // crs: L.CRS.EPSG102100,
                     zoomControl: false,
                     contextmenu: true,
                     fullscreenControl: true,
@@ -1320,7 +1447,7 @@
                     }
                 }, "List all layers", { position: "bottomleft" }).addTo(this.map);
 
-                // Thêm easy button để tìm kiếm tất cả feature service
+                // Thêm easy button để tìm kiếm tất cả services
                 L.easyButton('arcgis-service', (btn, map) => {
                     this.searchAllFeatureServices();
                 }, "Search all feature services", { position: "bottomleft" }).addTo(this.map);
@@ -1490,6 +1617,34 @@
                 }
             },
             
+            loadVectorTileFromStorage() {
+                try {
+                    const stored = localStorage.getItem('vector_tile_services');
+                    if (stored) {
+                        this.vectorTileServices = JSON.parse(stored);
+                        // Khôi phục trạng thái visible của các vector tile services
+                        this.restoreVectorTileVisibility();
+                    }
+                } catch (error) {
+                    console.error('Error loading vector tile services from storage:', error);
+                    this.vectorTileServices = [];
+                }
+            },
+            
+            loadMapServiceFromStorage() {
+                try {
+                    const stored = localStorage.getItem('map_services');
+                    if (stored) {
+                        this.mapServices = JSON.parse(stored);
+                        // Khôi phục trạng thái visible của các map services
+                        this.restoreMapServiceVisibility();
+                    }
+                } catch (error) {
+                    console.error('Error loading map services from storage:', error);
+                    this.mapServices = [];
+                }
+            },
+            
             restoreServiceVisibility() {
                 this.menuServices.forEach(service => {
                     if (service.visible) {
@@ -1499,6 +1654,22 @@
                                 this.addSublayerToMap(service, sublayer);
                             }
                         });
+                    }
+                });
+            },
+            
+            restoreVectorTileVisibility() {
+                this.vectorTileServices.forEach(service => {
+                    if (service.visible) {
+                        this.addVectorTileToMap(service);
+                    }
+                });
+            },
+            
+            restoreMapServiceVisibility() {
+                this.mapServices.forEach(service => {
+                    if (service.visible) {
+                        this.addMapServiceToMap(service);
                     }
                 });
             },
@@ -1520,8 +1691,20 @@
                         });
                     });
                     
+                    // Reset trạng thái visible của Vector Tile Services
+                    this.vectorTileServices.forEach(service => {
+                        service.visible = false;
+                    });
+                    
+                    // Reset trạng thái visible của Map Services
+                    this.mapServices.forEach(service => {
+                        service.visible = false;
+                    });
+                    
                     // Lưu trạng thái mới
                     this.saveMenuToStorage();
+                    this.saveVectorTileToStorage();
+                    this.saveMapServiceToStorage();
                     
                     alert('Đã xóa tất cả layers khỏi map!');
                 }
@@ -1549,6 +1732,22 @@
                 }
             },
             
+            saveVectorTileToStorage() {
+                try {
+                    localStorage.setItem('vector_tile_services', JSON.stringify(this.vectorTileServices));
+                } catch (error) {
+                    console.error('Error saving vector tile services to storage:', error);
+                }
+            },
+            
+            saveMapServiceToStorage() {
+                try {
+                    localStorage.setItem('map_services', JSON.stringify(this.mapServices));
+                } catch (error) {
+                    console.error('Error saving map services to storage:', error);
+                }
+            },
+            
             addToMenu(feature) {
                 const existingIndex = this.menuServices.findIndex(service => service.id === feature.id);
                 if (existingIndex === -1) {
@@ -1560,7 +1759,8 @@
                         owner: feature.owner,
                         modified: feature.modified,
                         visible: false,
-                        sublayers: []
+                        sublayers: [],
+                        serviceType: 'feature' // Thêm loại service
                     };
                     
                     // Lấy thông tin sublayers
@@ -1568,6 +1768,44 @@
                         this.menuServices.push(service);
                         this.saveMenuToStorage();
                     });
+                }
+            },
+            
+            addVectorTileToMenu(feature) {
+                const existingIndex = this.vectorTileServices.findIndex(service => service.id === feature.id);
+                if (existingIndex === -1) {
+                    // Tạo service object cho Vector Tile
+                    const service = {
+                        id: feature.id,
+                        name: feature.title,
+                        url: feature.url,
+                        owner: feature.owner,
+                        modified: feature.modified,
+                        visible: false,
+                        serviceType: 'vectorTile'
+                    };
+                    
+                    this.vectorTileServices.push(service);
+                    this.saveVectorTileToStorage();
+                }
+            },
+            
+            addMapServiceToMenu(feature) {
+                const existingIndex = this.mapServices.findIndex(service => service.id === feature.id);
+                if (existingIndex === -1) {
+                    // Tạo service object cho Map Service
+                    const service = {
+                        id: feature.id,
+                        name: feature.title,
+                        url: feature.url,
+                        owner: feature.owner,
+                        modified: feature.modified,
+                        visible: false,
+                        serviceType: 'mapService'
+                    };
+                    
+                    this.mapServices.push(service);
+                    this.saveMapServiceToStorage();
                 }
             },
             
@@ -1608,6 +1846,22 @@
                 this.saveMenuToStorage();
             },
             
+            removeVectorTileFromMenu(serviceId) {
+                // Xóa vector tile service khỏi map
+                this.removeVectorTileFromMap(serviceId);
+                
+                this.vectorTileServices = this.vectorTileServices.filter(service => service.id !== serviceId);
+                this.saveVectorTileToStorage();
+            },
+            
+            removeMapServiceFromMenu(serviceId) {
+                // Xóa map service khỏi map
+                this.removeMapServiceFromMap(serviceId);
+                
+                this.mapServices = this.mapServices.filter(service => service.id !== serviceId);
+                this.saveMapServiceToStorage();
+            },
+            
             toggleServiceVisibility(service) {
                 service.visible = !service.visible;
                 
@@ -1627,6 +1881,32 @@
                 
                 // Lưu trạng thái vào storage
                 this.saveMenuToStorage();
+            },
+            
+            toggleVectorTileVisibility(service) {
+                service.visible = !service.visible;
+                
+                if (service.visible) {
+                    this.addVectorTileToMap(service);
+                } else {
+                    this.removeVectorTileFromMap(service.id);
+                }
+                
+                // Lưu trạng thái vào storage
+                this.saveVectorTileToStorage();
+            },
+            
+            toggleMapServiceVisibility(service) {
+                service.visible = !service.visible;
+                
+                if (service.visible) {
+                    this.addMapServiceToMap(service);
+                } else {
+                    this.removeMapServiceFromMap(service.id);
+                }
+                
+                // Lưu trạng thái vào storage
+                this.saveMapServiceToStorage();
             },
             
             toggleSublayerVisibility(service, sublayer) {
@@ -1732,6 +2012,79 @@
                     
                     if (keysToRemove.length === 0) {
                         console.log(`No layers found for service: ${serviceId}`);
+                    }
+                }
+            },
+            
+            addVectorTileToMap(service) {
+                try {
+                    // Tạo Vector Tile Layer sử dụng L.esri.Vector.vectorTileLayer
+                    const vectorTileLayer = L.esri.Vector.vectorTileLayer(
+                        service.url,
+                        {
+                            token: this.arcgisToken,
+                        }
+                    );
+
+                    // const vectorTileLayer = L.tileLayer(
+                    //     service.url + "/tile/{z}/{y}/{x}.pbf?token=" + this.arcgisToken
+                    // );
+                    
+                    vectorTileLayer.addTo(this.map);
+                    
+                    // Store reference to remove later
+                    if (!this.listVectorLayer) {
+                        this.listVectorLayer = {};
+                    }
+                    this.listVectorLayer[`vectorTile_${service.id}`] = vectorTileLayer;
+                    
+                    console.log(`Added vector tile service: ${service.name} (ID: ${service.id})`);
+                    
+                } catch (error) {
+                    console.error('Error adding vector tile to map:', error);
+                }
+            },
+            
+            removeVectorTileFromMap(serviceId) {
+                if (this.listVectorLayer) {
+                    const layerKey = `vectorTile_${serviceId}`;
+                    if (this.listVectorLayer[layerKey]) {
+                        this.listVectorLayer[layerKey].remove();
+                        delete this.listVectorLayer[layerKey];
+                        console.log(`Removed vector tile service: ${serviceId}`);
+                    }
+                }
+            },
+            
+            addMapServiceToMap(service) {
+                try {
+                    // Tạo Map Service Layer sử dụng L.esri.tiledMapLayer
+                    const mapServiceLayer = L.tileLayer(
+                        service.url + "/tile/{z}/{y}/{x}?token=" + this.arcgisToken
+                    );
+                    
+                    mapServiceLayer.addTo(this.map);
+                    
+                    // Store reference to remove later
+                    if (!this.listVectorLayer) {
+                        this.listVectorLayer = {};
+                    }
+                    this.listVectorLayer[`mapService_${service.id}`] = mapServiceLayer;
+                    
+                    console.log(`Added map service: ${service.name} (ID: ${service.id}) (URL: ${service.url})`);
+                    
+                } catch (error) {
+                    console.error('Error adding map service to map:', error);
+                }
+            },
+            
+            removeMapServiceFromMap(serviceId) {
+                if (this.listVectorLayer) {
+                    const layerKey = `mapService_${serviceId}`;
+                    if (this.listVectorLayer[layerKey]) {
+                        this.listVectorLayer[layerKey].remove();
+                        delete this.listVectorLayer[layerKey];
+                        console.log(`Removed map service: ${serviceId}`);
                     }
                 }
             },
@@ -2648,6 +3001,25 @@
                 return this.menuServices.some(service => service.id === featureId);
             },
             
+            isVectorTileInMenu(featureId) {
+                return this.vectorTileServices.some(service => service.id === featureId);
+            },
+            
+            isMapServiceInMenu(featureId) {
+                return this.mapServices.some(service => service.id === featureId);
+            },
+            
+            isServiceInMenu(feature) {
+                if (feature.serviceType === 'feature') {
+                    return this.isInMenu(feature.id);
+                } else if (feature.serviceType === 'vectorTile') {
+                    return this.isVectorTileInMenu(feature.id);
+                } else if (feature.serviceType === 'mapService') {
+                    return this.isMapServiceInMenu(feature.id);
+                }
+                return false;
+            },
+            
             toggleMenuLayer(feature) {
                 if (this.isInMenu(feature.id)) {
                     this.removeServiceFromMenu(feature.id);
@@ -2656,16 +3028,46 @@
                 }
             },
             
+            toggleVectorTileLayer(feature) {
+                if (this.isVectorTileInMenu(feature.id)) {
+                    this.removeVectorTileFromMenu(feature.id);
+                } else {
+                    this.addVectorTileToMenu(feature);
+                }
+            },
+            
+            toggleMapServiceLayer(feature) {
+                if (this.isMapServiceInMenu(feature.id)) {
+                    this.removeMapServiceFromMenu(feature.id);
+                } else {
+                    this.addMapServiceToMenu(feature);
+                }
+            },
+            
+            toggleServiceLayer(feature) {
+                if (feature.serviceType === 'feature') {
+                    this.toggleMenuLayer(feature);
+                } else if (feature.serviceType === 'vectorTile') {
+                    this.toggleVectorTileLayer(feature);
+                } else if (feature.serviceType === 'mapService') {
+                    this.toggleMapServiceLayer(feature);
+                }
+            },
+            
             closeSideBar() {
                 this.openSideBar = false;
                 this.showMenu = false;
                 this.showFeatureSearch = false;
+                this.showVectorTileSearch = false;
+                this.showMapServiceSearch = false;
                 
                 // KHÔNG xóa layers khỏi map khi đóng sidebar
                 // Chỉ đóng sidebar, giữ nguyên các layers đã hiển thị
                 
                 // Lưu trạng thái hiện tại vào storage
                 this.saveMenuToStorage();
+                this.saveVectorTileToStorage();
+                this.saveMapServiceToStorage();
             },
             async validateToken() {
                 console.log("VALIDATE TOKEN")
@@ -2832,12 +3234,90 @@
                     this.openSideBar = true;
                     this.showMenu = false;
     
+                    // Tìm kiếm cả 3 loại service cùng lúc
+                    const searchPromises = [
+                        // Feature Service
+                        fetch(`${this.arcgisConfig.portalUrl}/sharing/rest/search?${new URLSearchParams({
+                            q: "type:\"Feature Service\"",
+                            f: 'json',
+                            token: this.arcgisToken,
+                            num: 100
+                        })}`, {
+                            method: 'GET',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Referer': window.location.origin
+                            }
+                        }),
+                        // Vector Tile Service
+                        fetch(`${this.arcgisConfig.portalUrl}/sharing/rest/search?${new URLSearchParams({
+                            q: "type:\"Vector Tile Service\"",
+                            f: 'json',
+                            token: this.arcgisToken,
+                            num: 100
+                        })}`, {
+                            method: 'GET',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Referer': window.location.origin
+                            }
+                        }),
+                        // Map Service
+                        fetch(`${this.arcgisConfig.portalUrl}/sharing/rest/search?${new URLSearchParams({
+                            q: "type:\"Map Service\"",
+                            f: 'json',
+                            token: this.arcgisToken,
+                            num: 100
+                        })}`, {
+                            method: 'GET',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Referer': window.location.origin
+                            }
+                        })
+                    ];
+    
+                    const responses = await Promise.all(searchPromises);
+                    
+                    // Kiểm tra tất cả responses
+                    for (const response of responses) {
+                        if (!response.ok) throw new Error('Search request failed');
+                    }
+    
+                    const results = await Promise.all(responses.map(r => r.json()));
+                    
+                    // Kết hợp tất cả kết quả
+                    const allFeatures = [
+                        ...(results[0].results || []).map(f => ({ ...f, serviceType: 'feature' })),
+                        ...(results[1].results || []).map(f => ({ ...f, serviceType: 'vectorTile' })),
+                        ...(results[2].results || []).map(f => ({ ...f, serviceType: 'mapService' }))
+                    ];
+                    
+                    console.log('All services:', allFeatures);
+                    this.searchLoading = false;
+                    this.searchResults = { "features": allFeatures }
+                    
+                } catch (error) {
+                    console.error('Search error:', error);
+                    this.showSearchError = true;
+                    this.searchLoading = false;
+                }
+            },
+            
+            async searchAllVectorTileServices() {
+                try {
+                    this.vectorTileSearchLoading = true;
+                    this.showSearchError = false;
+                    this.openSideBar = true;
+                    this.showMenu = false;
+                    this.showVectorTileSearch = true;
+    
                     // Build search parameters for ArcGIS Portal
                     const params = new URLSearchParams({
-                        q: "type:\"Feature Service\"",
+                        q: "type:\"Vector Tile Service\"",
                         f: 'json',
                         token: this.arcgisToken,
-                        num: 100 // Tăng số lượng kết quả
+                        num: 100
                     });
     
                     // Make API request to ArcGIS Portal search
@@ -2849,19 +3329,79 @@
                         }
                     });
     
-                    if (!response.ok) throw new Error('Search request failed');
+                    if (!response.ok) throw new Error('Vector Tile Service search request failed');
     
                     const results = await response.json();
-                    console.log('All feature services:', results);
-                    this.searchLoading = false;
-                    this.searchResults = { "features": results.results || [] }
+                    console.log('All vector tile services:', results);
+                    this.vectorTileSearchLoading = false;
+                    this.vectorTileSearchResults = { "features": results.results || [] }
                     
                 } catch (error) {
-                    console.error('Search error:', error);
+                    console.error('Vector Tile Service search error:', error);
                     this.showSearchError = true;
-                    this.searchLoading = false;
+                    this.vectorTileSearchLoading = false;
                 }
             },
+            
+            async searchAllMapServices() {
+                try {
+                    this.mapServiceSearchLoading = true;
+                    this.showSearchError = false;
+                    this.openSideBar = true;
+                    this.showMenu = false;
+                    this.showMapServiceSearch = true;
+    
+                    // Build search parameters for ArcGIS Portal
+                    const params = new URLSearchParams({
+                        q: "type:\"Map Service\"",
+                        f: 'json',
+                        token: this.arcgisToken,
+                        num: 100
+                    });
+    
+                    // Make API request to ArcGIS Portal search
+                    const response = await fetch(`${this.arcgisConfig.portalUrl}/sharing/rest/search?${params}`, {
+                        method: 'GET',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Referer': window.location.origin
+                        }
+                    });
+    
+                    if (!response.ok) throw new Error('Map Service search request failed');
+    
+                    const results = await response.json();
+                    console.log('All map services:', results);
+                    this.mapServiceSearchLoading = false;
+                    this.mapServiceSearchResults = { "features": results.results || [] }
+                    
+                } catch (error) {
+                    console.error('Map Service search error:', error);
+                    this.showSearchError = true;
+                    this.mapServiceSearchLoading = false;
+                }
+            },
+            
+            openVectorTileSearchSidebar() {
+                this.showVectorTileSearch = true;
+                this.openSideBar = true;
+                this.showMenu = false;
+            },
+            
+            openMapServiceSearchSidebar() {
+                this.showMapServiceSearch = true;
+                this.openSideBar = true;
+                this.showMenu = false;
+            },
+            
+            closeVectorTileSearchSidebar() {
+                this.showVectorTileSearch = false;
+            },
+            
+            closeMapServiceSearchSidebar() {
+                this.showMapServiceSearch = false;
+            },
+            
             openFeatureSearchSidebar() {
                 this.showFeatureSearch = true;
                 this.openSideBar = true;
@@ -3370,7 +3910,105 @@
                     delete this.listVectorLayer[layerKey];
                     console.log(`Removed feature layer: ${layerKey}`);
                 }
-            }
+            },
+            
+            async searchAllVectorTileServices() {
+                try {
+                    this.vectorTileSearchLoading = true;
+                    this.showSearchError = false;
+                    this.openSideBar = true;
+                    this.showMenu = false;
+                    this.showVectorTileSearch = true;
+    
+                    // Build search parameters for ArcGIS Portal
+                    const params = new URLSearchParams({
+                        q: "type:\"Vector Tile Service\"",
+                        f: 'json',
+                        token: this.arcgisToken,
+                        num: 100
+                    });
+    
+                    // Make API request to ArcGIS Portal search
+                    const response = await fetch(`${this.arcgisConfig.portalUrl}/sharing/rest/search?${params}`, {
+                        method: 'GET',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Referer': window.location.origin
+                        }
+                    });
+    
+                    if (!response.ok) throw new Error('Vector Tile Service search request failed');
+    
+                    const results = await response.json();
+                    console.log('All vector tile services:', results);
+                    this.vectorTileSearchLoading = false;
+                    this.vectorTileSearchResults = { "features": results.results || [] }
+                    
+                } catch (error) {
+                    console.error('Vector Tile Service search error:', error);
+                    this.showSearchError = true;
+                    this.vectorTileSearchLoading = false;
+                }
+            },
+            
+            async searchAllMapServices() {
+                try {
+                    this.mapServiceSearchLoading = true;
+                    this.showSearchError = false;
+                    this.openSideBar = true;
+                    this.showMenu = false;
+                    this.showMapServiceSearch = true;
+    
+                    // Build search parameters for ArcGIS Portal
+                    const params = new URLSearchParams({
+                        q: "type:\"Map Service\"",
+                        f: 'json',
+                        token: this.arcgisToken,
+                        num: 100
+                    });
+    
+                    // Make API request to ArcGIS Portal search
+                    const response = await fetch(`${this.arcgisConfig.portalUrl}/sharing/rest/search?${params}`, {
+                        method: 'GET',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Referer': window.location.origin
+                        }
+                    });
+    
+                    if (!response.ok) throw new Error('Map Service search request failed');
+    
+                    const results = await response.json();
+                    console.log('All map services:', results);
+                    this.mapServiceSearchLoading = false;
+                    this.mapServiceSearchResults = { "features": results.results || [] }
+                    
+                } catch (error) {
+                    console.error('Map Service search error:', error);
+                    this.showSearchError = true;
+                    this.mapServiceSearchLoading = false;
+                }
+            },
+            
+            openVectorTileSearchSidebar() {
+                this.showVectorTileSearch = true;
+                this.openSideBar = true;
+                this.showMenu = false;
+            },
+            
+            openMapServiceSearchSidebar() {
+                this.showMapServiceSearch = true;
+                this.openSideBar = true;
+                this.showMenu = false;
+            },
+            
+            closeVectorTileSearchSidebar() {
+                this.showVectorTileSearch = false;
+            },
+            
+            closeMapServiceSearchSidebar() {
+                this.showMapServiceSearch = false;
+            },
         },
         mounted() {
             this.$nextTick(() => {
@@ -3378,6 +4016,8 @@
                 this.getListLayer()
                 this.validateToken()
                 this.loadMenuFromStorage()
+                this.loadVectorTileFromStorage()
+                this.loadMapServiceFromStorage()
             })
         }
     })
