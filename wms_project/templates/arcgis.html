@@ -1589,7 +1589,9 @@
                         service.sublayers = layersData.layers.map(layer => ({
                             id: layer.id,
                             name: layer.name,
-                            visible: false
+                            visible: false,
+                            minScale: layer.minScale,
+                            maxScale: layer.maxScale
                         }));
                     }
                 } catch (error) {
@@ -1643,9 +1645,28 @@
                 this.saveMenuToStorage();
             },
             
+            // Hàm chuyển đổi scale thành zoom level
+            scaleToZoom(scale, latitude = 0) {
+                if (!scale) return null;
+                
+                // Công thức chuyển đổi: metersPerPixel = scaleDenominator * 0.00028
+                // zoom = log2(156543.03392 * cos(latitude * π/180) / metersPerPixel)
+                const metersPerPixel = scale * 0.00028;
+                const zoom = Math.log2(156543.03392 * Math.cos(latitude * Math.PI / 180) / metersPerPixel);
+                
+                return Math.round(zoom);
+            },
+            
             async addSublayerToMap(service, sublayer) {
                 try {
-                    const esriFeature = L.esri.featureLayer({
+                    // Tính toán zoom levels từ scale
+                    const minZoom = sublayer.minScale ? this.scaleToZoom(sublayer.minScale) : null;
+                    const maxZoom = sublayer.maxScale ? this.scaleToZoom(sublayer.maxScale) : null;
+                    
+                    console.log(`Layer: ${sublayer.name}, minScale: ${sublayer.minScale}, maxScale: ${sublayer.maxScale}`);
+                    console.log(`Calculated - minZoom: ${minZoom}, maxZoom: ${maxZoom}`);
+                    
+                    const layerConfig = {
                         url: `${service.url}/${sublayer.id}?token=${this.arcgisToken}`,
                         // style: {
                         //     color: '#3388ff',
@@ -1654,7 +1675,17 @@
                         //     fillOpacity: 0.2
                         // },
                         where: '1=1'
-                    });
+                    };
+                    
+                    // Thêm minZoom và maxZoom nếu có
+                    if (minZoom !== null) {
+                        layerConfig.minZoom = minZoom;
+                    }
+                    if (maxZoom !== null) {
+                        layerConfig.maxZoom = maxZoom;
+                    }
+                    
+                    const esriFeature = L.esri.featureLayer(layerConfig);
                     
                     // Add click event handler
                     esriFeature.on('click', (e) => {
