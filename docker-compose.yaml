@@ -59,6 +59,7 @@ services:
     volumes:
       - ./wms_data/wms_data/static:/mnt/static
       - ./wms_data/wms_data/data:/mnt/data
+      - ./wms_data/wms_data/tiles:/home/wms/tiles
       - ./wms_project:/home/wms
     command: [
       "/bin/bash",
