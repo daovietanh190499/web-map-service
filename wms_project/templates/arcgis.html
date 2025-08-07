@@ -1285,8 +1285,6 @@
                 },
                 arcgisConfig: {
                     portalUrl: 'https://gissoft.esrivn.net/portal',
-                    clientId: 'K0LoN8xkKyozyEmw',
-                    redirectUri: 'http://localhost/arcgis-authen',
                     apiUrl: 'https://gissoft.esrivn.net/server/rest/services'
                 },
                 arcgisToken: localStorage.getItem('arcgis_token'),
@@ -1532,20 +1530,6 @@
                     }
                 })
                 this.layerTreeControl.addTo(this.map);
-            },
-            initiateOAuth() {
-                const state = btoa(Math.random().toString(36));
-                localStorage.setItem('oauth_state', state);
-                
-                const params = new URLSearchParams({
-                    client_id: this.arcgisConfig.clientId,
-                    response_type: 'code',
-                    redirect_uri: this.arcgisConfig.redirectUri,
-                    state: state,
-                    expiration: 20160
-                });
-
-                window.location.href = `${this.arcgisConfig.portalUrl}/sharing/rest/oauth2/authorize?${params}`;
             },
             
             async generateToken(username, password) {
