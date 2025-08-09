@@ -55,12 +55,13 @@ async function updateLayerTree() {
     let list_layer = getListLayer()
 
     var layerBuilders = {}
+    let basemaps = []
 
     // Load basemap configuration
     try {
         const response = await fetch('/api/basemaps/');
         const basemapsData = await response.json();
-        const basemaps = basemapsData.results || basemapsData;
+        basemaps = basemapsData.results || basemapsData;
         
         // Add dynamic layer builders from basemaps
         basemaps.forEach(basemap => {
