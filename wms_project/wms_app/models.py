@@ -37,3 +37,26 @@ class PredictAreaComponent(models.Model):
     object = models.CharField(max_length=100, null=True)
     options = models.CharField(max_length=10000, null=True)
     geom = models.GeometryField(srid=4326, null=True)
+
+class BaseMap(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    created_at = models.DateTimeField(default=datetime.now)
+    updated_at = models.DateTimeField(auto_now=True, null=True)
+    service_type = models.CharField(max_length=100, unique=True)  # Uppercase, non-space string
+    url = models.URLField(max_length=1000)
+    attribution = models.CharField(max_length=500)
+    subdomains = models.JSONField(null=True, blank=True)  # Optional string array
+    
+    class Meta:
+        ordering = ['created_at']
+
+class ArcGISConfig(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    created_at = models.DateTimeField(default=datetime.now)
+    updated_at = models.DateTimeField(auto_now=True, null=True)
+    portal_url = models.URLField(max_length=1000)
+    api_url = models.URLField(max_length=1000)
+    
+    class Meta:
+        verbose_name = "ArcGIS Configuration"
+        verbose_name_plural = "ArcGIS Configurations"

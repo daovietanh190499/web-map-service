@@ -102,27 +102,71 @@
 
         var theLeftTreeControl
 
-        updateLeftLayerTree()
+        // Initialize the layer tree
+        (async function() {
+            await updateLeftLayerTree()
+        })()
 
-        function updateLeftLayerTree() {
+        async function updateLeftLayerTree() {
             if (theLeftTreeControl) {
                 theLeftTreeControl.remove(map);
             }
 
             let list_layer = getListLayer()
 
-            var layerBuilders = {
-                OSM: function(layerSettings) {
+            var layerBuilders = {}
+
+            // Load basemap configuration
+            try {
+                const response = await fetch('/api/basemaps/');
+                const basemapsData = await response.json();
+                const basemaps = basemapsData.results || basemapsData;
+                
+                // Add dynamic layer builders from basemaps
+                basemaps.forEach(basemap => {
+                    layerBuilders[basemap.service_type] = function(layerSettings) {
+                        const options = {
+                            attribution: basemap.attribution
+                        };
+                        
+                        if (basemap.subdomains && basemap.subdomains.length > 0) {
+                            options.subdomains = basemap.subdomains;
+                        }
+                        
+                        return L.tileLayer(basemap.url, options);
+                    };
+                });
+                
+                // Add default layer builders if no basemaps are configured
+                if (basemaps.length === 0) {
+                    layerBuilders.OSM = function(layerSettings) {
+                        return L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+                            subdomains: ['a', 'b', 'c']
+                        });
+                    };
+                    
+                    layerBuilders.SATELLITE = function(layerSettings) {
+                        return L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                            attribution: 'Tiles © Esri'
+                        });
+                    };
+                }
+            } catch (error) {
+                console.error('Error loading basemap configuration:', error);
+                // Fallback to default layer builders
+                layerBuilders.OSM = function(layerSettings) {
                     return L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
                         subdomains: ['a', 'b', 'c']
                     });
-                },
-                SATELLITE: function(layerSettings) {
+                };
+                
+                layerBuilders.SATELLITE = function(layerSettings) {
                     return L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
                         attribution: 'Tiles © Esri'
                     });
-                }
+                };
             }
 
             for (let layer in list_layer) {
@@ -182,29 +226,47 @@
                 params: {}
             }, rootLayerId);
 
-            var osmLayerId = theLeftTreeControl.addLayerDynamically({
-                code: "osm",
-                name: "OpenStreetMap",
-                active: true,
-                selectedByDefault: true,
-                openByDefault: true,
-                childLayers: [],
-                selectType: "NONE",
-                serviceType: "OSM",
-                params: {}
-            }, baseLayerId);
+            // Add dynamic basemap layers
+            basemaps.forEach((basemap, index) => {
+                theLeftTreeControl.addLayerDynamically({
+                    code: basemap.service_type.toLowerCase(),
+                    name: basemap.service_type,
+                    active: true,
+                    selectedByDefault: index === 0, // First one is selected by default
+                    openByDefault: true,
+                    childLayers: [],
+                    selectType: "NONE",
+                    serviceType: basemap.service_type,
+                    params: {}
+                }, baseLayerId);
+            });
 
-            var satelliteLayerId = theLeftTreeControl.addLayerDynamically({
-                code: "satellite",
-                name: "Satellite",
-                active: true,
-                selectedByDefault: false,
-                openByDefault: true,
-                childLayers: [],
-                selectType: "NONE",
-                serviceType: "SATELLITE",
-                params: {}
-            }, baseLayerId);
+            // If no basemaps configured, add defaults
+            if (basemaps.length === 0) {
+                theLeftTreeControl.addLayerDynamically({
+                    code: "osm",
+                    name: "OpenStreetMap",
+                    active: true,
+                    selectedByDefault: true,
+                    openByDefault: true,
+                    childLayers: [],
+                    selectType: "NONE",
+                    serviceType: "OSM",
+                    params: {}
+                }, baseLayerId);
+
+                theLeftTreeControl.addLayerDynamically({
+                    code: "satellite",
+                    name: "Satellite",
+                    active: true,
+                    selectedByDefault: false,
+                    openByDefault: true,
+                    childLayers: [],
+                    selectType: "NONE",
+                    serviceType: "SATELLITE",
+                    params: {}
+                }, baseLayerId);
+            }
             
             for (let layer in list_layer) {
                 let coords = list_layer[layer]['coords'][0]
@@ -225,27 +287,71 @@
 
         var theRightTreeControl
 
-        updateRightLayerTree()
+        // Initialize the right layer tree
+        (async function() {
+            await updateRightLayerTree()
+        })()
 
-        function updateRightLayerTree() {
+        async function updateRightLayerTree() {
             if (theRightTreeControl) {
                 theRightTreeControl.remove(map);
             }
 
             let list_layer = getListLayer()
 
-            var layerBuilders = {
-                OSM: function(layerSettings) {
+            var layerBuilders = {}
+
+            // Load basemap configuration
+            try {
+                const response = await fetch('/api/basemaps/');
+                const basemapsData = await response.json();
+                const basemaps = basemapsData.results || basemapsData;
+                
+                // Add dynamic layer builders from basemaps
+                basemaps.forEach(basemap => {
+                    layerBuilders[basemap.service_type] = function(layerSettings) {
+                        const options = {
+                            attribution: basemap.attribution
+                        };
+                        
+                        if (basemap.subdomains && basemap.subdomains.length > 0) {
+                            options.subdomains = basemap.subdomains;
+                        }
+                        
+                        return L.tileLayer(basemap.url, options);
+                    };
+                });
+                
+                // Add default layer builders if no basemaps are configured
+                if (basemaps.length === 0) {
+                    layerBuilders.OSM = function(layerSettings) {
+                        return L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+                            subdomains: ['a', 'b', 'c']
+                        });
+                    };
+                    
+                    layerBuilders.SATELLITE = function(layerSettings) {
+                        return L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                            attribution: 'Tiles © Esri'
+                        });
+                    };
+                }
+            } catch (error) {
+                console.error('Error loading basemap configuration:', error);
+                // Fallback to default layer builders
+                layerBuilders.OSM = function(layerSettings) {
                     return L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
                         subdomains: ['a', 'b', 'c']
                     });
-                },
-                SATELLITE: function(layerSettings) {
+                };
+                
+                layerBuilders.SATELLITE = function(layerSettings) {
                     return L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
                         attribution: 'Tiles © Esri'
                     });
-                }
+                };
             }
 
             for (let layer in list_layer) {
@@ -304,29 +410,47 @@
                 params: {}
             }, rootLayerId);
 
-            var osmLayerId = theRightTreeControl.addLayerDynamically({
-                code: "osm",
-                name: "OpenStreetMap",
-                active: true,
-                selectedByDefault: true,
-                openByDefault: true,
-                childLayers: [],
-                selectType: "NONE",
-                serviceType: "OSM",
-                params: {}
-            }, baseLayerId);
+            // Add dynamic basemap layers
+            basemaps.forEach((basemap, index) => {
+                theRightTreeControl.addLayerDynamically({
+                    code: basemap.service_type.toLowerCase(),
+                    name: basemap.service_type,
+                    active: true,
+                    selectedByDefault: index === 0, // First one is selected by default
+                    openByDefault: true,
+                    childLayers: [],
+                    selectType: "NONE",
+                    serviceType: basemap.service_type,
+                    params: {}
+                }, baseLayerId);
+            });
 
-            var satelliteLayerId = theRightTreeControl.addLayerDynamically({
-                code: "satellite",
-                name: "Satellite",
-                active: true,
-                selectedByDefault: false,
-                openByDefault: true,
-                childLayers: [],
-                selectType: "NONE",
-                serviceType: "SATELLITE",
-                params: {}
-            }, baseLayerId);
+            // If no basemaps configured, add defaults
+            if (basemaps.length === 0) {
+                theRightTreeControl.addLayerDynamically({
+                    code: "osm",
+                    name: "OpenStreetMap",
+                    active: true,
+                    selectedByDefault: true,
+                    openByDefault: true,
+                    childLayers: [],
+                    selectType: "NONE",
+                    serviceType: "OSM",
+                    params: {}
+                }, baseLayerId);
+
+                theRightTreeControl.addLayerDynamically({
+                    code: "satellite",
+                    name: "Satellite",
+                    active: true,
+                    selectedByDefault: false,
+                    openByDefault: true,
+                    childLayers: [],
+                    selectType: "NONE",
+                    serviceType: "SATELLITE",
+                    params: {}
+                }, baseLayerId);
+            }
             
             for (let layer in list_layer) {
                 let coords = list_layer[layer]['coords'][0]

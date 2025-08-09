@@ -296,6 +296,8 @@
             </div>
             <div id="map-container" class="flex-grow relative" :class="[{'with-sidebar': openSideBar}]">
                 <div id="map" class="absolute inset-0 z-10"></div>
+                
+
             </div>
         </div>
 
@@ -383,6 +385,97 @@
                 </button>
             </div>
         </div>
+
+        <!-- Settings Modal Overlay -->
+        <div id="settings-modal-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-40" v-if="openSettingsModal"></div>
+
+        <div id="settings-modal" v-if="openSettingsModal"
+            class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-2xl p-8 z-50 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <h3 class="text-2xl font-bold mb-6 text-gray-900">Project Configuration</h3>
+
+            <div class="flex flex-col gap-6">
+                <!-- Base Maps Configuration -->
+                <div class="border rounded-lg p-4">
+                    <h4 class="text-lg font-semibold mb-4">Base Maps Configuration</h4>
+                    <div class="mb-4">
+                        <button @click="addBaseMap" class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                            <i class="fas fa-plus mr-2"></i>Add Base Map
+                        </button>
+                    </div>
+                    
+                    <div class="space-y-4">
+                        <div v-for="(basemap, index) in basemaps" :key="index" class="border rounded p-4 bg-gray-50">
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Service Type:</label>
+                                    <input type="text" v-model="basemap.service_type" 
+                                        class="w-full px-3 py-2 border rounded focus:ring-blue-500 focus:border-blue-500"
+                                        placeholder="e.g., OSM, SATELLITE">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">URL:</label>
+                                    <input type="url" v-model="basemap.url" 
+                                        class="w-full px-3 py-2 border rounded focus:ring-blue-500 focus:border-blue-500"
+                                        placeholder="https://...">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Attribution:</label>
+                                    <input type="text" v-model="basemap.attribution" 
+                                        class="w-full px-3 py-2 border rounded focus:ring-blue-500 focus:border-blue-500"
+                                        placeholder="© OpenStreetMap contributors">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700 mb-1">Subdomains (comma separated):</label>
+                                    <input type="text" v-model="basemap.subdomains_text" 
+                                        class="w-full px-3 py-2 border rounded focus:ring-blue-500 focus:border-blue-500"
+                                        placeholder="a,b,c">
+                                </div>
+                            </div>
+                            <div class="mt-4 flex justify-end space-x-2">
+                                <button @click="saveBaseMap(index)" class="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700">
+                                    <i class="fas fa-save mr-1"></i>Save
+                                </button>
+                                <button @click="deleteBaseMap(index)" class="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700">
+                                    <i class="fas fa-trash mr-1"></i>Delete
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ArcGIS Configuration -->
+                <div class="border rounded-lg p-4">
+                    <h4 class="text-lg font-semibold mb-4">ArcGIS Configuration</h4>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Portal URL:</label>
+                            <input type="url" v-model="arcgisConfig.portal_url" 
+                                class="w-full px-3 py-2 border rounded focus:ring-blue-500 focus:border-blue-500"
+                                placeholder="https://gissoft.esrivn.net/portal">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">API URL:</label>
+                            <input type="url" v-model="arcgisConfig.api_url" 
+                                class="w-full px-3 py-2 border rounded focus:ring-blue-500 focus:border-blue-500"
+                                placeholder="https://gissoft.esrivn.net/server/rest/services">
+                        </div>
+                    </div>
+                    <div class="mt-4 flex justify-end">
+                        <button @click="saveArcGISConfig" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
+                            <i class="fas fa-save mr-2"></i>Save ArcGIS Config
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Close Button -->
+            <div class="mt-8 flex justify-end">
+                <button @click="closeSettingsModal"
+                    class="px-5 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400">
+                    Close
+                </button>
+            </div>
+        </div>
     </div>
 </body>
 
@@ -403,6 +496,7 @@
                 },
                 listLayer: [],
                 openModal: false,
+                openSettingsModal: false,
                 progressBar: 0,
                 uploadImage: {
                     name: "New Name",
@@ -411,6 +505,11 @@
                     format: "OPT",
                     satellite: "VINASAT1",
                     file: null
+                },
+                basemaps: [],
+                arcgisConfig: {
+                    portal_url: '',
+                    api_url: ''
                 },
                 expandFilter: false,
                 searchForm: {
@@ -423,80 +522,8 @@
                     satellite: ""
                 },
                 layerTreeControl: null,
-                layerBuilders: {
-                    OSM: function (layerSettings) {
-                        return L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-                            subdomains: ['a', 'b', 'c']
-                        });
-                    },
-                    SATELLITE: function (layerSettings) {
-                        return L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-                            attribution: 'Tiles © Esri'
-                        });
-                    }
-                },
-                tree: [
-                    {
-                        code: "root",
-                        name: "All the Layers",
-                        active: true,
-                        selectedByDefault: false,
-                        openByDefault: true,
-                        selectType: "NONE",
-                        serviceType: null,
-                        params: {},
-                        childLayers: [
-                            {
-                                code: "base",
-                                name: "Base layers",
-                                active: true,
-                                selectedByDefault: false,
-                                openByDefault: true,
-                                selectType: "SINGLE",
-                                serviceType: null,
-                                params: {},
-                                childLayers: [
-                                    {
-                                        code: "osm",
-                                        name: "OpenStreetMap",
-                                        active: true,
-                                        selectedByDefault: true,
-                                        openByDefault: true,
-                                        childLayers: [],
-                                        selectType: "NONE",
-                                        serviceType: "OSM",
-                                        params: {}
-                                    }, 
-                                    {
-                                        code: "satellite",
-                                        name: "Satellite",
-                                        active: true,
-                                        selectedByDefault: false,
-                                        openByDefault: true,
-                                        childLayers: [],
-                                        selectType: "NONE",
-                                        serviceType: "SATELLITE",
-                                        params: {}
-                                    }
-                                ],
-                            },
-                            {
-                                code: "overlays",
-                                name: "Overlays",
-                                active: true,
-                                selectedByDefault: false,
-                                openByDefault: true,
-                                selectType: "MULTIPLE",
-                                serviceType: null,
-                                params: {},
-                                childLayers: [
-
-                                ],
-                            }
-                        ],
-                    }
-                ]
+                layerBuilders: {},
+                tree: []
             }
         },
         methods: {
@@ -557,6 +584,10 @@
                 L.easyButton('fa-file-image', (btn, map) => {
                     this.openModal = true;
                 }, "Upload new Sattelite Image", { position: "bottomleft" }).addTo(this.map);
+
+                L.easyButton('fa-cog', (btn, map) => {
+                    this.openSettingsModal = true;
+                }, "Open Configuration", { position: "bottomleft" }).addTo(this.map);
 
                 L.Measure = {
                     linearMeasurement: "Distance measurement",
@@ -852,11 +883,267 @@
                 } catch (error) {
                     console.error('Error searching images:', error);
                 }
+            },
+            // Settings Modal Methods
+            openSettingsModal() {
+                this.openSettingsModal = true;
+                this.loadSettings();
+            },
+            closeSettingsModal() {
+                this.openSettingsModal = false;
+            },
+            async loadSettings() {
+                try {
+                    // Load basemaps
+                    const basemapsResponse = await fetch('/api/basemaps/');
+                    const basemapsData = await basemapsResponse.json();
+                    this.basemaps = basemapsData.results || basemapsData;
+                    
+                    // Load ArcGIS config
+                    const arcgisResponse = await fetch('/api/arcgis-config/');
+                    const arcgisData = await arcgisResponse.json();
+                    if (arcgisData.results && arcgisData.results.length > 0) {
+                        this.arcgisConfig = arcgisData.results[0];
+                    } else if (arcgisData.length > 0) {
+                        this.arcgisConfig = arcgisData[0];
+                    }
+                    
+                    // Build dynamic layer builders
+                    this.buildLayerBuilders();
+                    
+                    // Build dynamic tree structure
+                    this.buildTreeStructure(this.basemaps);
+                } catch (error) {
+                    console.error('Error loading settings:', error);
+                }
+            },
+            buildLayerBuilders() {
+                // Clear existing layer builders
+                this.layerBuilders = {};
+                
+                // Add dynamic layer builders from basemaps
+                this.basemaps.forEach(basemap => {
+                    this.layerBuilders[basemap.service_type] = function(layerSettings) {
+                        const options = {
+                            attribution: basemap.attribution
+                        };
+                        
+                        if (basemap.subdomains && basemap.subdomains.length > 0) {
+                            options.subdomains = basemap.subdomains;
+                        }
+                        
+                        return L.tileLayer(basemap.url, options);
+                    };
+                });
+                
+                // Add default layer builders if no basemaps are configured
+                if (this.basemaps.length === 0) {
+                    this.layerBuilders.OSM = function (layerSettings) {
+                        return L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+                            subdomains: ['a', 'b', 'c']
+                        });
+                    };
+                    
+                    this.layerBuilders.SATELLITE = function (layerSettings) {
+                        return L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                            attribution: 'Tiles © Esri'
+                        });
+                    };
+                }
+            },
+            buildTreeStructure(basemaps) {
+                // Build base layers from basemaps
+                const baseLayers = basemaps.map((basemap, index) => ({
+                    code: basemap.service_type.toLowerCase(),
+                    name: basemap.service_type,
+                    active: true,
+                    selectedByDefault: index === 0, // First one is selected by default
+                    openByDefault: true,
+                    childLayers: [],
+                    selectType: "NONE",
+                    serviceType: basemap.service_type,
+                    params: {}
+                }));
+
+                // If no basemaps configured, use defaults
+                if (baseLayers.length === 0) {
+                    baseLayers.push(
+                        {
+                            code: "osm",
+                            name: "OpenStreetMap",
+                            active: true,
+                            selectedByDefault: true,
+                            openByDefault: true,
+                            childLayers: [],
+                            selectType: "NONE",
+                            serviceType: "OSM",
+                            params: {}
+                        },
+                        {
+                            code: "satellite",
+                            name: "Satellite",
+                            active: true,
+                            selectedByDefault: false,
+                            openByDefault: true,
+                            childLayers: [],
+                            selectType: "NONE",
+                            serviceType: "SATELLITE",
+                            params: {}
+                        }
+                    );
+                }
+
+                // Build the complete tree structure
+                this.tree = [
+                    {
+                        code: "root",
+                        name: "All the Layers",
+                        active: true,
+                        selectedByDefault: false,
+                        openByDefault: true,
+                        selectType: "NONE",
+                        serviceType: null,
+                        params: {},
+                        childLayers: [
+                            {
+                                code: "base",
+                                name: "Base layers",
+                                active: true,
+                                selectedByDefault: false,
+                                openByDefault: true,
+                                selectType: "SINGLE",
+                                serviceType: null,
+                                params: {},
+                                childLayers: baseLayers
+                            },
+                            {
+                                code: "overlays",
+                                name: "Overlays",
+                                active: true,
+                                selectedByDefault: false,
+                                openByDefault: true,
+                                selectType: "MULTIPLE",
+                                serviceType: null,
+                                params: {},
+                                childLayers: []
+                            }
+                        ]
+                    }
+                ];
+            },
+            addBaseMap() {
+                this.basemaps.push({
+                    service_type: '',
+                    url: '',
+                    attribution: '',
+                    subdomains_text: '',
+                    subdomains: []
+                });
+            },
+            async saveBaseMap(index) {
+                const basemap = this.basemaps[index];
+                
+                // Convert subdomains_text to array
+                if (basemap.subdomains_text) {
+                    basemap.subdomains = basemap.subdomains_text.split(',').map(s => s.trim());
+                } else {
+                    basemap.subdomains = null;
+                }
+                
+                try {
+                    const method = basemap.id ? 'PUT' : 'POST';
+                    const url = basemap.id ? `/api/basemaps/${basemap.id}/` : '/api/basemaps/';
+                    
+                    const response = await fetch(url, {
+                        method: method,
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            service_type: basemap.service_type,
+                            url: basemap.url,
+                            attribution: basemap.attribution,
+                            subdomains: basemap.subdomains
+                        })
+                    });
+                    
+                    if (response.ok) {
+                        const savedBasemap = await response.json();
+                        this.basemaps[index] = savedBasemap;
+                        this.basemaps[index].subdomains_text = savedBasemap.subdomains ? savedBasemap.subdomains.join(',') : '';
+                        this.buildLayerBuilders();
+                        this.buildTreeStructure(this.basemaps);
+                        alert('Base map saved successfully!');
+                    } else {
+                        alert('Error saving base map');
+                    }
+                } catch (error) {
+                    console.error('Error saving base map:', error);
+                    alert('Error saving base map');
+                }
+            },
+            async deleteBaseMap(index) {
+                const basemap = this.basemaps[index];
+                
+                if (!basemap.id) {
+                    this.basemaps.splice(index, 1);
+                    this.buildLayerBuilders();
+                    this.buildTreeStructure(this.basemaps);
+                    return;
+                }
+                
+                try {
+                    const response = await fetch(`/api/basemaps/${basemap.id}/`, {
+                        method: 'DELETE'
+                    });
+                    
+                    if (response.ok) {
+                        this.basemaps.splice(index, 1);
+                        this.buildLayerBuilders();
+                        this.buildTreeStructure(this.basemaps);
+                        alert('Base map deleted successfully!');
+                    } else {
+                        alert('Error deleting base map');
+                    }
+                } catch (error) {
+                    console.error('Error deleting base map:', error);
+                    alert('Error deleting base map');
+                }
+            },
+            async saveArcGISConfig() {
+                try {
+                    const method = this.arcgisConfig.id ? 'PUT' : 'POST';
+                    const url = this.arcgisConfig.id ? `/api/arcgis-config/${this.arcgisConfig.id}/` : '/api/arcgis-config/';
+                    
+                    const response = await fetch(url, {
+                        method: method,
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            portal_url: this.arcgisConfig.portal_url,
+                            api_url: this.arcgisConfig.api_url
+                        })
+                    });
+                    
+                    if (response.ok) {
+                        const savedConfig = await response.json();
+                        this.arcgisConfig = savedConfig;
+                        alert('ArcGIS configuration saved successfully!');
+                    } else {
+                        alert('Error saving ArcGIS configuration');
+                    }
+                } catch (error) {
+                    console.error('Error saving ArcGIS configuration:', error);
+                    alert('Error saving ArcGIS configuration');
+                }
             }
         },
         mounted() {
-            this.$nextTick(() => {
-                this.initMap()
+            this.$nextTick(async () => {
+                await this.loadSettings();
+                this.initMap();
             })
         }
     })

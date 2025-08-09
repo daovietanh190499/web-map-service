@@ -1,7 +1,7 @@
 # wms_app/serializers.py
 
 from rest_framework import serializers
-from .models import Image
+from .models import Image, BaseMap, ArcGISConfig
 
 from rest_framework_gis.serializers import GeoFeatureModelSerializer
 from .models import PredictArea, PredictAreaComponent
@@ -15,6 +15,16 @@ class ImageUploadSerializer(serializers.Serializer):
     satellite_id = serializers.CharField(max_length=255, required=False)
     datetime = serializers.DateTimeField(required=False)
     file = serializers.FileField()
+
+class BaseMapSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BaseMap
+        fields = '__all__'
+
+class ArcGISConfigSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ArcGISConfig
+        fields = '__all__'
 
 class PredictAreaSerializer(serializers.ModelSerializer):
     class Meta:

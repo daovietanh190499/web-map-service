@@ -2,12 +2,14 @@
 
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import ImageViewSet, PredictAreaViewSet
+from .views import ImageViewSet, PredictAreaViewSet, BaseMapViewSet, ArcGISConfigViewSet
 from . import views
 
 router = DefaultRouter()
 router.register(r'images', ImageViewSet, "image")
 router.register(r'predict-area', PredictAreaViewSet, "predict-area")
+router.register(r'basemaps', BaseMapViewSet, "basemap")
+router.register(r'arcgis-config', ArcGISConfigViewSet, "arcgis-config")
 
 urlpatterns = [
     path('', include(router.urls)),

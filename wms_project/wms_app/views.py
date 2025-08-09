@@ -4,9 +4,9 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.contrib.gis.geos import GEOSGeometry, GeometryCollection
 from django.contrib.gis.db.models.functions import Intersection
-from .models import Image, PredictArea
+from .models import Image, PredictArea, BaseMap, ArcGISConfig
 from django.db.models import Q
-from .serializers import ImageSerializer, SearchGeometrySerializer, ImageFilterSerializer, PredictAreaSerializer, PredictAreaComponentSerializer, ImageUploadSerializer, DetailPredictAreaSerializer
+from .serializers import ImageSerializer, SearchGeometrySerializer, ImageFilterSerializer, PredictAreaSerializer, PredictAreaComponentSerializer, ImageUploadSerializer, DetailPredictAreaSerializer, BaseMapSerializer, ArcGISConfigSerializer
 from osgeo import gdal, osr
 import json
 import os
@@ -40,6 +40,14 @@ def arcgis_map(request):
 
 def arcgis_auth(request):
     return render(request, 'arcgis-authen.html')
+
+class BaseMapViewSet(viewsets.ModelViewSet):
+    queryset = BaseMap.objects.all()
+    serializer_class = BaseMapSerializer
+
+class ArcGISConfigViewSet(viewsets.ModelViewSet):
+    queryset = ArcGISConfig.objects.all()
+    serializer_class = ArcGISConfigSerializer
 
 class ImageViewSet(viewsets.ModelViewSet):
     queryset = Image.objects.all()

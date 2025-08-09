@@ -47,25 +47,66 @@ var theTreeControl
 
 updateLayerTree()
 
-function updateLayerTree() {
+async function updateLayerTree() {
     if (theTreeControl) {
         theTreeControl.remove(map);
     }
 
     let list_layer = getListLayer()
 
-    var layerBuilders = {
-        OSM: function (layerSettings) {
+    var layerBuilders = {}
+
+    // Load basemap configuration
+    try {
+        const response = await fetch('/api/basemaps/');
+        const basemapsData = await response.json();
+        const basemaps = basemapsData.results || basemapsData;
+        
+        // Add dynamic layer builders from basemaps
+        basemaps.forEach(basemap => {
+            layerBuilders[basemap.service_type] = function(layerSettings) {
+                const options = {
+                    attribution: basemap.attribution
+                };
+                
+                if (basemap.subdomains && basemap.subdomains.length > 0) {
+                    options.subdomains = basemap.subdomains;
+                }
+                
+                return L.tileLayer(basemap.url, options);
+            };
+        });
+        
+        // Add default layer builders if no basemaps are configured
+        if (basemaps.length === 0) {
+            layerBuilders.OSM = function(layerSettings) {
+                return L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+                    subdomains: ['a', 'b', 'c']
+                });
+            };
+            
+            layerBuilders.SATELLITE = function(layerSettings) {
+                return L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                    attribution: 'Tiles © Esri'
+                });
+            };
+        }
+    } catch (error) {
+        console.error('Error loading basemap configuration:', error);
+        // Fallback to default layer builders
+        layerBuilders.OSM = function(layerSettings) {
             return L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
                 subdomains: ['a', 'b', 'c']
             });
-        },
-        SATELLITE: function (layerSettings) {
+        };
+        
+        layerBuilders.SATELLITE = function(layerSettings) {
             return L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
                 attribution: 'Tiles © Esri'
             });
-        }
+        };
     }
 
     for (let layer in list_layer) {
@@ -124,29 +165,47 @@ function updateLayerTree() {
         params: {}
     }, rootLayerId);
 
-    var osmLayerId = theTreeControl.addLayerDynamically({
-        code: "osm",
-        name: "OpenStreetMap",
-        active: true,
-        selectedByDefault: true,
-        openByDefault: true,
-        childLayers: [],
-        selectType: "NONE",
-        serviceType: "OSM",
-        params: {}
-    }, baseLayerId);
+    // Add dynamic basemap layers
+    basemaps.forEach((basemap, index) => {
+        theTreeControl.addLayerDynamically({
+            code: basemap.service_type.toLowerCase(),
+            name: basemap.service_type,
+            active: true,
+            selectedByDefault: index === 0, // First one is selected by default
+            openByDefault: true,
+            childLayers: [],
+            selectType: "NONE",
+            serviceType: basemap.service_type,
+            params: {}
+        }, baseLayerId);
+    });
 
-    var satelliteLayerId = theTreeControl.addLayerDynamically({
-        code: "satellite",
-        name: "Satellite",
-        active: true,
-        selectedByDefault: false,
-        openByDefault: true,
-        childLayers: [],
-        selectType: "NONE",
-        serviceType: "SATELLITE",
-        params: {}
-    }, baseLayerId);
+    // If no basemaps configured, add defaults
+    if (basemaps.length === 0) {
+        theTreeControl.addLayerDynamically({
+            code: "osm",
+            name: "OpenStreetMap",
+            active: true,
+            selectedByDefault: true,
+            openByDefault: true,
+            childLayers: [],
+            selectType: "NONE",
+            serviceType: "OSM",
+            params: {}
+        }, baseLayerId);
+
+        theTreeControl.addLayerDynamically({
+            code: "satellite",
+            name: "Satellite",
+            active: true,
+            selectedByDefault: false,
+            openByDefault: true,
+            childLayers: [],
+            selectType: "NONE",
+            serviceType: "SATELLITE",
+            params: {}
+        }, baseLayerId);
+    }
 
     for (let layer in list_layer) {
         let coords = list_layer[layer]['coords'][0]

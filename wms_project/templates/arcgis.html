@@ -1284,8 +1284,8 @@
                     satellite: ""
                 },
                 arcgisConfig: {
-                    portalUrl: 'https://gissoft.esrivn.net/portal',
-                    apiUrl: 'https://gissoft.esrivn.net/server/rest/services'
+                    portalUrl: '',
+                    apiUrl: ''
                 },
                 arcgisToken: localStorage.getItem('arcgis_token'),
                 showLoginButton: true,
@@ -1326,80 +1326,8 @@
                 mapServiceSearchLoading: false,
                 vectorTileSearchResults: { "features": [] },
                 mapServiceSearchResults: { "features": [] },
-                layerBuilders: {
-                    OSM: function (layerSettings) {
-                        return L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-                            subdomains: ['a', 'b', 'c']
-                        });
-                    },
-                    SATELLITE: function (layerSettings) {
-                        return L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-                            attribution: 'Tiles © Esri'
-                        });
-                    }
-                },
-                tree: [
-                    {
-                        code: "root",
-                        name: "All the Layers",
-                        active: true,
-                        selectedByDefault: false,
-                        openByDefault: true,
-                        selectType: "NONE",
-                        serviceType: null,
-                        params: {},
-                        childLayers: [
-                            {
-                                code: "base",
-                                name: "Base layers",
-                                active: true,
-                                selectedByDefault: false,
-                                openByDefault: true,
-                                selectType: "SINGLE",
-                                serviceType: null,
-                                params: {},
-                                childLayers: [
-                                    {
-                                        code: "osm",
-                                        name: "OpenStreetMap",
-                                        active: true,
-                                        selectedByDefault: true,
-                                        openByDefault: true,
-                                        childLayers: [],
-                                        selectType: "NONE",
-                                        serviceType: "OSM",
-                                        params: {}
-                                    }, 
-                                    {
-                                        code: "satellite",
-                                        name: "Satellite",
-                                        active: true,
-                                        selectedByDefault: false,
-                                        openByDefault: true,
-                                        childLayers: [],
-                                        selectType: "NONE",
-                                        serviceType: "SATELLITE",
-                                        params: {}
-                                    }
-                                ],
-                            },
-                            {
-                                code: "overlays",
-                                name: "Overlays",
-                                active: true,
-                                selectedByDefault: false,
-                                openByDefault: true,
-                                selectType: "MULTIPLE",
-                                serviceType: null,
-                                params: {},
-                                childLayers: [
-
-                                ],
-                            }
-                        ],
-                    }
-                ]
+                layerBuilders: {},
+                tree: []
             }
         },
         methods: {
@@ -1479,6 +1407,153 @@
                 this.getListLayer()
 
                 this.updateLayerTree()
+            },
+            async loadConfiguration() {
+                try {
+                    // Load basemaps
+                    const basemapsResponse = await fetch('/api/basemaps/');
+                    const basemapsData = await basemapsResponse.json();
+                    const basemaps = basemapsData.results || basemapsData;
+                    
+                    // Build dynamic layer builders
+                    this.buildLayerBuilders(basemaps);
+                    
+                    // Build dynamic tree structure
+                    this.buildTreeStructure(basemaps);
+                    
+                    // Load ArcGIS config
+                    const arcgisResponse = await fetch('/api/arcgis-config/');
+                    const arcgisData = await arcgisResponse.json();
+                    if (arcgisData.results && arcgisData.results.length > 0) {
+                        this.arcgisConfig["portalUrl"] = arcgisData.results[0]["portal_url"];
+                        this.arcgisConfig["apiUrl"] = arcgisData.results[0]["api_url"];
+                    } else if (arcgisData.length > 0) {
+                        this.arcgisConfig["portalUrl"] = arcgisData[0]["portal_url"];
+                        this.arcgisConfig["apiUrl"] = arcgisData[0]["api_url"];
+                    }
+                } catch (error) {
+                    console.error('Error loading configuration:', error);
+                    // Fallback to default configuration
+                    this.buildDefaultLayerBuilders();
+                }
+            },
+            buildLayerBuilders(basemaps) {
+                // Clear existing layer builders
+                this.layerBuilders = {};
+                
+                // Add dynamic layer builders from basemaps
+                basemaps.forEach(basemap => {
+                    this.layerBuilders[basemap.service_type] = function(layerSettings) {
+                        const options = {
+                            attribution: basemap.attribution
+                        };
+                        
+                        if (basemap.subdomains && basemap.subdomains.length > 0) {
+                            options.subdomains = basemap.subdomains;
+                        }
+                        
+                        return L.tileLayer(basemap.url, options);
+                    };
+                });
+                
+                // Add default layer builders if no basemaps are configured
+                if (basemaps.length === 0) {
+                    this.buildDefaultLayerBuilders();
+                }
+            },
+            buildDefaultLayerBuilders() {
+                this.layerBuilders.OSM = function (layerSettings) {
+                    return L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+                        subdomains: ['a', 'b', 'c']
+                    });
+                };
+                
+                this.layerBuilders.SATELLITE = function (layerSettings) {
+                    return L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                        attribution: 'Tiles © Esri'
+                    });
+                };
+            },
+            buildTreeStructure(basemaps) {
+                // Build base layers from basemaps
+                const baseLayers = basemaps.map((basemap, index) => ({
+                    code: basemap.service_type.toLowerCase(),
+                    name: basemap.service_type,
+                    active: true,
+                    selectedByDefault: index === 0, // First one is selected by default
+                    openByDefault: true,
+                    childLayers: [],
+                    selectType: "NONE",
+                    serviceType: basemap.service_type,
+                    params: {}
+                }));
+
+                // If no basemaps configured, use defaults
+                if (baseLayers.length === 0) {
+                    baseLayers.push(
+                        {
+                            code: "osm",
+                            name: "OpenStreetMap",
+                            active: true,
+                            selectedByDefault: true,
+                            openByDefault: true,
+                            childLayers: [],
+                            selectType: "NONE",
+                            serviceType: "OSM",
+                            params: {}
+                        },
+                        {
+                            code: "satellite",
+                            name: "Satellite",
+                            active: true,
+                            selectedByDefault: false,
+                            openByDefault: true,
+                            childLayers: [],
+                            selectType: "NONE",
+                            serviceType: "SATELLITE",
+                            params: {}
+                        }
+                    );
+                }
+
+                // Build the complete tree structure
+                this.tree = [
+                    {
+                        code: "root",
+                        name: "All the Layers",
+                        active: true,
+                        selectedByDefault: false,
+                        openByDefault: true,
+                        selectType: "NONE",
+                        serviceType: null,
+                        params: {},
+                        childLayers: [
+                            {
+                                code: "base",
+                                name: "Base layers",
+                                active: true,
+                                selectedByDefault: false,
+                                openByDefault: true,
+                                selectType: "SINGLE",
+                                serviceType: null,
+                                params: {},
+                                childLayers: baseLayers
+                            },
+                            {
+                                code: "overlays",
+                                name: "Overlays",
+                                active: true,
+                                selectedByDefault: false,
+                                openByDefault: true,
+                                selectType: "MULTIPLE",
+                                serviceType: null,
+                                params: {},
+                                childLayers: []
+                            }
+                        ]
+                    }
+                ];
             },
             updateLayerTree() {
                 if (this.layerTreeControl) {
@@ -3996,7 +4071,8 @@
             },
         },
         mounted() {
-            this.$nextTick(() => {
+            this.$nextTick(async () => {
+                await this.loadConfiguration();
                 this.initMap()
                 this.getListLayer()
                 this.validateToken()
