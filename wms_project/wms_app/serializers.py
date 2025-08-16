@@ -1,7 +1,7 @@
 # wms_app/serializers.py
 
 from rest_framework import serializers
-from .models import Image, BaseMap, ArcGISConfig
+from .models import Image, BaseMap, ArcGISConfig, Topic, TopicAttachment
 
 from rest_framework_gis.serializers import GeoFeatureModelSerializer
 from .models import PredictArea, PredictAreaComponent
@@ -78,3 +78,62 @@ class ImageFilterSerializer(serializers.Serializer):
     topic = serializers.CharField(required=False)
     source = serializers.CharField(required=False)
     satellite_id = serializers.CharField(required=False)
+
+class TopicAttachmentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TopicAttachment
+        fields = ['id', 'file', 'filename', 'file_size', 'file_type', 'uploaded_at']
+
+class TopicSerializer(serializers.ModelSerializer):
+    attachments = TopicAttachmentSerializer(many=True, read_only=True)
+    created_by_username = serializers.CharField(source='created_by.username', read_only=True)
+    
+    class Meta:
+        model = Topic
+        fields = ['id', 'topic_name', 'created_date', 'type', 'content', 'area', 'subject', 'created_by', 'created_by_username', 'updated_at', 'attachments']
+        read_only_fields = ['id', 'created_date', 'updated_at', 'created_by']
+
+class TopicCreateUpdateSerializer(serializers.ModelSerializer):
+    attachments = serializers.ListField(
+        child=serializers.FileField(),
+        required=False,
+        write_only=True
+    )
+    
+    class Meta:
+        model = Topic
+        fields = ['topic_name', 'type', 'content', 'area', 'subject', 'attachments']
+    
+    def create(self, validated_data):
+        attachments_data = validated_data.pop('attachments', [])
+        validated_data['created_by'] = self.context['request'].user
+        topic = Topic.objects.create(**validated_data)
+        
+        for attachment_file in attachments_data:
+            TopicAttachment.objects.create(topic=topic, file=attachment_file)
+        
+        return topic
+    
+    def update(self, instance, validated_data):
+        attachments_data = validated_data.pop('attachments', [])
+        
+        # Update topic fields
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        
+        # Handle new attachments if provided
+        if attachments_data:
+            for attachment_file in attachments_data:
+                TopicAttachment.objects.create(topic=instance, file=attachment_file)
+        
+        return instance
+
+class TopicSearchSerializer(serializers.Serializer):
+    name = serializers.CharField(required=False)
+    created_date_from = serializers.DateTimeField(required=False)
+    created_date_to = serializers.DateTimeField(required=False)
+    type = serializers.CharField(required=False)
+    subject = serializers.CharField(required=False)
+    area = serializers.CharField(required=False)
+    content = serializers.CharField(required=False)

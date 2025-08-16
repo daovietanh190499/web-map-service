@@ -4,9 +4,14 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.contrib.gis.geos import GEOSGeometry, GeometryCollection
 from django.contrib.gis.db.models.functions import Intersection
-from .models import Image, PredictArea, BaseMap, ArcGISConfig
+from .models import Image, PredictArea, BaseMap, ArcGISConfig, Topic, TopicAttachment
 from django.db.models import Q
-from .serializers import ImageSerializer, SearchGeometrySerializer, ImageFilterSerializer, PredictAreaSerializer, PredictAreaComponentSerializer, ImageUploadSerializer, DetailPredictAreaSerializer, BaseMapSerializer, ArcGISConfigSerializer
+from .serializers import (
+    ImageSerializer, SearchGeometrySerializer, ImageFilterSerializer, 
+    PredictAreaSerializer, PredictAreaComponentSerializer, ImageUploadSerializer, 
+    DetailPredictAreaSerializer, BaseMapSerializer, ArcGISConfigSerializer,
+    TopicSerializer, TopicCreateUpdateSerializer, TopicSearchSerializer, TopicAttachmentSerializer
+)
 from osgeo import gdal, osr
 import json
 import os
@@ -40,6 +45,9 @@ def arcgis_map(request):
 
 def arcgis_auth(request):
     return render(request, 'arcgis-authen.html')
+
+def topic_management(request):
+    return render(request, 'topic.html')
 
 class BaseMapViewSet(viewsets.ModelViewSet):
     queryset = BaseMap.objects.all()
@@ -381,3 +389,104 @@ class PredictAreaViewSet(viewsets.ModelViewSet):
 #             FROM spatial_table
 #         ''')
 #         results = cursor.fetchall()
+
+class TopicViewSet(viewsets.ModelViewSet):
+    queryset = Topic.objects.all()
+    serializer_class = TopicSerializer
+    
+    def get_serializer_class(self):
+        if self.action in ['create', 'update', 'partial_update']:
+            return TopicCreateUpdateSerializer
+        return TopicSerializer
+    
+    @action(detail=False, methods=['get'])
+    def search(self, request):
+        """Search topics with filters"""
+        serializer = TopicSearchSerializer(data=request.query_params)
+        if serializer.is_valid():
+            queryset = Topic.objects.all()
+            
+            # Apply filters
+            if serializer.validated_data.get('name'):
+                queryset = queryset.filter(
+                    topic_name__icontains=serializer.validated_data['name']
+                )
+            
+            if serializer.validated_data.get('created_date_from'):
+                queryset = queryset.filter(
+                    created_date__gte=serializer.validated_data['created_date_from']
+                )
+            
+            if serializer.validated_data.get('created_date_to'):
+                queryset = queryset.filter(
+                    created_date__lte=serializer.validated_data['created_date_to']
+                )
+            
+            if serializer.validated_data.get('type'):
+                queryset = queryset.filter(type=serializer.validated_data['type'])
+            
+            if serializer.validated_data.get('subject'):
+                queryset = queryset.filter(
+                    subject__icontains=serializer.validated_data['subject']
+                )
+            
+            if serializer.validated_data.get('area'):
+                queryset = queryset.filter(
+                    area__icontains=serializer.validated_data['area']
+                )
+            
+            if serializer.validated_data.get('content'):
+                queryset = queryset.filter(
+                    content__icontains=serializer.validated_data['content']
+                )
+            
+            # Serialize results with limited fields for search results
+            results = []
+            for topic in queryset:
+                results.append({
+                    'id': topic.id,
+                    'topic_name': topic.topic_name,
+                    'created_date': topic.created_date,
+                    'created_by': topic.created_by.username if topic.created_by else None,
+                    'type': topic.type,
+                    'subject': topic.subject
+                })
+            
+            return Response(results)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    @action(detail=True, methods=['post'])
+    def add_attachment(self, request, pk=None):
+        """Add attachment to a topic"""
+        topic = self.get_object()
+        file_obj = request.FILES.get('file')
+        
+        if not file_obj:
+            return Response(
+                {'error': 'No file provided'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        attachment = TopicAttachment.objects.create(
+            topic=topic,
+            file=file_obj
+        )
+        
+        return Response(TopicAttachmentSerializer(attachment).data)
+    
+    @action(detail=True, methods=['delete'])
+    def remove_attachment(self, request, pk=None):
+        """Remove attachment from a topic"""
+        topic = self.get_object()
+        attachment_id = request.data.get('attachment_id')
+        
+        try:
+            attachment = topic.attachments.get(id=attachment_id)
+            attachment.delete()
+            return Response({'message': 'Attachment removed successfully'})
+        except TopicAttachment.DoesNotExist:
+            return Response(
+                {'error': 'Attachment not found'}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
