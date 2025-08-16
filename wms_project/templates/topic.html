@@ -112,9 +112,40 @@
                 <a class="nav-link active" href="/topics">Topics</a>
                 <a class="nav-link" href="/draw">Draw</a>
                 <a class="nav-link" href="/compare">Compare</a>
+                <button id="loginBtn" class="nav-link btn btn-link" style="background: none; border: none; color: inherit;">
+                    <i class="fas fa-user me-2"></i>Đăng nhập
+                </button>
             </div>
         </div>
     </nav>
+
+    <!-- Login Modal -->
+    <div id="loginModal" class="modal fade" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Đăng nhập</h5>
+                    <button type="button" class="btn-close" id="closeLoginModal" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="loginForm" method="post" action="/accounts/login/">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label for="username" class="form-label">Tên đăng nhập</label>
+                            <input type="text" class="form-control" id="username" name="username" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="password" class="form-label">Mật khẩu</label>
+                            <input type="password" class="form-control" id="password" name="password" required>
+                        </div>
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary">Đăng nhập</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Search Section -->
     <section class="search-section">
@@ -339,7 +370,9 @@
         async function loadTopics() {
             showLoading(true);
             try {
-                const response = await axios.get(API_BASE);
+                const response = await axios.get(API_BASE, {
+                    headers: { 'X-CSRFToken': getCSRFToken() }
+                });
                 currentTopics = response.data;
                 displayTopics(currentTopics);
                 showLoading(false);
@@ -372,7 +405,9 @@
             if (content) searchParams.append('content', content);
 
             try {
-                const response = await axios.get(`${API_BASE}search/?${searchParams.toString()}`);
+                const response = await axios.get(`${API_BASE}search/?${searchParams.toString()}`, {
+                    headers: { 'X-CSRFToken': getCSRFToken() }
+                });
                 currentTopics = response.data;
                 displayTopics(currentTopics);
                 showLoading(false);
@@ -464,7 +499,9 @@
         // Load topic statistics
         async function loadStats() {
             try {
-                const response = await axios.get(API_BASE);
+                const response = await axios.get(API_BASE, {
+                    headers: { 'X-CSRFToken': getCSRFToken() }
+                });
                 const topics = response.data;
                 
                 document.getElementById('totalTopics').textContent = topics.length;
@@ -498,7 +535,9 @@
         // Edit topic
         async function editTopic(topicId) {
             try {
-                const response = await axios.get(`${API_BASE}${topicId}/`);
+                const response = await axios.get(`${API_BASE}${topicId}/`, {
+                    headers: { 'X-CSRFToken': getCSRFToken() }
+                });
                 const topic = response.data;
                 
                 currentTopicId = topicId;
@@ -525,7 +564,9 @@
         // View topic
         async function viewTopic(topicId) {
             try {
-                const response = await axios.get(`${API_BASE}${topicId}/`);
+                const response = await axios.get(`${API_BASE}${topicId}/`, {
+                    headers: { 'X-CSRFToken': getCSRFToken() }
+                });
                 const topic = response.data;
                 
                 currentTopicId = topicId;
@@ -655,13 +696,19 @@
                 if (currentTopicId) {
                     // Update existing topic
                     await axios.patch(`${API_BASE}${currentTopicId}/`, formData, {
-                        headers: { 'Content-Type': 'multipart/form-data' }
+                        headers: { 
+                            'Content-Type': 'multipart/form-data',
+                            'X-CSRFToken': getCSRFToken()
+                        }
                     });
                     showSuccess('Topic updated successfully');
                 } else {
                     // Create new topic
                     await axios.post(API_BASE, formData, {
-                        headers: { 'Content-Type': 'multipart/form-data' }
+                        headers: { 
+                            'Content-Type': 'multipart/form-data',
+                            'X-CSRFToken': getCSRFToken()
+                        }
                     });
                     showSuccess('Topic created successfully');
                 }
@@ -683,7 +730,9 @@
             }
 
             try {
-                await axios.delete(`${API_BASE}${topicId}/`);
+                await axios.delete(`${API_BASE}${topicId}/`, {
+                    headers: { 'X-CSRFToken': getCSRFToken() }
+                });
                 showSuccess('Topic deleted successfully');
                 loadTopics();
                 loadStats();
@@ -701,6 +750,7 @@
 
             try {
                 await axios.delete(`${API_BASE}${currentTopicId}/remove_attachment/`, {
+                    headers: { 'X-CSRFToken': getCSRFToken() },
                     data: { attachment_id: attachmentId }
                 });
                 showSuccess('Attachment removed successfully');
@@ -716,6 +766,7 @@
         async function downloadAttachment(attachmentId) {
             try {
                 const response = await axios.get(`${API_BASE}attachments/${attachmentId}/`, {
+                    headers: { 'X-CSRFToken': getCSRFToken() },
                     responseType: 'blob'
                 });
                 
@@ -733,6 +784,28 @@
         }
 
         // Utility functions
+        function getCSRFToken() {
+            // Try to get from cookie first
+            const cookies = document.cookie.split(';');
+            for (let cookie of cookies) {
+                const [name, value] = cookie.trim().split('=');
+                if (name === 'csrftoken') {
+                    return value;
+                }
+            }
+            // Fallback to DOM if cookie not found
+            const tokenElement = document.querySelector('[name=csrfmiddlewaretoken]');
+            if (tokenElement) {
+                return tokenElement.value;
+            }
+            // If still not found, try to get from meta tag
+            const metaToken = document.querySelector('meta[name=csrf-token]');
+            if (metaToken) {
+                return metaToken.getAttribute('content');
+            }
+            throw new Error('CSRF token not found');
+        }
+        
         function showLoading(show) {
             const spinner = document.getElementById('loadingSpinner');
             if (show) {
@@ -751,6 +824,112 @@
             // You can implement a toast notification here
             alert('Error: ' + message);
         }
+
+        // Login Modal Functionality
+        const loginModal = document.getElementById('loginModal');
+        const loginBtn = document.getElementById('loginBtn');
+        const closeLoginModal = document.getElementById('closeLoginModal');
+
+        loginBtn.addEventListener('click', function() {
+            const modal = new bootstrap.Modal(loginModal);
+            modal.show();
+        });
+
+        closeLoginModal.addEventListener('click', function() {
+            const modal = bootstrap.Modal.getInstance(loginModal);
+            modal.hide();
+        });
+
+        // Handle login form submission
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            
+            fetch('/api/auth/login/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCSRFToken()
+                },
+                body: JSON.stringify({
+                    username: username,
+                    password: password
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.message) {
+                    alert('Đăng nhập thành công!');
+                    bootstrap.Modal.getInstance(loginModal).hide();
+                    // Reload page to update login state
+                    window.location.reload();
+                } else if (data.error) {
+                    alert('Đăng nhập thất bại: ' + data.error);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Có lỗi xảy ra khi đăng nhập.');
+            });
+        });
+
+        // Function to update login state
+        function updateLoginState(isLoggedIn, user = null) {
+            const loginBtn = document.getElementById('loginBtn');
+            if (isLoggedIn && user) {
+                loginBtn.innerHTML = `<i class="fas fa-user me-2"></i>${user.username}`;
+                loginBtn.onclick = function() {
+                    // Show user menu or logout
+                    if (confirm('Bạn có muốn đăng xuất?')) {
+                        logout();
+                    }
+                };
+            } else {
+                loginBtn.innerHTML = `<i class="fas fa-user me-2"></i>Đăng nhập`;
+                loginBtn.onclick = function() {
+                    const modal = new bootstrap.Modal(loginModal);
+                    modal.show();
+                };
+            }
+        }
+
+        // Logout function
+        function logout() {
+            fetch('/api/auth/logout/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCSRFToken()
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.message) {
+                    alert('Đăng xuất thành công!');
+                    updateLoginState(false);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Có lỗi xảy ra khi đăng xuất.');
+            });
+        }
+
+        // Check if user is already logged in
+        fetch('/api/auth/user/', {
+            headers: { 'X-CSRFToken': getCSRFToken() }
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.user) {
+                    updateLoginState(true, data.user);
+                }
+            })
+            .catch(error => {
+                console.log('User not logged in');
+            });
     </script>
 </body>
 </html>

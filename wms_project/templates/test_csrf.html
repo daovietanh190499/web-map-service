@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test CSRF Token</title>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+</head>
+<body>
+    <h1>Test CSRF Token</h1>
+    
+    <!-- CSRF Token -->
+    {% csrf_token %}
+    
+    <button onclick="testCSRF()">Test CSRF Token</button>
+    <div id="result"></div>
+
+    <script>
+        function testCSRF() {
+            const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+            const resultDiv = document.getElementById('result');
+            
+            resultDiv.innerHTML = '<p>Testing CSRF token...</p>';
+            
+            // Test with CSRF token
+            axios.post('/api/auth/login/', {
+                username: 'test',
+                password: 'test'
+            }, {
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                }
+            })
+            .then(response => {
+                resultDiv.innerHTML = '<p style="color: green;">✅ CSRF token working! Response: ' + JSON.stringify(response.data) + '</p>';
+            })
+            .catch(error => {
+                if (error.response && error.response.status === 400) {
+                    resultDiv.innerHTML = '<p style="color: orange;">⚠️ CSRF token working, but login failed (expected): ' + error.response.data.error + '</p>';
+                } else {
+                    resultDiv.innerHTML = '<p style="color: red;">❌ CSRF token error: ' + error.message + '</p>';
+                }
+            });
+        }
+        
+        // Test without CSRF token
+        function testWithoutCSRF() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = '<p>Testing without CSRF token...</p>';
+            
+            axios.post('/api/auth/login/', {
+                username: 'test',
+                password: 'test'
+            }, {
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => {
+                resultDiv.innerHTML = '<p style="color: green;">✅ Request succeeded (unexpected)</p>';
+            })
+            .catch(error => {
+                if (error.response && error.response.status === 403) {
+                    resultDiv.innerHTML = '<p style="color: green;">✅ CSRF protection working! Blocked request without token</p>';
+                } else {
+                    resultDiv.innerHTML = '<p style="color: red;">❌ Unexpected error: ' + error.message + '</p>';
+                }
+            });
+        }
+    </script>
+    
+    <button onclick="testWithoutCSRF()">Test Without CSRF Token</button>
+</body>
+</html>

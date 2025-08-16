@@ -2,6 +2,7 @@
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
 from django.contrib.gis.geos import GEOSGeometry, GeometryCollection
 from django.contrib.gis.db.models.functions import Intersection
 from .models import Image, PredictArea, BaseMap, ArcGISConfig, Topic, TopicAttachment
@@ -393,6 +394,13 @@ class PredictAreaViewSet(viewsets.ModelViewSet):
 class TopicViewSet(viewsets.ModelViewSet):
     queryset = Topic.objects.all()
     serializer_class = TopicSerializer
+    permission_classes = [IsAuthenticated]
+    
+    def get_queryset(self):
+        """Filter topics based on user permissions"""
+        if self.request.user.is_superuser:
+            return Topic.objects.all()
+        return Topic.objects.filter(created_by=self.request.user)
     
     def get_serializer_class(self):
         if self.action in ['create', 'update', 'partial_update']:
