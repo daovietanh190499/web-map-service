@@ -322,6 +322,61 @@ class ImageViewSet(viewsets.ModelViewSet):
         
         return Response(ImageSerializer(results, many=True).data)
     
+    @action(detail=True, methods=['get'], permission_classes=[IsAuthenticated])
+    def download(self, request, pk=None):
+        """Download satellite image file with authentication"""
+        try:
+            image = self.get_object()
+            
+            # Check if file exists
+            if not image.filepath or not os.path.exists(image.filepath):
+                return Response(
+                    {'error': 'Image file not found on server'}, 
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            
+            # Determine filename for download
+            filename = image.filename or image.name or f"satellite_image_{image.id}"
+            if not filename.endswith(('.jp2', '.tif', '.tiff', '.png', '.jpg', '.jpeg')):
+                filename += '.jp2'  # Default extension for satellite images
+            
+            # Open and serve the file
+            try:
+                file_obj = open(image.filepath, 'rb')
+            except Exception as e:
+                return Response(
+                    {'error': f'Error opening file: {str(e)}'}, 
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+            
+            # Determine content type based on file extension
+            import mimetypes
+            content_type, _ = mimetypes.guess_type(image.filepath)
+            if not content_type:
+                content_type = 'application/octet-stream'
+            
+            # Create file response with proper headers
+            response = FileResponse(
+                file_obj,
+                content_type=content_type
+            )
+            response['Content-Disposition'] = f'attachment; filename="{filename}"'
+            response['Content-Length'] = os.path.getsize(image.filepath)
+            response['Cache-Control'] = 'no-cache'
+            
+            return response
+            
+        except Image.DoesNotExist:
+            return Response(
+                {'error': 'Image not found'}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            return Response(
+                {'error': f'Error downloading image: {str(e)}'}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
 class PredictAreaViewSet(viewsets.ModelViewSet):
     queryset = PredictArea.objects.all()
     serializer_class = PredictAreaSerializer

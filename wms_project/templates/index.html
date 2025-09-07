@@ -319,11 +319,16 @@
                                             </div>
                                         </div>
                                     </div>
-                                    <div class="flex-auto w-1/5">
+                                    <div class="flex-auto w-1/5 flex flex-col gap-2">
                                         <i :key="feature.id + '-action'"
                                             class="fas w-8 h-8 text-xl cursor-pointer"
                                             :class="[{'fa-folder-plus': !(feature.id in listLayer), 'fa-folder-minus': (feature.id in listLayer)}]"
-                                            @click="changeMenu(feature.id, feature.properties.name || feature.properties.filename, feature.geometry.coordinates)">
+                                            @click="changeMenu(feature.id, feature.properties.name || feature.properties.filename, feature.geometry.coordinates)"
+                                            title="Add/Remove from layers">
+                                        </i>
+                                        <i class="fas fa-download w-8 h-8 text-xl cursor-pointer text-green-600 hover:text-green-800"
+                                           @click="downloadImage(feature.id, feature.properties.name || feature.properties.filename)"
+                                           title="Download image">
                                         </i>
                                     </div>
                                 </div>
@@ -1185,6 +1190,49 @@
                 } catch (error) {
                     console.error('Error saving ArcGIS configuration:', error);
                     alert('Error saving ArcGIS configuration');
+                }
+            },
+            async downloadImage(imageId, imageName) {
+                try {
+                    const response = await fetch(`/api/images/${imageId}/download/`, {
+                        method: 'GET',
+                        headers: {
+                            'X-CSRFToken': getCSRFToken()
+                        }
+                    });
+                    
+                    if (response.ok) {
+                        // Get the filename from the response headers or use the image name
+                        const contentDisposition = response.headers.get('Content-Disposition');
+                        let filename = imageName || 'satellite_image';
+                        
+                        if (contentDisposition) {
+                            const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+                            if (filenameMatch) {
+                                filename = filenameMatch[1];
+                            }
+                        }
+                        
+                        // Create blob and download
+                        const blob = await response.blob();
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = filename;
+                        document.body.appendChild(a);
+                        a.click();
+                        window.URL.revokeObjectURL(url);
+                        document.body.removeChild(a);
+                    } else if (response.status === 401) {
+                        alert('Please login to download images');
+                    } else if (response.status === 404) {
+                        alert('Image file not found');
+                    } else {
+                        alert('Error downloading image');
+                    }
+                } catch (error) {
+                    console.error('Error downloading image:', error);
+                    alert('Error downloading image');
                 }
             }
         },
