@@ -498,3 +498,142 @@ class TopicViewSet(viewsets.ModelViewSet):
                 {'error': 'Attachment not found'}, 
                 status=status.HTTP_404_NOT_FOUND
             )
+    
+    @action(detail=False, methods=['get'], url_path='attachments/(?P<attachment_id>[^/.]+)/debug')
+    def debug_attachment(self, request, attachment_id=None):
+        """Debug endpoint to check attachment file paths"""
+        try:
+            attachment = TopicAttachment.objects.get(id=attachment_id)
+            
+            import os
+            from django.conf import settings
+            
+            debug_info = {
+                'attachment_id': str(attachment.id),
+                'filename': attachment.filename,
+                'file_name': attachment.file.name,
+                'file_path': getattr(attachment.file, 'path', 'No path attribute'),
+                'media_root': settings.MEDIA_ROOT,
+                'media_url': settings.MEDIA_URL,
+                'file_size': attachment.file_size,
+                'file_type': attachment.file_type,
+                'uploaded_at': attachment.uploaded_at,
+            }
+            
+            # Check various possible file paths
+            possible_paths = [
+                attachment.file.path if hasattr(attachment.file, 'path') else None,
+                os.path.join(settings.MEDIA_ROOT, attachment.file.name),
+                os.path.join('/mnt/data', attachment.file.name),
+                os.path.join('/mnt/data', 'topic_attachments', attachment.filename),
+                os.path.join(settings.MEDIA_ROOT, 'topic_attachments', attachment.filename),
+            ]
+            
+            path_checks = {}
+            for i, path in enumerate(possible_paths):
+                if path:
+                    path_checks[f'path_{i}'] = {
+                        'path': path,
+                        'exists': os.path.exists(path),
+                        'is_file': os.path.isfile(path) if os.path.exists(path) else False,
+                        'size': os.path.getsize(path) if os.path.exists(path) else None
+                    }
+            
+            debug_info['path_checks'] = path_checks
+            
+            return Response(debug_info)
+            
+        except TopicAttachment.DoesNotExist:
+            return Response(
+                {'error': 'Attachment not found'}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            return Response(
+                {'error': f'Debug error: {str(e)}'}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @action(detail=False, methods=['get'], url_path='attachments/(?P<attachment_id>[^/.]+)')
+    def download_attachment(self, request, attachment_id=None):
+        """Download a specific attachment"""
+        try:
+            attachment = TopicAttachment.objects.get(id=attachment_id)
+            
+            # Check if user has permission to access this attachment
+            if not request.user.is_superuser and attachment.topic.created_by != request.user:
+                return Response(
+                    {'error': 'Permission denied'}, 
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            
+            # Check if file exists
+            if not attachment.file:
+                return Response(
+                    {'error': 'File not found'}, 
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            
+            # Try to open the file - this will handle the actual file path resolution
+            try:
+                file_obj = attachment.file.open('rb')
+            except Exception as e:
+                # If the file doesn't exist at the expected path, try alternative paths
+                import os
+                from django.conf import settings
+                
+                # Try different possible file paths
+                possible_paths = [
+                    attachment.file.path,  # Full path from Django
+                    os.path.join(settings.MEDIA_ROOT, attachment.file.name),  # MEDIA_ROOT + file name
+                    os.path.join('/mnt/data', attachment.file.name),  # Direct path
+                    os.path.join('/mnt/data', 'topic_attachments', attachment.filename),  # Alternative structure
+                    os.path.join(settings.MEDIA_ROOT, 'topic_attachments', attachment.filename),  # MEDIA_ROOT + topic_attachments + filename
+                    os.path.join('/home/wms/topic_attachments', attachment.filename),  # MEDIA_ROOT + topic_attachments + filename
+                ]
+
+                print(path)
+                
+                file_found = False
+                for path in possible_paths:
+                    if os.path.exists(path):
+                        try:
+                            file_obj = open(path, 'rb')
+                            file_found = True
+                            break
+                        except Exception:
+                            continue
+                
+                if not file_found:
+                    return Response(
+                        {'error': f'File not found on disk. Tried paths: {possible_paths}'}, 
+                        status=status.HTTP_404_NOT_FOUND
+                    )
+            
+            # Determine content type based on file extension
+            import mimetypes
+            content_type, _ = mimetypes.guess_type(attachment.filename)
+            if not content_type:
+                content_type = 'application/octet-stream'
+            
+            # Create file response with proper headers
+            response = FileResponse(
+                file_obj,
+                content_type=content_type
+            )
+            response['Content-Disposition'] = f'attachment; filename="{attachment.filename}"'
+            response['Content-Length'] = attachment.file_size
+            response['Cache-Control'] = 'no-cache'
+            
+            return response
+            
+        except TopicAttachment.DoesNotExist:
+            return Response(
+                {'error': 'Attachment not found'}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            return Response(
+                {'error': f'Error downloading file: {str(e)}'}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )

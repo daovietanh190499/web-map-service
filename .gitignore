@@ -7,3 +7,4 @@ docker/
 data/
 .minio.sys/
 13/
+topic_attachments/

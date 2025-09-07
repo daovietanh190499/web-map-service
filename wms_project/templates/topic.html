@@ -98,6 +98,172 @@
             font-weight: bold;
             margin-bottom: 0.5rem;
         }
+
+        /* Gallery Styles */
+        .attachments-gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .attachment-gallery-item {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 10px;
+            background-color: #f9f9f9;
+            text-align: center;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .attachment-gallery-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .attachment-gallery-item img {
+            width: 100%;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: opacity 0.2s ease;
+        }
+
+        .attachment-gallery-item img:hover {
+            opacity: 0.8;
+        }
+
+        .attachment-gallery-item video {
+            width: 100%;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 4px;
+        }
+
+        .attachment-gallery-item audio {
+            width: 100%;
+        }
+
+        .attachment-gallery-item .file-icon {
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #e9ecef;
+            border-radius: 4px;
+        }
+
+        .attachment-gallery-item .file-icon i {
+            font-size: 2em;
+            color: #6c757d;
+        }
+
+        /* Media Thumbnail Styles */
+        .media-thumbnail {
+            position: relative;
+            cursor: pointer;
+            border-radius: 4px;
+            overflow: hidden;
+            height: 80px;
+            background: #f8f9fa;
+        }
+
+        .media-thumbnail img,
+        .media-thumbnail video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s ease;
+        }
+
+        .media-thumbnail:hover img,
+        .media-thumbnail:hover video {
+            transform: scale(1.05);
+        }
+
+        .media-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .media-thumbnail:hover .media-overlay {
+            opacity: 1;
+        }
+
+        .media-overlay i {
+            color: white;
+            font-size: 1.5em;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+        }
+
+        .audio-thumbnail {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .audio-thumbnail i {
+            font-size: 2em;
+        }
+
+        .video-thumbnail {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        /* Preview Modal Styles */
+        .preview-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .preview-modal-content {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            max-width: 90%;
+            max-height: 90%;
+            overflow: auto;
+            position: relative;
+        }
+
+        .preview-modal-close {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #666;
+        }
+
+        .preview-modal-close:hover {
+            color: #333;
+        }
     </style>
 </head>
 <body>
@@ -608,17 +774,9 @@
                         <div class="col-12">
                             <h6>Attachments (${topic.attachments ? topic.attachments.length : 0})</h6>
                             ${topic.attachments && topic.attachments.length > 0 ? 
-                                topic.attachments.map(att => `
-                                    <div class="attachment-item">
-                                        <div>
-                                            <i class="fas fa-file me-2"></i>${att.filename}
-                                            <small class="text-muted ms-2">(${formatFileSize(att.file_size)})</small>
-                                        </div>
-                                        <button class="btn btn-sm btn-outline-primary" onclick="downloadAttachment('${att.id}')">
-                                            <i class="fas fa-download me-1"></i>Download
-                                        </button>
-                                    </div>
-                                `).join('') : 
+                                `<div class="attachments-gallery">
+                                    ${topic.attachments.map(att => createAttachmentGalleryItem(att)).join('')}
+                                </div>` : 
                                 '<p class="text-muted">No attachments</p>'
                             }
                         </div>
@@ -648,17 +806,88 @@
                 return;
             }
             
-            attachmentsList.innerHTML = attachments.map(att => `
-                <div class="attachment-item">
-                    <div>
-                        <i class="fas fa-file me-2"></i>${att.filename}
-                        <small class="text-muted ms-2">(${formatFileSize(att.file_size)})</small>
-                    </div>
-                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeAttachment('${att.id}')">
-                        <i class="fas fa-trash me-1"></i>Remove
-                    </button>
+            attachmentsList.innerHTML = `
+                <div class="attachments-gallery">
+                    ${attachments.map(att => createAttachmentGalleryItemForEdit(att)).join('')}
                 </div>
-            `).join('');
+            `;
+        }
+
+        // Create attachment gallery item for edit modal
+        function createAttachmentGalleryItemForEdit(attachment) {
+            // Determine content type from file extension since API doesn't provide content_type
+            const contentType = getContentTypeFromFilename(attachment.filename);
+            const isImage = contentType && contentType.startsWith('image/');
+            const isVideo = contentType && contentType.startsWith('video/');
+            const isAudio = contentType && contentType.startsWith('audio/');
+            
+            let mediaContent = '';
+            let isMediaFile = isImage || isVideo || isAudio;
+            
+            if (isImage) {
+                mediaContent = `
+                    <div class="media-thumbnail" style="margin-bottom: 8px;" onclick="previewAttachment('${attachment.id}', '${attachment.filename}', '${contentType}')">
+                        <img src="${attachment.file}" 
+                             alt="${attachment.filename}" 
+                             class="preview-img">
+                        <div class="media-overlay">
+                            <i class="fas fa-eye"></i>
+                        </div>
+                    </div>
+                `;
+            } else if (isVideo) {
+                mediaContent = `
+                    <div class="media-thumbnail" style="margin-bottom: 8px;" onclick="previewAttachment('${attachment.id}', '${attachment.filename}', '${contentType}')">
+                        <video class="video-thumbnail">
+                            <source src="${attachment.file}" type="${contentType}">
+                        </video>
+                        <div class="media-overlay">
+                            <i class="fas fa-play"></i>
+                        </div>
+                    </div>
+                `;
+            } else if (isAudio) {
+                mediaContent = `
+                    <div class="media-thumbnail" style="margin-bottom: 8px;" onclick="previewAttachment('${attachment.id}', '${attachment.filename}', '${contentType}')">
+                        <div class="audio-thumbnail">
+                            <i class="fas fa-music"></i>
+                        </div>
+                        <div class="media-overlay">
+                            <i class="fas fa-play"></i>
+                        </div>
+                    </div>
+                `;
+            } else {
+                mediaContent = `
+                    <div class="file-icon" style="margin-bottom: 8px;">
+                        <i class="fas fa-file"></i>
+                    </div>
+                `;
+            }
+            
+            return `
+                <div class="attachment-gallery-item">
+                    ${mediaContent}
+                    <div class="attachment-info">
+                        <div class="attachment-name" style="font-size: 0.9rem; font-weight: 500; margin-bottom: 4px; word-break: break-word;">
+                            ${attachment.filename}
+                        </div>
+                        <div class="attachment-size" style="font-size: 0.8rem; color: #6c757d; margin-bottom: 8px;">
+                            ${formatFileSize(attachment.file_size)}
+                        </div>
+                        <div class="attachment-actions" style="display: flex; gap: 5px; justify-content: center;">
+                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeAttachment('${attachment.id}')">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                            ${isMediaFile ? `
+                                <button class="btn btn-sm btn-outline-info" onclick="previewAttachment('${attachment.id}', '${attachment.filename}', '${contentType}')">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
         }
 
         // Format file size
@@ -668,6 +897,232 @@
             const sizes = ['Bytes', 'KB', 'MB', 'GB'];
             const i = Math.floor(Math.log(bytes) / Math.log(k));
             return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        // Create attachment gallery item
+        function createAttachmentGalleryItem(attachment) {
+            // Determine content type from file extension since API doesn't provide content_type
+            const contentType = getContentTypeFromFilename(attachment.filename);
+            const isImage = contentType && contentType.startsWith('image/');
+            const isVideo = contentType && contentType.startsWith('video/');
+            const isAudio = contentType && contentType.startsWith('audio/');
+            
+            let mediaContent = '';
+            let isMediaFile = isImage || isVideo || isAudio;
+            
+            if (isImage) {
+                mediaContent = `
+                    <div class="media-thumbnail" style="margin-bottom: 8px;" onclick="previewAttachment('${attachment.id}', '${attachment.filename}', '${contentType}')">
+                        <img src="${attachment.file}" 
+                             alt="${attachment.filename}" 
+                             class="preview-img">
+                        <div class="media-overlay">
+                            <i class="fas fa-eye"></i>
+                        </div>
+                    </div>
+                `;
+            } else if (isVideo) {
+                mediaContent = `
+                    <div class="media-thumbnail" style="margin-bottom: 8px;" onclick="previewAttachment('${attachment.id}', '${attachment.filename}', '${contentType}')">
+                        <video class="video-thumbnail">
+                            <source src="${attachment.file}" type="${contentType}">
+                        </video>
+                        <div class="media-overlay">
+                            <i class="fas fa-play"></i>
+                        </div>
+                    </div>
+                `;
+            } else if (isAudio) {
+                mediaContent = `
+                    <div class="media-thumbnail" style="margin-bottom: 8px;" onclick="previewAttachment('${attachment.id}', '${attachment.filename}', '${contentType}')">
+                        <div class="audio-thumbnail">
+                            <i class="fas fa-music"></i>
+                        </div>
+                        <div class="media-overlay">
+                            <i class="fas fa-play"></i>
+                        </div>
+                    </div>
+                `;
+            } else {
+                mediaContent = `
+                    <div class="file-icon" style="margin-bottom: 8px;">
+                        <i class="fas fa-file"></i>
+                    </div>
+                `;
+            }
+            
+            return `
+                <div class="attachment-gallery-item">
+                    ${mediaContent}
+                    <div class="attachment-info">
+                        <div class="attachment-name" style="font-size: 0.9rem; font-weight: 500; margin-bottom: 4px; word-break: break-word;">
+                            ${attachment.filename}
+                        </div>
+                        <div class="attachment-size" style="font-size: 0.8rem; color: #6c757d; margin-bottom: 8px;">
+                            ${formatFileSize(attachment.file_size)}
+                        </div>
+                        <div class="attachment-actions" style="display: flex; gap: 5px; justify-content: center;">
+                            <button class="btn btn-sm btn-outline-primary download-btn" onclick="downloadAttachment('${attachment.id}')">
+                                <i class="fas fa-download"></i>
+                            </button>
+                            ${isMediaFile ? `
+                                <button class="btn btn-sm btn-outline-info" onclick="previewAttachment('${attachment.id}', '${attachment.filename}', '${contentType}')">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Get attachment URL
+        function getAttachmentUrl(attachmentId) {
+            return `${API_BASE}attachments/${attachmentId}/`;
+        }
+
+        // Get content type from filename
+        function getContentTypeFromFilename(filename) {
+            const extension = filename.split('.').pop().toLowerCase();
+            const mimeTypes = {
+                // Images
+                'jpg': 'image/jpeg',
+                'jpeg': 'image/jpeg',
+                'png': 'image/png',
+                'gif': 'image/gif',
+                'bmp': 'image/bmp',
+                'webp': 'image/webp',
+                'svg': 'image/svg+xml',
+                'ico': 'image/x-icon',
+                
+                // Videos
+                'mp4': 'video/mp4',
+                'avi': 'video/x-msvideo',
+                'mov': 'video/quicktime',
+                'wmv': 'video/x-ms-wmv',
+                'flv': 'video/x-flv',
+                'webm': 'video/webm',
+                'mkv': 'video/x-matroska',
+                '3gp': 'video/3gpp',
+                
+                // Audio
+                'mp3': 'audio/mpeg',
+                'wav': 'audio/wav',
+                'ogg': 'audio/ogg',
+                'aac': 'audio/aac',
+                'flac': 'audio/flac',
+                'm4a': 'audio/mp4',
+                'wma': 'audio/x-ms-wma',
+                
+                // Documents
+                'pdf': 'application/pdf',
+                'doc': 'application/msword',
+                'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                'xls': 'application/vnd.ms-excel',
+                'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                'ppt': 'application/vnd.ms-powerpoint',
+                'pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+                'txt': 'text/plain',
+                'rtf': 'application/rtf',
+                
+                // Archives
+                'zip': 'application/zip',
+                'rar': 'application/x-rar-compressed',
+                '7z': 'application/x-7z-compressed',
+                'tar': 'application/x-tar',
+                'gz': 'application/gzip'
+            };
+            
+            return mimeTypes[extension] || 'application/octet-stream';
+        }
+
+        // Preview attachment
+        function previewAttachment(attachmentId, fileName, contentType) {
+            // Find the attachment object to get the direct file URL
+            let url = getAttachmentUrl(attachmentId);
+            
+            // Try to find the attachment in current topics to get the direct file URL
+            for (let topic of currentTopics) {
+                if (topic.attachments) {
+                    for (let att of topic.attachments) {
+                        if (att.id === attachmentId) {
+                            url = att.file;
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            // Create modal for preview
+            const modal = document.createElement('div');
+            modal.className = 'preview-modal';
+            
+            const modalContent = document.createElement('div');
+            modalContent.className = 'preview-modal-content';
+            
+            const closeBtn = document.createElement('button');
+            closeBtn.className = 'preview-modal-close';
+            closeBtn.innerHTML = '×';
+            closeBtn.onclick = () => document.body.removeChild(modal);
+            
+            const title = document.createElement('h3');
+            title.textContent = fileName;
+            title.style.marginBottom = '15px';
+            
+            let mediaElement = '';
+            
+            if (contentType.startsWith('image/')) {
+                mediaElement = `
+                    <div style="text-align: center;">
+                        <img src="${url}" style="max-width: 100%; max-height: 70vh; object-fit: contain; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+                    </div>
+                `;
+            } else if (contentType.startsWith('video/')) {
+                mediaElement = `
+                    <div style="text-align: center;">
+                        <video controls style="max-width: 100%; max-height: 70vh; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+                            <source src="${url}" type="${contentType}">
+                            Your browser does not support the video tag.
+                        </video>
+                    </div>
+                `;
+            } else if (contentType.startsWith('audio/')) {
+                mediaElement = `
+                    <div style="text-align: center; padding: 20px;">
+                        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px; border-radius: 8px; margin-bottom: 20px;">
+                            <i class="fas fa-music" style="font-size: 4em; color: white;"></i>
+                        </div>
+                        <audio controls style="width: 100%; max-width: 400px;">
+                            <source src="${url}" type="${contentType}">
+                            Your browser does not support the audio tag.
+                        </audio>
+                    </div>
+                `;
+            } else {
+                mediaElement = `
+                    <div style="text-align: center; padding: 40px;">
+                        <i class="fas fa-file" style="font-size: 3em; color: #6c757d;"></i>
+                        <p>Preview not available for this file type</p>
+                        <a href="${url}" download="${fileName}" class="btn btn-primary">Download File</a>
+                    </div>
+                `;
+            }
+            
+            modalContent.innerHTML = `
+                ${closeBtn.outerHTML}
+                ${title.outerHTML}
+                ${mediaElement}
+            `;
+            
+            modal.appendChild(modalContent);
+            document.body.appendChild(modal);
+            
+            // Close modal when clicking outside
+            modal.onclick = (e) => {
+                if (e.target === modal) {
+                    document.body.removeChild(modal);
+                }
+            };
         }
 
         // Save topic (create or update)
@@ -765,15 +1220,27 @@
         // Download attachment
         async function downloadAttachment(attachmentId) {
             try {
-                const response = await axios.get(`${API_BASE}attachments/${attachmentId}/`, {
-                    headers: { 'X-CSRFToken': getCSRFToken() },
-                    responseType: 'blob'
-                });
+                // Find the attachment object to get the direct file URL and filename
+                let fileUrl = `${API_BASE}attachments/${attachmentId}/`;
+                let filename = 'attachment';
                 
-                const url = window.URL.createObjectURL(new Blob([response.data]));
+                for (let topic of currentTopics) {
+                    if (topic.attachments) {
+                        for (let att of topic.attachments) {
+                            if (att.id === attachmentId) {
+                                fileUrl = att.file;
+                                filename = att.filename;
+                                break;
+                            }
+                        }
+                    }
+                }
+                
+                // Create a temporary link to download the file
                 const link = document.createElement('a');
-                link.href = url;
-                link.setAttribute('download', response.headers['content-disposition']?.split('filename=')[1] || 'attachment');
+                link.href = fileUrl;
+                link.setAttribute('download', filename);
+                link.setAttribute('target', '_blank');
                 document.body.appendChild(link);
                 link.click();
                 link.remove();
