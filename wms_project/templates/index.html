@@ -330,6 +330,10 @@
                                            @click="downloadImage(feature.id, feature.properties.name || feature.properties.filename)"
                                            title="Download image">
                                         </i>
+                                        <i class="fas fa-trash-alt w-8 h-8 text-xl cursor-pointer text-red-600 hover:text-red-800"
+                                           @click="clearTiles(feature.id, feature.properties.name || feature.properties.filename)"
+                                           title="Clear rendered tiles">
+                                        </i>
                                     </div>
                                 </div>
                             </div>
@@ -1236,6 +1240,36 @@
                 } catch (error) {
                     console.error('Error downloading image:', error);
                     alert('Error downloading image');
+                }
+            },
+            async clearTiles(imageId, imageName) {
+                // Confirm before clearing tiles
+                if (!confirm(`Bạn có chắc chắn muốn xóa tất cả tiles đã render cho hình ảnh "${imageName}"?`)) {
+                    return;
+                }
+                
+                try {
+                    const response = await fetch(`/api/images/${imageId}/clear_tiles/`, {
+                        method: 'DELETE',
+                        headers: {
+                            'X-CSRFToken': getCSRFToken()
+                        }
+                    });
+                    
+                    if (response.ok) {
+                        const result = await response.json();
+                        alert(`Đã xóa thành công ${result.tiles_cleared} tiles cho hình ảnh "${imageName}"`);
+                    } else if (response.status === 401) {
+                        alert('Vui lòng đăng nhập để thực hiện thao tác này');
+                    } else if (response.status === 404) {
+                        alert('Không tìm thấy hình ảnh');
+                    } else {
+                        const errorData = await response.json();
+                        alert(`Lỗi khi xóa tiles: ${errorData.error || 'Unknown error'}`);
+                    }
+                } catch (error) {
+                    console.error('Error clearing tiles:', error);
+                    alert('Có lỗi xảy ra khi xóa tiles');
                 }
             }
         },

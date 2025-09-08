@@ -30,6 +30,7 @@ from django.conf import settings
 from binascii import a2b_base64
 import glob
 import subprocess
+import shutil
 
 def index(request):
     return render(request, 'index.html')
@@ -80,17 +81,17 @@ class ImageViewSet(viewsets.ModelViewSet):
         else:
             img = rasterio.open(img_db.filepath)
             
-            print(img.meta, img.statistics(1), img.statistics(2), img.statistics(3))
+            # print(img.meta, img.statistics(1), img.statistics(2), img.statistics(3))
             tiled = Tiles(image=img, zooms=[int(z)], x=int(x), y=int(y), pixels=256, resampling="bilinear")
-            print("MAX MIN", np.max(tiled.tiles.data), np.min(tiled.tiles.data))
-            print("DATAAAAAA", z, x, y, tiled.tiles.data, tiled.tiles.data.shape)
+            # print("MAX MIN", np.max(tiled.tiles.data), np.min(tiled.tiles.data))
+            # print("DATAAAAAA", z, x, y, tiled.tiles.data, tiled.tiles.data.shape)
 
-            # img = PIL_Image.fromarray(np.concatenate(
-            #     ( np.transpose(tiled.tiles.data, (1, 2, 0))[:, :, :3], 
-            #     np.transpose(tiled.tiles.data, (1, 2, 0))[:, :, -1:] ), axis=-1)
-            # )
+            img = PIL_Image.fromarray(np.concatenate(
+                ( np.transpose(tiled.tiles.data, (1, 2, 0))[:, :, :3], 
+                np.transpose(tiled.tiles.data, (1, 2, 0))[:, :, -1:] ), axis=-1)
+            )
 
-            img = PIL_Image.fromarray(np.transpose(tiled.tiles.data, (1, 2, 0)))
+            # img = PIL_Image.fromarray(np.transpose(tiled.tiles.data, (1, 2, 0)))
             
             # clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
             # img8_clahe = clahe.apply(np.transpose(tiled.tiles.data, (1, 2, 0)))
@@ -98,6 +99,9 @@ class ImageViewSet(viewsets.ModelViewSet):
             # img = PIL_Image.fromarray(np.transpose(tiled.tiles.data, (1, 2, 0))[:, :, -2:-5:-1])
 
             # img = ImageOps.equalize(img)
+
+            if not os.path.exists(f'tiles/{img_db.id}'):
+                os.makedirs(f'tiles/{img_db.id}', exist_ok=True)
 
             if not os.path.exists(f'tiles/{img_db.id}/{str(z)}/{str(x)}'):
                 os.makedirs(f'tiles/{img_db.id}/{str(z)}/{str(x)}')
@@ -398,6 +402,44 @@ class ImageViewSet(viewsets.ModelViewSet):
         except Exception as e:
             return Response(
                 {'error': f'Error downloading image: {str(e)}'}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    @action(detail=True, methods=['delete'], permission_classes=[IsAuthenticated])
+    def clear_tiles(self, request, pk=None):
+        """Clear all rendered tiles for a satellite image"""
+        try:
+            image = self.get_object()
+            tiles_dir = f'tiles/{image.id}'
+            
+            # Check if tiles directory exists
+            if not os.path.exists(tiles_dir):
+                return Response(
+                    {'message': 'No tiles found for this image'}, 
+                    status=status.HTTP_200_OK
+                )
+            
+            # Count tiles before deletion
+            tile_count = 0
+            for root, dirs, files in os.walk(tiles_dir):
+                tile_count += len([f for f in files if f.endswith('.png')])
+            
+            # Remove the entire tiles directory
+            shutil.rmtree(tiles_dir)
+            
+            return Response({
+                'message': f'Successfully cleared {tile_count} tiles for image {image.id}',
+                'tiles_cleared': tile_count
+            }, status=status.HTTP_200_OK)
+            
+        except Image.DoesNotExist:
+            return Response(
+                {'error': 'Image not found'}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            return Response(
+                {'error': f'Error clearing tiles: {str(e)}'}, 
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
     
