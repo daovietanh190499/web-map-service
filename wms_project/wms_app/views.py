@@ -31,6 +31,10 @@ from binascii import a2b_base64
 import glob
 import subprocess
 import shutil
+import logging
+
+# Thiết lập logger cho module này
+logger = logging.getLogger('wms_app')
 
 def index(request):
     return render(request, 'index.html')
@@ -220,7 +224,7 @@ class ImageViewSet(viewsets.ModelViewSet):
             return True
 
         except Exception as e:
-            print(f"Error processing {jp2_path}: {str(e)}")
+            logger.error(f"Error processing {jp2_path}: {str(e)}")
             return False
         
     @action(detail=False, methods=['post'])
@@ -241,10 +245,43 @@ class ImageViewSet(viewsets.ModelViewSet):
             with open(temp_path, 'wb') as f:
                 for chunk in uploaded_file.chunks():
                     f.write(chunk)
+
+            band_stats = []
+
+            subprocess.run([
+                "gdalinfo",
+                "-stats", 
+                temp_path
+            ])
             
-            subprocess.run(["gdal_translate", "-b", "1", "-b", "2", "-b", "3", "-of", "JP2OpenJPEG", temp_path, temp_path.replace(".jp2", "_rgb.jp2"), "-ot", "Byte", "-scale"])
-            subprocess.run(["gdalenhance", "-equalize", "-of", "JP2OpenJPEG", temp_path.replace(".jp2", "_rgb.jp2"), temp_path.replace(".jp2", "_enhanced.jp2")])
-            subprocess.run(["rm", temp_path.replace(".jp2", "_rgb.jp2")])
+            ds = gdal.Open(temp_path)
+
+            for i in range(1, ds.RasterCount + 1):
+                metadata = ds.GetRasterBand(i).GetMetadata()
+                mean = float(metadata.get("STATISTICS_MEAN", "nan"))
+                stddev = float(metadata.get("STATISTICS_STDDEV", "nan"))
+                band_stats.append((mean, stddev))
+
+            z_score = 2.05374891063182
+
+            gdal_command = [
+                "gdal_translate",
+                "-b", "1",
+                "-scale", str(band_stats[0][0] - z_score*band_stats[0][1]), str(band_stats[0][0] + z_score*band_stats[0][1]), "0", "255",
+                "-b", "2",
+                "-scale", str(band_stats[1][0] - z_score*band_stats[1][1]), str(band_stats[1][0] + z_score*band_stats[1][1]), "0", "255",
+                "-b", "3",
+                "-scale", str(band_stats[2][0] - z_score*band_stats[2][1]), str(band_stats[2][0] + z_score*band_stats[2][1]), "0", "255",
+                "-of", "JP2OpenJPEG",
+                "-ot", "Byte",
+                temp_path, temp_path.replace(".jp2", "_enhanced.jp2")
+            ]
+            logger.debug(f"GDAL command: {gdal_command}")
+
+            subprocess.run(gdal_command)
+
+            # subprocess.run(["gdalenhance", "-equalize", "-of", "JP2OpenJPEG", temp_path.replace(".jp2", "_rgb.jp2"), temp_path.replace(".jp2", "_enhanced.jp2")])
+            # subprocess.run(["rm", temp_path.replace(".jp2", "_rgb.jp2")])
 
             # Process the file with GDAL
             if self._store_jp2_metadata(temp_path, name, datetime_, format, source, satellite_id):
@@ -467,7 +504,7 @@ class ImageViewSet(viewsets.ModelViewSet):
                     shutil.rmtree(tiles_dir)
                 except Exception as e:
                     # Log error but don't fail the operation
-                    print(f'Warning: Could not delete tiles directory: {str(e)}')
+                    logger.warning(f'Could not delete tiles directory: {str(e)}')
             
             # Delete database record
             image.delete()
