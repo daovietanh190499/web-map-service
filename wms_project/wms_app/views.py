@@ -22,12 +22,14 @@ from datetime import datetime
 from rest_framework_gis.filters import InBBoxFilter
 from django.shortcuts import render
 from PIL import Image as PIL_Image
+from PIL import ImageOps
 import io
 from django.http import HttpResponse, FileResponse
 from wms_app.generate_tiles import Tiles
 from django.conf import settings
 from binascii import a2b_base64
 import glob
+import subprocess
 
 def index(request):
     return render(request, 'index.html')
@@ -77,8 +79,26 @@ class ImageViewSet(viewsets.ModelViewSet):
             img = PIL_Image.open(f'tiles/{img_db.id}/{str(z)}/{str(x)}/{str(y)}.png')
         else:
             img = rasterio.open(img_db.filepath)
+            
+            print(img.meta, img.statistics(1), img.statistics(2), img.statistics(3))
             tiled = Tiles(image=img, zooms=[int(z)], x=int(x), y=int(y), pixels=256, resampling="bilinear")
+            print("MAX MIN", np.max(tiled.tiles.data), np.min(tiled.tiles.data))
+            print("DATAAAAAA", z, x, y, tiled.tiles.data, tiled.tiles.data.shape)
+
+            # img = PIL_Image.fromarray(np.concatenate(
+            #     ( np.transpose(tiled.tiles.data, (1, 2, 0))[:, :, :3], 
+            #     np.transpose(tiled.tiles.data, (1, 2, 0))[:, :, -1:] ), axis=-1)
+            # )
+
             img = PIL_Image.fromarray(np.transpose(tiled.tiles.data, (1, 2, 0)))
+            
+            # clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
+            # img8_clahe = clahe.apply(np.transpose(tiled.tiles.data, (1, 2, 0)))
+            
+            # img = PIL_Image.fromarray(np.transpose(tiled.tiles.data, (1, 2, 0))[:, :, -2:-5:-1])
+
+            # img = ImageOps.equalize(img)
+
             if not os.path.exists(f'tiles/{img_db.id}/{str(z)}/{str(x)}'):
                 os.makedirs(f'tiles/{img_db.id}/{str(z)}/{str(x)}')
             img.save(f'tiles/{img_db.id}/{str(z)}/{str(x)}/{str(y)}.png')
@@ -217,6 +237,10 @@ class ImageViewSet(viewsets.ModelViewSet):
             with open(temp_path, 'wb') as f:
                 for chunk in uploaded_file.chunks():
                     f.write(chunk)
+            
+            subprocess.run(["gdal_translate", "-b", "1", "-b", "2", "-b", "3", "-of", "JP2OpenJPEG", temp_path, temp_path.replace(".jp2", "_rgb.jp2"), "-ot", "Byte", "-scale"])
+            subprocess.run(["gdalenhance", "-equalize", "-of", "JP2OpenJPEG", temp_path.replace(".jp2", "_rgb.jp2"), temp_path])
+            subprocess.run(["rm", temp_path.replace(".jp2", "_rgb.jp2")])
 
             # Process the file with GDAL
             if self._store_jp2_metadata(temp_path, name, datetime_, format, source, satellite_id):
@@ -646,8 +670,6 @@ class TopicViewSet(viewsets.ModelViewSet):
                     os.path.join(settings.MEDIA_ROOT, 'topic_attachments', attachment.filename),  # MEDIA_ROOT + topic_attachments + filename
                     os.path.join('/home/wms/topic_attachments', attachment.filename),  # MEDIA_ROOT + topic_attachments + filename
                 ]
-
-                print(path)
                 
                 file_found = False
                 for path in possible_paths:

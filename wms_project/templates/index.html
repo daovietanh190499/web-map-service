@@ -853,6 +853,9 @@
     
                 const xhr = new XMLHttpRequest();
                 xhr.open('POST', '/api/images/upload_image/', true);
+                
+                // Add CSRF token to headers
+                xhr.setRequestHeader('X-CSRFToken', getCSRFToken());
     
                 // Update progress bar
                 xhr.upload.onprogress = (event) => {
