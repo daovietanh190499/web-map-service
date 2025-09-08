@@ -604,6 +604,91 @@
         .preview-modal-close:hover {
             color: #333;
         }
+
+        /* Autocomplete Styles */
+        .autocomplete-container {
+            position: relative;
+            display: inline-block;
+            width: 100%;
+        }
+
+        .autocomplete-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #d1d5db;
+            border-top: none;
+            border-radius: 0 0 6px 6px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 1000;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            display: none;
+        }
+
+        .autocomplete-item {
+            padding: 0.75rem 1rem;
+            cursor: pointer;
+            border-bottom: 1px solid #f3f4f6;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background-color 0.2s ease;
+        }
+
+        .autocomplete-item:last-child {
+            border-bottom: none;
+        }
+
+        .autocomplete-item:hover {
+            background-color: #f9fafb;
+        }
+
+        .autocomplete-item.selected {
+            background-color: rgba(37, 99, 235, 0.1);
+        }
+
+        .autocomplete-item-value {
+            font-weight: 500;
+            color: #374151;
+        }
+
+        .autocomplete-item-count {
+            font-size: 0.75rem;
+            color: #6b7280;
+            background: #f3f4f6;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+        }
+
+        .autocomplete-input {
+            width: 100%;
+            border-radius: 6px;
+            border: 1px solid #d1d5db;
+            padding: 0.75rem 1rem;
+            font-size: 0.875rem;
+            transition: border-color 0.2s ease;
+        }
+
+        .autocomplete-input:focus {
+            border-color: rgb(37, 99, 235);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+            outline: none;
+        }
+
+        .autocomplete-input.has-dropdown {
+            border-bottom-left-radius: 0;
+            border-bottom-right-radius: 0;
+        }
+
+        .autocomplete-no-results {
+            padding: 0.75rem 1rem;
+            color: #6b7280;
+            font-style: italic;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
@@ -686,20 +771,24 @@
                                 </div>
                                 <div class="col-md-3">
                                     <label class="form-label">Type</label>
-                                    <select class="form-select" id="searchType">
-                                        <option value="">All Types</option>
-                                        <option value="BC_tin">BC tin</option>
-                                        <option value="Thong_tin_DTCB">Thông tin ĐTCB</option>
-                                        <option value="Chua_xac_dinh">Chưa xác định</option>
-                                    </select>
+                                    <div class="autocomplete-container">
+                                        <input type="text" class="autocomplete-input" id="searchType" placeholder="Search by type..." autocomplete="off">
+                                        <div class="autocomplete-dropdown" id="searchTypeDropdown"></div>
+                                    </div>
                                 </div>
                                 <div class="col-md-3">
                                     <label class="form-label">Subject</label>
-                                    <input type="text" class="form-control" id="searchSubject" placeholder="Search by subject...">
+                                    <div class="autocomplete-container">
+                                        <input type="text" class="autocomplete-input" id="searchSubject" placeholder="Search by subject..." autocomplete="off">
+                                        <div class="autocomplete-dropdown" id="searchSubjectDropdown"></div>
+                                    </div>
                                 </div>
                                 <div class="col-md-3">
                                     <label class="form-label">Area</label>
-                                    <input type="text" class="form-control" id="searchArea" placeholder="Search by area...">
+                                    <div class="autocomplete-container">
+                                        <input type="text" class="autocomplete-input" id="searchArea" placeholder="Search by area..." autocomplete="off">
+                                        <div class="autocomplete-dropdown" id="searchAreaDropdown"></div>
+                                    </div>
                                 </div>
                                 <div class="col-md-3">
                                     <label class="form-label">Content</label>
@@ -798,19 +887,24 @@
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Type *</label>
-                                <select class="form-select" id="topicType" required>
-                                    <option value="BC_tin">BC tin</option>
-                                    <option value="Thong_tin_DTCB">Thông tin ĐTCB</option>
-                                    <option value="Chua_xac_dinh">Chưa xác định</option>
-                                </select>
+                                <div class="autocomplete-container">
+                                    <input type="text" class="autocomplete-input" id="topicType" placeholder="Select or enter type..." required autocomplete="off">
+                                    <div class="autocomplete-dropdown" id="topicTypeDropdown"></div>
+                                </div>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Area *</label>
-                                <input type="text" class="form-control" id="topicArea" required>
+                                <div class="autocomplete-container">
+                                    <input type="text" class="autocomplete-input" id="topicArea" placeholder="Select or enter area..." required autocomplete="off">
+                                    <div class="autocomplete-dropdown" id="topicAreaDropdown"></div>
+                                </div>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Subject *</label>
-                                <input type="text" class="form-control" id="topicSubject" required>
+                                <div class="autocomplete-container">
+                                    <input type="text" class="autocomplete-input" id="topicSubject" placeholder="Select or enter subject..." required autocomplete="off">
+                                    <div class="autocomplete-dropdown" id="topicSubjectDropdown"></div>
+                                </div>
                             </div>
                             <div class="col-12">
                                 <label class="form-label">Content *</label>
@@ -862,6 +956,8 @@
         let currentTopics = [];
         let currentTopicId = null;
         const API_BASE = '/api/topics/';
+        let fieldValues = { types: [], subjects: [], areas: [] };
+        let activeAutocomplete = null;
 
         // Initialize date pickers
         document.addEventListener('DOMContentLoaded', function() {
@@ -872,6 +968,10 @@
             
             loadTopics();
             loadStats();
+            // Load field values first, then initialize autocomplete
+            loadFieldValues().then(() => {
+                initializeAutocomplete();
+            });
         });
 
         // Search form handler
@@ -879,6 +979,186 @@
             e.preventDefault();
             searchTopics();
         });
+
+        // Load field values from API
+        async function loadFieldValues() {
+            try {
+                const response = await axios.get(`${API_BASE}field-values/`, {
+                    headers: { 'X-CSRFToken': getCSRFToken() }
+                });
+                fieldValues = response.data;
+                console.log('Field values loaded:', fieldValues);
+                return fieldValues;
+            } catch (error) {
+                console.error('Error loading field values:', error);
+                // Return empty data structure if API fails
+                fieldValues = { types: [], subjects: [], areas: [] };
+                return fieldValues;
+            }
+        }
+
+        // Initialize autocomplete functionality
+        function initializeAutocomplete() {
+            // Search form autocomplete
+            setupAutocomplete('searchType', 'searchTypeDropdown', fieldValues.types, 'label');
+            setupAutocomplete('searchSubject', 'searchSubjectDropdown', fieldValues.subjects, 'value');
+            setupAutocomplete('searchArea', 'searchAreaDropdown', fieldValues.areas, 'value');
+            
+            // Topic form autocomplete
+            setupAutocomplete('topicType', 'topicTypeDropdown', fieldValues.types, 'label');
+            setupAutocomplete('topicSubject', 'topicSubjectDropdown', fieldValues.subjects, 'value');
+            setupAutocomplete('topicArea', 'topicAreaDropdown', fieldValues.areas, 'value');
+        }
+
+        // Setup autocomplete for a specific input
+        function setupAutocomplete(inputId, dropdownId, data, displayField) {
+            const input = document.getElementById(inputId);
+            const dropdown = document.getElementById(dropdownId);
+            
+            if (!input || !dropdown) {
+                console.error(`Autocomplete setup failed: input ${inputId} or dropdown ${dropdownId} not found`);
+                return;
+            }
+            
+            console.log(`Setting up autocomplete for ${inputId} with ${data.length} items`);
+            
+            let selectedIndex = -1;
+            let isFirstFocus = true;
+            
+            input.addEventListener('input', function() {
+                const query = this.value.toLowerCase().trim();
+                selectedIndex = -1;
+                
+                if (query.length === 0) {
+                    // Show all items when input is empty
+                    if (data.length > 0) {
+                        showDropdown(dropdown, data, displayField, input);
+                    } else {
+                        hideDropdown(dropdown);
+                    }
+                    return;
+                }
+                
+                const filtered = data.filter(item => 
+                    item[displayField].toLowerCase().includes(query)
+                );
+                
+                if (filtered.length > 0) {
+                    showDropdown(dropdown, filtered, displayField, input);
+                } else {
+                    hideDropdown(dropdown);
+                }
+            });
+            
+            input.addEventListener('keydown', function(e) {
+                const items = dropdown.querySelectorAll('.autocomplete-item');
+                
+                if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    selectedIndex = Math.min(selectedIndex + 1, items.length - 1);
+                    updateSelection(items);
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    selectedIndex = Math.max(selectedIndex - 1, -1);
+                    updateSelection(items);
+                } else if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if (selectedIndex >= 0 && items[selectedIndex]) {
+                        selectItem(items[selectedIndex], input);
+                    }
+                } else if (e.key === 'Escape') {
+                    hideDropdown(dropdown);
+                    selectedIndex = -1;
+                }
+            });
+            
+            input.addEventListener('blur', function() {
+                // Delay hiding to allow click events on dropdown items
+                setTimeout(() => {
+                    hideDropdown(dropdown);
+                    selectedIndex = -1;
+                }, 200);
+            });
+            
+            input.addEventListener('focus', function() {
+                // Show all items on first focus or if input is empty
+                if (isFirstFocus || this.value.trim().length === 0) {
+                    if (data.length > 0) {
+                        showDropdown(dropdown, data, displayField, input);
+                    }
+                    isFirstFocus = false;
+                } else if (this.value.trim().length > 0) {
+                    const query = this.value.toLowerCase().trim();
+                    const filtered = data.filter(item => 
+                        item[displayField].toLowerCase().includes(query)
+                    );
+                    if (filtered.length > 0) {
+                        showDropdown(dropdown, filtered, displayField, input);
+                    }
+                }
+            });
+        }
+
+        // Show dropdown with filtered items
+        function showDropdown(dropdown, items, displayField, input) {
+            console.log(`Showing dropdown with ${items.length} items for field ${displayField}`);
+            
+            dropdown.innerHTML = '';
+            
+            if (items.length === 0) {
+                dropdown.innerHTML = '<div class="autocomplete-no-results">No results found</div>';
+            } else {
+                items.forEach((item, index) => {
+                    const itemElement = document.createElement('div');
+                    itemElement.className = 'autocomplete-item';
+                    itemElement.innerHTML = `
+                        <span class="autocomplete-item-value">${item[displayField]}</span>
+                        <span class="autocomplete-item-count">${item.count}</span>
+                    `;
+                    
+                    itemElement.addEventListener('click', function() {
+                        selectItem(this, input);
+                    });
+                    
+                    dropdown.appendChild(itemElement);
+                });
+            }
+            
+            dropdown.style.display = 'block';
+            input.classList.add('has-dropdown');
+            activeAutocomplete = dropdown;
+            
+            console.log('Dropdown should be visible now');
+        }
+
+        // Hide dropdown
+        function hideDropdown(dropdown) {
+            console.log('Hiding dropdown');
+            dropdown.style.display = 'none';
+            dropdown.previousElementSibling.classList.remove('has-dropdown');
+            if (activeAutocomplete === dropdown) {
+                activeAutocomplete = null;
+            }
+        }
+
+        // Select item from dropdown
+        function selectItem(itemElement, input) {
+            const value = itemElement.querySelector('.autocomplete-item-value').textContent;
+            input.value = value;
+            hideDropdown(itemElement.parentElement);
+        }
+
+        // Update selection highlighting
+        function updateSelection(items) {
+            items.forEach((item, index) => {
+                if (index === selectedIndex) {
+                    item.classList.add('selected');
+                    item.scrollIntoView({ block: 'nearest' });
+                } else {
+                    item.classList.remove('selected');
+                }
+            });
+        }
 
         // Load all topics
         async function loadTopics() {
@@ -905,10 +1185,14 @@
             const name = document.getElementById('searchName').value;
             const dateFrom = document.getElementById('searchDateFrom').value;
             const dateTo = document.getElementById('searchDateTo').value;
-            const type = document.getElementById('searchType').value;
+            const typeDisplayValue = document.getElementById('searchType').value;
             const subject = document.getElementById('searchSubject').value;
             const area = document.getElementById('searchArea').value;
             const content = document.getElementById('searchContent').value;
+
+            // Convert display label back to value for type field
+            const typeItem = fieldValues.types.find(item => item.label === typeDisplayValue);
+            const type = typeItem ? typeItem.value : typeDisplayValue;
 
             if (name) searchParams.append('name', name);
             if (dateFrom) searchParams.append('created_date_from', dateFrom);
@@ -1058,7 +1342,11 @@
                 document.getElementById('topicModalTitle').textContent = 'Edit Topic';
                 document.getElementById('topicId').value = topic.id;
                 document.getElementById('topicName').value = topic.topic_name;
-                document.getElementById('topicType').value = topic.type;
+                
+                // Set values for autocomplete fields using display labels
+                const typeItem = fieldValues.types.find(item => item.value === topic.type);
+                document.getElementById('topicType').value = typeItem ? typeItem.label : topic.type;
+                
                 document.getElementById('topicArea').value = topic.area;
                 document.getElementById('topicSubject').value = topic.subject;
                 document.getElementById('topicContent').value = topic.content;
@@ -1481,9 +1769,14 @@
                 return;
             }
 
+            // Convert display label back to value for type field
+            const typeDisplayValue = document.getElementById('topicType').value;
+            const typeItem = fieldValues.types.find(item => item.label === typeDisplayValue);
+            const typeValue = typeItem ? typeItem.value : typeDisplayValue;
+
             const formData = new FormData();
             formData.append('topic_name', document.getElementById('topicName').value);
-            formData.append('type', document.getElementById('topicType').value);
+            formData.append('type', typeValue);
             formData.append('area', document.getElementById('topicArea').value);
             formData.append('subject', document.getElementById('topicSubject').value);
             formData.append('content', document.getElementById('topicContent').value);
@@ -1745,6 +2038,29 @@
             .catch(error => {
                 console.log('User not logged in');
             });
+
+        // Test function to manually trigger autocomplete
+        function testAutocomplete() {
+            console.log('Testing autocomplete...');
+            console.log('Field values:', fieldValues);
+            
+            // Test search type dropdown
+            const searchTypeInput = document.getElementById('searchType');
+            const searchTypeDropdown = document.getElementById('searchTypeDropdown');
+            
+            if (searchTypeInput && searchTypeDropdown) {
+                console.log('Search type elements found');
+                searchTypeInput.focus();
+                if (fieldValues.types.length > 0) {
+                    showDropdown(searchTypeDropdown, fieldValues.types, 'label', searchTypeInput);
+                }
+            } else {
+                console.log('Search type elements not found');
+            }
+        }
+
+        // Make test function available globally for debugging
+        window.testAutocomplete = testAutocomplete;
     </script>
 </body>
 </html>

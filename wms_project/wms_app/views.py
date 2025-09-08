@@ -79,7 +79,7 @@ class ImageViewSet(viewsets.ModelViewSet):
         if os.path.exists(f'tiles/{img_db.id}/{str(z)}/{str(x)}/{str(y)}.png'):
             img = PIL_Image.open(f'tiles/{img_db.id}/{str(z)}/{str(x)}/{str(y)}.png')
         else:
-            img = rasterio.open(img_db.filepath)
+            img = rasterio.open(img_db.filepath.replace(".jp2", "_enhanced.jp2"))
             
             # print(img.meta, img.statistics(1), img.statistics(2), img.statistics(3))
             tiled = Tiles(image=img, zooms=[int(z)], x=int(x), y=int(y), pixels=256, resampling="bilinear")
@@ -243,7 +243,7 @@ class ImageViewSet(viewsets.ModelViewSet):
                     f.write(chunk)
             
             subprocess.run(["gdal_translate", "-b", "1", "-b", "2", "-b", "3", "-of", "JP2OpenJPEG", temp_path, temp_path.replace(".jp2", "_rgb.jp2"), "-ot", "Byte", "-scale"])
-            subprocess.run(["gdalenhance", "-equalize", "-of", "JP2OpenJPEG", temp_path.replace(".jp2", "_rgb.jp2"), temp_path])
+            subprocess.run(["gdalenhance", "-equalize", "-of", "JP2OpenJPEG", temp_path.replace(".jp2", "_rgb.jp2"), temp_path.replace(".jp2", "_enhanced.jp2")])
             subprocess.run(["rm", temp_path.replace(".jp2", "_rgb.jp2")])
 
             # Process the file with GDAL
@@ -801,3 +801,57 @@ class TopicViewSet(viewsets.ModelViewSet):
                 {'error': f'Error downloading file: {str(e)}'}, 
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+    
+    @action(detail=False, methods=['get'], url_path='field-values')
+    def get_field_values(self, request):
+        """Get all unique values for Type, Subject, and Area fields with statistics"""
+        try:
+            from django.db.models import Count
+            
+            # Get unique values with counts for each field
+            type_values = Topic.objects.values('type').annotate(count=Count('type')).order_by('-count')
+            subject_values = Topic.objects.values('subject').annotate(count=Count('subject')).order_by('-count')
+            area_values = Topic.objects.values('area').annotate(count=Count('area')).order_by('-count')
+            
+            # Format the response
+            response_data = {
+                'types': [
+                    {
+                        'value': item['type'],
+                        'count': item['count'],
+                        'label': self._get_type_label(item['type'])
+                    }
+                    for item in type_values if item['type']
+                ],
+                'subjects': [
+                    {
+                        'value': item['subject'],
+                        'count': item['count']
+                    }
+                    for item in subject_values if item['subject']
+                ],
+                'areas': [
+                    {
+                        'value': item['area'],
+                        'count': item['count']
+                    }
+                    for item in area_values if item['area']
+                ]
+            }
+            
+            return Response(response_data)
+            
+        except Exception as e:
+            return Response(
+                {'error': f'Error getting field values: {str(e)}'}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    def _get_type_label(self, type_value):
+        """Get display label for type value"""
+        type_labels = {
+            'BC_tin': 'BC tin',
+            'Thong_tin_DTCB': 'Thông tin ĐTCB',
+            'Chua_xac_dinh': 'Chưa xác định'
+        }
+        return type_labels.get(type_value, type_value)
