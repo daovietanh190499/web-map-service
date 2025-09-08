@@ -193,9 +193,9 @@
                     <!-- Header -->
                     <div class="p-4 border-b">
                         <div class="flex justify-between items-center">
-                            <h2 class="text-xl font-bold">Search Images</h2>
+                            <h2 class="text-xl font-bold">${ sidebarMode === 'search' ? 'Search Images' : 'Manage Images' }</h2>
                             <div class="flex items-center gap-2">
-                                <button id="toggle-filters" class="text-gray-500 hover:text-gray-700">
+                                <button v-if="sidebarMode === 'search'" id="toggle-filters" class="text-gray-500 hover:text-gray-700">
                                     <i class="fas fa-filter"></i>
                                 </button>
                                 <button id="close-search" class="text-gray-500 hover:text-gray-700" @click="closeSearchSideBar">
@@ -206,7 +206,7 @@
                     </div>
 
                     <!-- Collapsible Filters -->
-                    <div id="filters-container" class="hidden">
+                    <div id="filters-container" class="hidden" v-if="sidebarMode === 'search'">
                         <form id="search-form">
                             <div class="filter-section">
                                 <div class="filter-header" data-target="date-filter">
@@ -288,52 +288,95 @@
                         </form>
                     </div>
 
-                    <!-- Search Results -->
+                    <!-- Search Results / Manage Images -->
                     <div class="search-results-container flex-grow p-4">
                         <div id="search-results" class="space-y-2">
-                            <div class="flex justify-center items-center py-4" v-if="searchLoading">
-                                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-                            </div>
-                            <div class="text-center text-red-500 py-4" v-if="showSearchError">
-                                Error performing search. Please try again.
-                            </div>
-                            <div class="text-center text-gray-500 py-4" v-if="!searchLoading && !showSearchError && searchResults.features.length === 0">
-                                No results found
-                            </div>
-                            <div class="bg-white border rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 mb-3" v-for="(feature, index) in searchResults.features" :key="feature.id">
-                                <div class="flex p-3">
-                                    <div class="flex-auto w-4/5">
-                                        <div class="font-semibold text-gray-800">${ feature.properties.name || feature.properties.filename }</div>
-                                        <div class="text-sm text-gray-600 mt-1">
-                                            <div class="flex items-center gap-2">
-                                                <i class="far fa-calendar-alt w-4"></i>
-                                                ${ new Date(feature.properties.datetime).toLocaleDateString() } 
-                                            </div>
-                                            <div class="flex items-center gap-2">
-                                                <i class="fas fa-ruler w-4"></i>
-                                                ${ feature.properties.resolution } m
-                                            </div>
-                                            <div class="flex items-center gap-2">
-                                                <i class="fas fa-satellite w-4"></i>
-                                                ${ feature.properties.satellite_id || 'N/A' }
+                            <!-- Search Mode Content -->
+                            <div v-if="sidebarMode === 'search'">
+                                <div class="flex justify-center items-center py-4" v-if="searchLoading">
+                                    <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                                </div>
+                                <div class="text-center text-red-500 py-4" v-if="showSearchError">
+                                    Error performing search. Please try again.
+                                </div>
+                                <div class="text-center text-gray-500 py-4" v-if="!searchLoading && !showSearchError && searchResults.features.length === 0">
+                                    No results found
+                                </div>
+                                <div class="bg-white border rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 mb-3" v-for="(feature, index) in searchResults.features" :key="feature.id">
+                                    <div class="flex p-3">
+                                        <div class="flex-auto w-4/5">
+                                            <div class="font-semibold text-gray-800">${ feature.properties.name || feature.properties.filename }</div>
+                                            <div class="text-sm text-gray-600 mt-1">
+                                                <div class="flex items-center gap-2">
+                                                    <i class="far fa-calendar-alt w-4"></i>
+                                                    ${ new Date(feature.properties.datetime).toLocaleDateString() } 
+                                                </div>
+                                                <div class="flex items-center gap-2">
+                                                    <i class="fas fa-ruler w-4"></i>
+                                                    ${ feature.properties.resolution } m
+                                                </div>
+                                                <div class="flex items-center gap-2">
+                                                    <i class="fas fa-satellite w-4"></i>
+                                                    ${ feature.properties.satellite_id || 'N/A' }
+                                                </div>
                                             </div>
                                         </div>
+                                        <div class="flex-auto w-1/5 flex flex-col gap-2">
+                                            <i :key="feature.id + '-action'"
+                                                class="fas w-8 h-8 text-xl cursor-pointer"
+                                                :class="[{'fa-folder-plus': !(feature.id in listLayer), 'fa-folder-minus': (feature.id in listLayer)}]"
+                                                @click="changeMenu(feature.id, feature.properties.name || feature.properties.filename, feature.geometry.coordinates)"
+                                                title="Add/Remove from layers">
+                                            </i>
+                                            <i class="fas fa-download w-8 h-8 text-xl cursor-pointer text-green-600 hover:text-green-800"
+                                               @click="downloadImage(feature.id, feature.properties.name || feature.properties.filename)"
+                                               title="Download image">
+                                            </i>
+                                            <i class="fas fa-trash-alt w-8 h-8 text-xl cursor-pointer text-red-600 hover:text-red-800"
+                                               @click="clearTiles(feature.id, feature.properties.name || feature.properties.filename)"
+                                               title="Clear rendered tiles">
+                                            </i>
+                                        </div>
                                     </div>
-                                    <div class="flex-auto w-1/5 flex flex-col gap-2">
-                                        <i :key="feature.id + '-action'"
-                                            class="fas w-8 h-8 text-xl cursor-pointer"
-                                            :class="[{'fa-folder-plus': !(feature.id in listLayer), 'fa-folder-minus': (feature.id in listLayer)}]"
-                                            @click="changeMenu(feature.id, feature.properties.name || feature.properties.filename, feature.geometry.coordinates)"
-                                            title="Add/Remove from layers">
-                                        </i>
-                                        <i class="fas fa-download w-8 h-8 text-xl cursor-pointer text-green-600 hover:text-green-800"
-                                           @click="downloadImage(feature.id, feature.properties.name || feature.properties.filename)"
-                                           title="Download image">
-                                        </i>
-                                        <i class="fas fa-trash-alt w-8 h-8 text-xl cursor-pointer text-red-600 hover:text-red-800"
-                                           @click="clearTiles(feature.id, feature.properties.name || feature.properties.filename)"
-                                           title="Clear rendered tiles">
-                                        </i>
+                                </div>
+                            </div>
+
+                            <!-- Manage Mode Content -->
+                            <div v-if="sidebarMode === 'manage'">
+                                <div class="text-center text-gray-500 py-4" v-if="Object.keys(listLayer).length === 0">
+                                    Chưa có hình ảnh nào được thêm vào menu
+                                </div>
+                                
+                                <div class="bg-white border rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 mb-3" 
+                                     v-for="(layer, layerId) in listLayer" :key="layerId">
+                                    <div class="flex p-3">
+                                        <div class="flex-auto w-4/5">
+                                            <div class="font-semibold text-gray-800">${ layer.name || layerId }</div>
+                                            <div class="text-sm text-gray-600 mt-1">
+                                                <div class="flex items-center gap-2">
+                                                    <i class="fas fa-layer-group w-4"></i>
+                                                    ID: ${ layerId }
+                                                </div>
+                                                <div class="flex items-center gap-2" v-if="layer.coords">
+                                                    <i class="fas fa-map-marker-alt w-4"></i>
+                                                    Tọa độ: ${ layer.coords.length > 0 ? 'Có dữ liệu' : 'Không có' }
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="flex-auto w-1/5 flex flex-col gap-2">
+                                            <i class="fas fa-folder-minus w-8 h-8 text-xl cursor-pointer text-orange-600 hover:text-orange-800"
+                                               @click="removeLayerFromMenu(layerId, layer.name)"
+                                               title="Xóa khỏi menu">
+                                            </i>
+                                            <i class="fas fa-download w-8 h-8 text-xl cursor-pointer text-green-600 hover:text-green-800"
+                                               @click="downloadImage(layerId, layer.name)"
+                                               title="Tải xuống hình ảnh gốc">
+                                            </i>
+                                            <i class="fas fa-trash-alt w-8 h-8 text-xl cursor-pointer text-red-600 hover:text-red-800"
+                                               @click="clearTiles(layerId, layer.name)"
+                                               title="Xóa tiles đã render">
+                                            </i>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -433,6 +476,7 @@
                 </button>
             </div>
         </div>
+
 
         <!-- Settings Modal Overlay -->
         <div id="settings-modal-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-40" v-if="openSettingsModal"></div>
@@ -537,6 +581,7 @@
                 drawnItems: new L.FeatureGroup(),
                 drawControl: null,
                 openSideBar: false,
+                sidebarMode: 'search', // 'search' or 'manage'
                 searchLoading: false,
                 showSearchError: false,
                 searchResults: {
@@ -637,6 +682,11 @@
                     this.openSettingsModal = true;
                 }, "Open Configuration", { position: "bottomleft" }).addTo(this.map);
 
+                L.easyButton('fa-images', (btn, map) => {
+                    this.sidebarMode = 'manage';
+                    this.openSideBar = true;
+                }, "Manage Satellite Images", { position: "bottomleft" }).addTo(this.map);
+
                 L.Measure = {
                     linearMeasurement: "Distance measurement",
                     areaMeasurement: "Area measurement",
@@ -685,6 +735,7 @@
                     this.drawnItems.clearLayers();
                     let layer = e.layer;
                     this.drawnItems.addLayer(layer);
+                    this.sidebarMode = 'search';
                     this.openSideBar = true
     
                     const bounds = layer.getBounds();
@@ -836,6 +887,7 @@
             },
             closeSearchSideBar() {
                 this.openSideBar = false;
+                this.sidebarMode = 'search';
                 this.drawnItems.clearLayers();
             },
             closeModal() {
@@ -1271,6 +1323,16 @@
                     console.error('Error clearing tiles:', error);
                     alert('Có lỗi xảy ra khi xóa tiles');
                 }
+            },
+            removeLayerFromMenu(layerId, layerName) {
+                // Confirm before removing from menu
+                if (!confirm(`Bạn có chắc chắn muốn xóa "${layerName}" khỏi menu?`)) {
+                    return;
+                }
+                
+                this.removeLayer(layerId);
+                this.updateLayerTree();
+                alert(`Đã xóa "${layerName}" khỏi menu thành công!`);
             }
         },
         mounted() {
