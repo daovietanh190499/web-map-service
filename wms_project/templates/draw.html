@@ -658,7 +658,7 @@
         }
 
         function fetchListPredict() {
-            fetch('api/images/' + layerImage.layer_id, {
+            fetch('api/images/' + layerImage.layer_id + "/", {
                 headers: { 'X-CSRFToken': getCSRFToken() }
             })
                 .then(res => res.json())
