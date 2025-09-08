@@ -443,6 +443,51 @@ class ImageViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
     
+    @action(detail=True, methods=['delete'], permission_classes=[IsAuthenticated])
+    def delete_image(self, request, pk=None):
+        """Delete satellite image file and its database record"""
+        try:
+            image = self.get_object()
+            image_name = image.name or image.filename or f"image_{image.id}"
+            
+            # Check if file exists and delete it
+            if image.filepath and os.path.exists(image.filepath):
+                try:
+                    os.remove(image.filepath)
+                except Exception as e:
+                    return Response(
+                        {'error': f'Error deleting file: {str(e)}'}, 
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                    )
+            
+            # Delete tiles directory if it exists
+            tiles_dir = f'tiles/{image.id}'
+            if os.path.exists(tiles_dir):
+                try:
+                    shutil.rmtree(tiles_dir)
+                except Exception as e:
+                    # Log error but don't fail the operation
+                    print(f'Warning: Could not delete tiles directory: {str(e)}')
+            
+            # Delete database record
+            image.delete()
+            
+            return Response({
+                'message': f'Successfully deleted image "{image_name}" and all associated files',
+                'deleted_image_id': pk
+            }, status=status.HTTP_200_OK)
+            
+        except Image.DoesNotExist:
+            return Response(
+                {'error': 'Image not found'}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            return Response(
+                {'error': f'Error deleting image: {str(e)}'}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
 class PredictAreaViewSet(viewsets.ModelViewSet):
     queryset = PredictArea.objects.all()
     serializer_class = PredictAreaSerializer
