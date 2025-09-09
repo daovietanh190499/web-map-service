@@ -749,19 +749,9 @@ class TopicViewSet(viewsets.ModelViewSet):
                     content__icontains=serializer.validated_data['content']
                 )
             
-            # Serialize results with limited fields for search results
-            results = []
-            for topic in queryset:
-                results.append({
-                    'id': topic.id,
-                    'topic_name': topic.topic_name,
-                    'created_date': topic.created_date,
-                    'created_by': topic.created_by.username if topic.created_by else None,
-                    'type': topic.type,
-                    'subject': topic.subject
-                })
-            
-            return Response(results)
+            # Serialize results with full data for search results
+            serializer = TopicSerializer(queryset, many=True)
+            return Response(serializer.data)
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
