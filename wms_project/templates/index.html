@@ -1306,13 +1306,13 @@
                 // Apply resolution filters
                 if (this.searchForm.resolutionMin && this.searchForm.resolutionMin > 0) {
                     filteredResults = filteredResults.filter(item => {
-                        return item.properties.resolution*111111 >= parseFloat(this.searchForm.resolutionMin);
+                        return item.properties.resolution >= parseFloat(this.searchForm.resolutionMin);
                     });
                 }
                 
                 if (this.searchForm.resolutionMax && this.searchForm.resolutionMax < 10000) {
                     filteredResults = filteredResults.filter(item => {
-                        return item.properties.resolution*111111 <= parseFloat(this.searchForm.resolutionMax);
+                        return item.properties.resolution <= parseFloat(this.searchForm.resolutionMax);
                     });
                 }
                 
