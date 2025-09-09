@@ -60,8 +60,6 @@
             transition: transform 0.3s ease-in-out;
             height: 100vh;
             width: 360px;
-            display: flex;
-            flex-direction: column;
         }
 
         #search-sidebar.hidden {
@@ -80,10 +78,9 @@
         }
 
         .filter-content.expanded {
-            max-height: 300px;
-            /* Reduced max height */
+            max-height: 500px;
+            /* Adjust based on content */
             padding: 1rem;
-            overflow-y: auto;
         }
 
         .filter-header {
@@ -101,15 +98,9 @@
         }
 
         .search-results-container {
-            flex: 1;
+            height: calc(100vh - 120px);
+            /* Adjust based on header height */
             overflow-y: auto;
-            min-height: 0; /* Important for flex child to shrink */
-        }
-
-        #filters-container {
-            max-height: 50vh;
-            overflow-y: auto;
-            border-bottom: 1px solid #e2e8f0;
         }
 
         #app-container {
@@ -196,7 +187,8 @@
     <div class="w-100 h-screen overflow-hidden" id="app">
         <div id="app-container" class="flex h-full">
             <!-- Sidebar -->
-            <div id="search-sidebar" class="w-1/3 h-full bg-white shadow-lg z-50 flex-shrink-0 flex flex-col" v-if="openSideBar">
+            <div id="search-sidebar" class="w-1/3 h-full bg-white shadow-lg z-50 flex-shrink-0" v-if="openSideBar">
+                <div class="h-full flex flex-col">
 
                     <!-- Header -->
                     <div class="p-4 border-b">
@@ -344,6 +336,10 @@
                                                 @click="changeMenu(feature.id, feature.properties.name || feature.properties.filename || 'Unnamed Image', feature.geometry.coordinates)"
                                                 title="Add/Remove from layers">
                                             </i>
+                                            <i class="fas fa-edit w-8 h-8 text-xl cursor-pointer text-purple-600 hover:text-purple-800 flex items-center justify-center"
+                                               @click="openUpdateModal(feature)"
+                                               title="Update metadata">
+                                            </i>
                                             <i class="fas fa-download w-8 h-8 text-xl cursor-pointer text-green-600 hover:text-green-800 flex items-center justify-center"
                                                @click="downloadImage(feature.id, feature.properties.name || feature.properties.filename || 'Unnamed Image')"
                                                title="Download image">
@@ -368,8 +364,8 @@
                                 </div>
                                 
                                 <div class="bg-white border rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 mb-3" 
-                                     v-for="(layer, layerId) in listLayer" :key="layerId" v-if="layer">
-                                    <div class="flex p-3">
+                                     v-for="(layer, layerId) in listLayer" :key="layerId">
+                                    <div class="flex p-3" v-if="layer">
                                         <div class="flex-auto w-4/5">
                                             <div class="font-semibold text-gray-800">${ layer.name || layerId || 'Unnamed Layer' }</div>
                                             <div class="text-sm text-gray-600 mt-1">
@@ -387,6 +383,10 @@
                                             <i class="fas fa-folder-minus w-8 h-8 text-xl cursor-pointer text-orange-600 hover:text-orange-800 flex items-center justify-center"
                                                @click="removeLayerFromMenu(layerId, layer.name || 'Unnamed Layer')"
                                                title="Xóa khỏi menu">
+                                            </i>
+                                            <i class="fas fa-edit w-8 h-8 text-xl cursor-pointer text-purple-600 hover:text-purple-800 flex items-center justify-center"
+                                               @click="openUpdateModalFromLayer(layerId, layer)"
+                                               title="Cập nhật metadata">
                                             </i>
                                             <i class="fas fa-download w-8 h-8 text-xl cursor-pointer text-green-600 hover:text-green-800 flex items-center justify-center"
                                                @click="downloadImage(layerId, layer.name || 'Unnamed Layer')"
@@ -465,6 +465,13 @@
                             <label for="modal-satellite" class="text-sm font-medium text-gray-700 mb-2">Satellite ID:</label>
                             <input type="text" id="modal-satellite" v-model="uploadImage.satellite"
                                 class="w-full h-10 px-3 rounded-md border border-gray-300 focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+
+                        <div class="flex flex-col">
+                            <label for="modal-bands-order" class="text-sm font-medium text-gray-700 mb-2">Bands Order:</label>
+                            <input type="text" id="modal-bands-order" v-model="uploadImage.bandsOrder"
+                                placeholder="3_2_1" class="w-full h-10 px-3 rounded-md border border-gray-300 focus:ring-blue-500 focus:border-blue-500">
+                            <p class="text-xs text-gray-500 mt-1">Thứ tự kênh hình ảnh (ví dụ: 3_2_1, 1_2_3, 4_5_6)</p>
                         </div>
 
                         <!-- File Input -->
@@ -595,6 +602,86 @@
                 </button>
             </div>
         </div>
+
+        <!-- Update Metadata Modal Overlay -->
+        <div id="update-modal-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-40" v-if="openUpdateModal"></div>
+
+        <div id="update-modal" v-if="openUpdateModal"
+            class="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white rounded-lg shadow-2xl p-8 z-50 w-full max-w-lg">
+            <h3 class="text-2xl font-bold mb-6 text-gray-900">Update Image Metadata</h3>
+            
+            <!-- Loading indicator -->
+            <div v-if="updateModalLoading" class="flex justify-center items-center py-8">
+                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                <span class="ml-2 text-gray-600">Loading image data...</span>
+            </div>
+
+            <div v-if="!updateModalLoading" class="flex flex-col gap-6">
+                <div class="flex space-x-4 flex-row">
+                    <div class="flex-1 space-y-4 flex-col">
+                        <!-- Name Input -->
+                        <div class="flex flex-col">
+                            <label for="update-name" class="text-sm font-medium text-gray-700 mb-2">Name:</label>
+                            <input type="text" id="update-name" placeholder="Enter image name" v-model="updateImage.name"
+                                class="w-full h-10 px-3 rounded-md border border-gray-300 focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+
+                        <div class="flex flex-col">
+                            <label for="update-time" class="text-sm font-medium text-gray-700 mb-2">Time:</label>
+                            <input type="datetime-local" id="update-time" v-model="updateImage.datetime"
+                                class="w-full h-10 px-3 rounded-md border border-gray-300 focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+
+                        <div class="flex flex-col">
+                            <label for="update-source" class="text-sm font-medium text-gray-700 mb-2">Source:</label>
+                            <select id="update-source" v-model="updateImage.source"
+                                class="w-full h-10 px-3 rounded-md border border-gray-300 focus:ring-blue-500 focus:border-blue-500">
+                                <option value="commercial">Commercial</option>
+                                <option value="exchange">Exchange</option>
+                                <option value="opensource">Opensource</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="flex-1 space-y-4 flex-col">
+                        <div class="flex flex-col">
+                            <label for="update-format" class="text-sm font-medium text-gray-700 mb-2">Format:</label>
+                            <select id="update-format" v-model="updateImage.format"
+                                class="w-full h-10 px-3 rounded-md border border-gray-300 focus:ring-blue-500 focus:border-blue-500">
+                                <option value="OPT">OPT</option>
+                                <option value="SAR">SAR</option>
+                                <option value="UAV">UAV</option>
+                                <option value="LIDAR">LIDAR</option>
+                            </select>
+                        </div>
+
+                        <div class="flex flex-col">
+                            <label for="update-satellite" class="text-sm font-medium text-gray-700 mb-2">Satellite ID:</label>
+                            <input type="text" id="update-satellite" v-model="updateImage.satellite"
+                                class="w-full h-10 px-3 rounded-md border border-gray-300 focus:ring-blue-500 focus:border-blue-500">
+                        </div>
+
+                        <div class="flex flex-col">
+                            <label for="update-bands-order" class="text-sm font-medium text-gray-700 mb-2">Bands Order:</label>
+                            <input type="text" id="update-bands-order" v-model="updateImage.bandsOrder"
+                                placeholder="1_2_3" class="w-full h-10 px-3 rounded-md border border-gray-300 focus:ring-blue-500 focus:border-blue-500">
+                            <p class="text-xs text-gray-500 mt-1">Thứ tự kênh hình ảnh (ví dụ: 3_2_1, 1_2_3, 4_5_6)</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Buttons -->
+            <div v-if="!updateModalLoading" class="mt-8 flex justify-end space-x-4">
+                <button id="cancel-update-modal" @click="closeUpdateModal"
+                    class="px-5 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400">
+                    Cancel
+                </button>
+                <button id="save-update-modal" @click="submitUpdateModal"
+                    class="px-5 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    Update
+                </button>
+            </div>
+        </div>
     </div>
 </body>
 
@@ -618,6 +705,8 @@
                 listLayer: [],
                 openModal: false,
                 openSettingsModal: false,
+                openUpdateModal: false,
+                updateModalLoading: false,
                 progressBar: 0,
                 uploadImage: {
                     name: "New Name",
@@ -625,7 +714,17 @@
                     source: "opensource",
                     format: "OPT",
                     satellite: "VINASAT1",
+                    bandsOrder: "3_2_1",
                     file: null
+                },
+                updateImage: {
+                    id: null,
+                    name: "",
+                    datetime: "",
+                    source: "opensource",
+                    format: "OPT",
+                    satellite: "",
+                    bandsOrder: "1_2_3"
                 },
                 basemaps: [],
                 arcgisConfig: {
@@ -959,6 +1058,114 @@
                 this.openModal = false;
                 this.progressBar = 0; // Reset progress bar when closing modal
             },
+            async openUpdateModal(feature) {
+                this.updateModalLoading = true;
+                try {
+                    // Fetch full image data from API
+                    const response = await fetch(`/api/images/${feature.id}/`, {
+                        headers: { 'X-CSRFToken': getCSRFToken() }
+                    });
+                    
+                    if (response.ok) {
+                        const imageData = await response.json();
+                        this.updateImage = {
+                            id: imageData.id,
+                            name: imageData.properties.name || imageData.properties.filename || '',
+                            datetime: imageData.properties.datetime ? new Date(imageData.properties.datetime).toISOString().slice(0, 16) : '',
+                            source: imageData.properties.source || 'opensource',
+                            format: imageData.properties.format || 'OPT',
+                            satellite: imageData.properties.satellite_id || '',
+                            bandsOrder: imageData.properties.bands_order || '1_2_3'
+                        };
+                    } else {
+                        // Fallback to feature data if API fails
+                        this.updateImage = {
+                            id: feature.id,
+                            name: feature.properties.name || feature.properties.filename || '',
+                            datetime: feature.properties.datetime ? new Date(feature.properties.datetime).toISOString().slice(0, 16) : '',
+                            source: feature.properties.source || 'opensource',
+                            format: feature.properties.format || 'OPT',
+                            satellite: feature.properties.satellite_id || '',
+                            bandsOrder: feature.properties.bands_order || '1_2_3'
+                        };
+                    }
+                } catch (error) {
+                    console.error('Error fetching image data:', error);
+                    // Fallback to feature data
+                    this.updateImage = {
+                        id: feature.id,
+                        name: feature.properties.name || feature.properties.filename || '',
+                        datetime: feature.properties.datetime ? new Date(feature.properties.datetime).toISOString().slice(0, 16) : '',
+                        source: feature.properties.source || 'opensource',
+                        format: feature.properties.format || 'OPT',
+                        satellite: feature.properties.satellite_id || '',
+                        bandsOrder: feature.properties.bands_order || '1_2_3'
+                    };
+                } finally {
+                    this.updateModalLoading = false;
+                }
+                this.openUpdateModal = true;
+            },
+            async openUpdateModalFromLayer(layerId, layer) {
+                this.updateModalLoading = true;
+                try {
+                    // Fetch full image data from API
+                    const response = await fetch(`/api/images/${layerId}/`, {
+                        headers: { 'X-CSRFToken': getCSRFToken() }
+                    });
+                    
+                    if (response.ok) {
+                        const imageData = await response.json();
+                        this.updateImage = {
+                            id: imageData.id,
+                            name: imageData.properties.name || imageData.properties.filename || '',
+                            datetime: imageData.properties.datetime ? new Date(imageData.properties.datetime).toISOString().slice(0, 16) : '',
+                            source: imageData.properties.source || 'opensource',
+                            format: imageData.properties.format || 'OPT',
+                            satellite: imageData.properties.satellite_id || '',
+                            bandsOrder: imageData.properties.bands_order || '1_2_3'
+                        };
+                    } else {
+                        // Fallback to layer data
+                        this.updateImage = {
+                            id: layerId,
+                            name: layer.name || '',
+                            datetime: '',
+                            source: 'opensource',
+                            format: 'OPT',
+                            satellite: '',
+                            bandsOrder: '1_2_3'
+                        };
+                    }
+                } catch (error) {
+                    console.error('Error fetching image data:', error);
+                    // Fallback to layer data
+                    this.updateImage = {
+                        id: layerId,
+                        name: layer.name || '',
+                        datetime: '',
+                        source: 'opensource',
+                        format: 'OPT',
+                        satellite: '',
+                        bandsOrder: '1_2_3'
+                    };
+                } finally {
+                    this.updateModalLoading = false;
+                }
+                this.openUpdateModal = true;
+            },
+            closeUpdateModal() {
+                this.openUpdateModal = false;
+                this.updateImage = {
+                    id: null,
+                    name: "",
+                    datetime: "",
+                    source: "opensource",
+                    format: "OPT",
+                    satellite: "",
+                    bandsOrder: "1_2_3"
+                };
+            },
             submitModal() {
                 if (!this.uploadImage.name || !this.uploadImage.file) {
                     alert('Please provide a name and select a file.');
@@ -974,6 +1181,7 @@
                 formData.append('source', this.uploadImage.source)
                 formData.append('format', this.uploadImage.format)
                 formData.append('satellite_id', this.uploadImage.satellite)
+                formData.append('bands_order', this.uploadImage.bandsOrder)
                 formData.append('file', this.uploadImage.file);
     
                 const xhr = new XMLHttpRequest();
@@ -1015,6 +1223,45 @@
                 };
     
                 xhr.send(formData);
+            },
+            async submitUpdateModal() {
+                if (!this.updateImage.name) {
+                    alert('Please provide a name.');
+                    return;
+                }
+                
+                try {
+                    const response = await fetch(`/api/images/${this.updateImage.id}/update_metadata/`, {
+                        method: 'PATCH',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': getCSRFToken()
+                        },
+                        body: JSON.stringify({
+                            name: this.updateImage.name,
+                            datetime: this.updateImage.datetime,
+                            source: this.updateImage.source,
+                            format: this.updateImage.format,
+                            satellite_id: this.updateImage.satellite,
+                            bands_order: this.updateImage.bandsOrder
+                        })
+                    });
+                    
+                    if (response.ok) {
+                        alert('Metadata updated successfully!');
+                        this.closeUpdateModal();
+                        // Refresh search results to show updated data
+                        if (this.allSearchResults.length > 0) {
+                            this.applyFilters();
+                        }
+                    } else {
+                        const errorData = await response.json();
+                        alert('Error updating metadata: ' + (errorData.error || 'Unknown error'));
+                    }
+                } catch (error) {
+                    console.error('Error updating metadata:', error);
+                    alert('Error updating metadata');
+                }
             },
             submitSearchForm() {
                 // Check if there's a drawn area
@@ -1125,10 +1372,10 @@
                 }
             },
             // Settings Modal Methods
-            openSettingsModal() {
-                this.openSettingsModal = true;
-                this.loadSettings();
-            },
+            // openSettingsModal() {
+            //     this.openSettingsModal = true;
+            //     this.loadSettings();
+            // },
             closeSettingsModal() {
                 this.openSettingsModal = false;
             },

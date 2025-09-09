@@ -14,7 +14,17 @@ class ImageUploadSerializer(serializers.Serializer):
     source = serializers.CharField(max_length=255, required=False)
     satellite_id = serializers.CharField(max_length=255, required=False)
     datetime = serializers.DateTimeField(required=False)
+    bands_order = serializers.CharField(max_length=50, required=False, default='3_2_1')
     file = serializers.FileField()
+
+class ImageUpdateSerializer(serializers.Serializer):
+    name = serializers.CharField(max_length=255, required=False)
+    format = serializers.CharField(max_length=255, required=False)
+    source = serializers.CharField(max_length=255, required=False)
+    satellite_id = serializers.CharField(max_length=255, required=False)
+    datetime = serializers.DateTimeField(required=False)
+    bands_order = serializers.CharField(max_length=50, required=False)
+    topic = serializers.CharField(max_length=255, required=False)
 
 class BaseMapSerializer(serializers.ModelSerializer):
     class Meta:

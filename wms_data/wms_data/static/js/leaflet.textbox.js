@@ -170,7 +170,7 @@
                 lineNumber = 0,
                 lineHeight = 1.1, // em
                 tspan = L.SVG.create('tspan');
-            tspan.setAttribute('style', 'font: ' +  (this.options.textOptions?.style || "normal") + ' ' + twoToPowerOfOffset + 'em ' + (this.options.textOptions?.font || "arial"));
+            tspan.setAttribute('style', 'font: ' +  (this.options.textOptions?.style || "normal") + ' ' + twoToPowerOfOffset + 'px ' + (this.options.textOptions?.font || "arial"));
             tspan.setAttribute('fill', this.options.textOptions?.color || '#000000');
             tspan.setAttribute('x', textNode.getAttribute('x'));
             tspan.setAttribute('y', textNode.getAttribute('y'));

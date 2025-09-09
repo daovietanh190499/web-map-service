@@ -13,6 +13,7 @@ class Image(models.Model):
     datetime = models.DateTimeField(null=True)
     resolution = models.FloatField(null=True)
     bands = models.IntegerField(null=True)
+    bands_order = models.CharField(max_length=50, default='3_2_1', help_text="Thứ tự kênh hình ảnh, ví dụ: 3_2_1, 1_2_3, 4_5_6")
     filename = models.CharField(max_length=255, null=True)
     filepath = models.CharField(max_length=1000, null=True)
     area = models.FloatField(null=True)

@@ -10,7 +10,7 @@ from django.db.models import Q
 from .serializers import (
     ImageSerializer, SearchGeometrySerializer, ImageFilterSerializer, 
     PredictAreaSerializer, PredictAreaComponentSerializer, ImageUploadSerializer, 
-    DetailPredictAreaSerializer, BaseMapSerializer, ArcGISConfigSerializer,
+    ImageUpdateSerializer, DetailPredictAreaSerializer, BaseMapSerializer, ArcGISConfigSerializer,
     TopicSerializer, TopicCreateUpdateSerializer, TopicSearchSerializer, TopicAttachmentSerializer
 )
 from osgeo import gdal, osr
@@ -73,6 +73,26 @@ class ImageViewSet(viewsets.ModelViewSet):
     filter_backends = (InBBoxFilter,)
     bbox_filter_include_overlapping = True
 
+    def _reorder_bands(self, data, bands_order):
+        """Reorder bands based on bands_order string like '3_2_1' or '1_2_3'
+        data shape is (channel, width, height)
+        """
+        try:
+            # Parse bands_order string (e.g., '3_2_1' -> [3, 2, 1])
+            band_indices = [int(band) - 1 for band in bands_order.split('_')]  # Convert to 0-based indexing
+            
+            # band_indices.append(-1)
+            # Ensure we don't exceed available bands
+            num_bands = data.shape[0]  # First dimension is channels
+            band_indices = [idx for idx in band_indices if 0 <= idx < num_bands]
+            
+            # data shape is (channel, width, height)
+            # Return reordered data with same shape
+            return data[band_indices]
+        except (ValueError, IndexError) as e:
+            logger.warning(f"Error parsing bands_order '{bands_order}': {e}. Using default order.")
+            return data
+
     @action(detail=True, url_path='jp2/tiles/(?P<z>[0-9]+)/(?P<x>[0-9]+)/(?P<y>[0-9]+).png', methods=['GET'])
     def generate_tile(self, request, pk, z, x, y):
         
@@ -90,19 +110,49 @@ class ImageViewSet(viewsets.ModelViewSet):
             # print("MAX MIN", np.max(tiled.tiles.data), np.min(tiled.tiles.data))
             # print("DATAAAAAA", z, x, y, tiled.tiles.data, tiled.tiles.data.shape)
 
-            img = PIL_Image.fromarray(np.concatenate(
-                ( np.transpose(tiled.tiles.data, (1, 2, 0))[:, :, :3], 
-                np.transpose(tiled.tiles.data, (1, 2, 0))[:, :, -1:] ), axis=-1)
-            )
-
-            # img = PIL_Image.fromarray(np.transpose(tiled.tiles.data, (1, 2, 0)))
+            # Get bands_order from database, default to '1_2_3'
+            bands_order = getattr(img_db, 'bands_order', '1_2_3')
             
-            # clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
-            # img8_clahe = clahe.apply(np.transpose(tiled.tiles.data, (1, 2, 0)))
+            # tiled.tiles.data.shape is (channel, width, height)
+            # Reorder bands based on bands_order
+            reordered_data = self._reorder_bands(tiled.tiles.data, bands_order)
             
-            # img = PIL_Image.fromarray(np.transpose(tiled.tiles.data, (1, 2, 0))[:, :, -2:-5:-1])
-
-            # img = ImageOps.equalize(img)
+            # Convert to PIL Image with proper channel arrangement
+            # reordered_data shape is (channel, width, height)
+            num_channels = tiled.tiles.data.shape[0]
+            
+            if num_channels >= 3:
+                # Take first 3 bands for RGB
+                rgb_data = reordered_data[:3]  # (3, width, height)
+                # Always use the last channel as alpha
+                alpha_data = tiled.tiles.data[-1:]  # (1, width, height)
+                
+                # Transpose to (width, height, channels) and combine RGB + Alpha
+                img = PIL_Image.fromarray(np.concatenate(
+                    (np.transpose(rgb_data, (1, 2, 0)),  # (width, height, 3)
+                    np.transpose(alpha_data, (1, 2, 0))), axis=-1)  # (width, height, 1)
+                )
+            else:
+                # If less than 3 channels, duplicate the available channels
+                if num_channels == 1:
+                    # Duplicate single channel for grayscale
+                    rgb_data = np.repeat(reordered_data, 3, axis=0)  # (3, width, height)
+                elif num_channels == 2:
+                    # Use first channel for R and G, second for B
+                    rgb_data = np.concatenate([
+                        reordered_data[0:1],  # R
+                        reordered_data[1:2],  # G  
+                        reordered_data[1:2]   # B (duplicate G)
+                    ], axis=0)  # (3, width, height)
+                
+                # Use the last channel as alpha
+                alpha_data = reordered_data[-1:]  # (1, width, height)
+                
+                # Transpose to (width, height, channels) and combine RGB + Alpha
+                img = PIL_Image.fromarray(np.concatenate(
+                    (np.transpose(rgb_data, (1, 2, 0)),  # (width, height, 3)
+                    np.transpose(alpha_data, (1, 2, 0))), axis=-1)  # (width, height, 1)
+                )
 
             if not os.path.exists(f'tiles/{img_db.id}'):
                 os.makedirs(f'tiles/{img_db.id}', exist_ok=True)
@@ -172,7 +222,7 @@ class ImageViewSet(viewsets.ModelViewSet):
 
         return files_processed
 
-    def _store_jp2_metadata(self, jp2_path, name=None, datetime_=None, format=None, source=None, satellite_id=None):
+    def _store_jp2_metadata(self, jp2_path, name=None, datetime_=None, format=None, source=None, satellite_id=None, bands_order='3_2_1'):
         """Extract and store JP2 metadata"""
         try:
             ds = gdal.Open(jp2_path)
@@ -216,7 +266,8 @@ class ImageViewSet(viewsets.ModelViewSet):
                     'datetime': datetime_,
                     'source': source,
                     'format': format,
-                    'satellite_id': satellite_id
+                    'satellite_id': satellite_id,
+                    'bands_order': bands_order
                 }
             )
 
@@ -237,6 +288,7 @@ class ImageViewSet(viewsets.ModelViewSet):
             source = serializer.validated_data['source']
             format = serializer.validated_data['format']
             satellite_id = serializer.validated_data['satellite_id']
+            bands_order = serializer.validated_data.get('bands_order', '3_2_1')
 
             milliseconds = int(datetime.now().timestamp() * 1000)
 
@@ -284,12 +336,58 @@ class ImageViewSet(viewsets.ModelViewSet):
             # subprocess.run(["rm", temp_path.replace(".jp2", "_rgb.jp2")])
 
             # Process the file with GDAL
-            if self._store_jp2_metadata(temp_path, name, datetime_, format, source, satellite_id):
+            if self._store_jp2_metadata(temp_path, name, datetime_, format, source, satellite_id, bands_order):
                 return Response({'message': 'File processed successfully.'}, status=status.HTTP_201_CREATED)
             else:
                 return Response({'error': 'Failed to process the file.'}, status=status.HTTP_400_BAD_REQUEST)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+    @action(detail=True, methods=['patch'], permission_classes=[IsAuthenticated])
+    def update_metadata(self, request, pk=None):
+        """Update satellite image metadata"""
+        try:
+            image = self.get_object()
+            serializer = ImageUpdateSerializer(data=request.data)
+            
+            if serializer.is_valid():
+                # Update only provided fields
+                update_data = serializer.validated_data
+                
+                # Map frontend field names to model field names
+                field_mapping = {
+                    'name': 'name',
+                    'format': 'format', 
+                    'source': 'source',
+                    'satellite_id': 'satellite_id',
+                    'datetime': 'datetime',
+                    'bands_order': 'bands_order',
+                    'topic': 'topic'
+                }
+                
+                # Update fields that are provided
+                for frontend_field, model_field in field_mapping.items():
+                    if frontend_field in update_data:
+                        setattr(image, model_field, update_data[frontend_field])
+                
+                image.save()
+                
+                return Response({
+                    'message': 'Metadata updated successfully',
+                    'image': ImageSerializer(image).data
+                }, status=status.HTTP_200_OK)
+            else:
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                
+        except Image.DoesNotExist:
+            return Response(
+                {'error': 'Image not found'}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            return Response(
+                {'error': f'Error updating metadata: {str(e)}'}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
     @action(detail=False, methods=['post'])
     def spatial_query(self, request):
