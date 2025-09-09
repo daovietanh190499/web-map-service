@@ -195,7 +195,7 @@
                         <div class="flex justify-between items-center">
                             <h2 class="text-xl font-bold">${ sidebarMode === 'search' ? 'Search Images' : 'Manage Images' }</h2>
                             <div class="flex items-center gap-2">
-                                <button v-if="sidebarMode === 'search'" id="toggle-filters" class="text-gray-500 hover:text-gray-700">
+                                <button v-if="sidebarMode === 'search'" id="toggle-filters" class="text-gray-500 hover:text-gray-700" @click="toggleFilter">
                                     <i class="fas fa-filter"></i>
                                 </button>
                                 <button id="close-search" class="text-gray-500 hover:text-gray-700" @click="closeSearchSideBar">
@@ -206,16 +206,16 @@
                     </div>
 
                     <!-- Collapsible Filters -->
-                    <div id="filters-container" class="hidden" v-if="sidebarMode === 'search'">
-                        <form id="search-form">
+                    <div id="filters-container" :class="{'hidden': !expandFilter}" v-if="sidebarMode === 'search'">
+                        <form id="search-form" @submit.prevent="submitSearchForm">
                             <div class="filter-section">
-                                <div class="filter-header" data-target="date-filter">
+                                <div class="filter-header" @click="toggleFilterSection('date-filter')" :class="{'expanded': expandedSections.date}">
                                     <div class="flex justify-between items-center">
                                         <span class="font-semibold">Date Range</span>
                                         <i class="fas fa-chevron-down"></i>
                                     </div>
                                 </div>
-                                <div id="date-filter" class="filter-content">
+                                <div id="date-filter" class="filter-content" :class="{'expanded': expandedSections.date}">
                                     <div class="grid grid-cols-2 gap-2">
                                         <div>
                                             <label class="block text-sm">Start Date</label>
@@ -232,13 +232,13 @@
                             </div>
 
                             <div class="filter-section">
-                                <div class="filter-header" data-target="resolution-filter">
+                                <div class="filter-header" @click="toggleFilterSection('resolution-filter')" :class="{'expanded': expandedSections.resolution}">
                                     <div class="flex justify-between items-center">
                                         <span class="font-semibold">Resolution (meters)</span>
                                         <i class="fas fa-chevron-down"></i>
                                     </div>
                                 </div>
-                                <div id="resolution-filter" class="filter-content">
+                                <div id="resolution-filter" class="filter-content" :class="{'expanded': expandedSections.resolution}">
                                     <div class="grid grid-cols-2 gap-2">
                                         <div>
                                             <label class="block text-sm">Min</label>
@@ -255,13 +255,13 @@
                             </div>
 
                             <div class="filter-section">
-                                <div class="filter-header" data-target="metadata-filter">
+                                <div class="filter-header" @click="toggleFilterSection('metadata-filter')" :class="{'expanded': expandedSections.metadata}">
                                     <div class="flex justify-between items-center">
                                         <span class="font-semibold">Metadata</span>
                                         <i class="fas fa-chevron-down"></i>
                                     </div>
                                 </div>
-                                <div id="metadata-filter" class="filter-content">
+                                <div id="metadata-filter" class="filter-content" :class="{'expanded': expandedSections.metadata}">
                                     <div class="space-y-2">
                                         <div>
                                             <label class="block text-sm">Topic</label>
@@ -279,10 +279,14 @@
                                 </div>
                             </div>
 
-                            <div class="p-4">
+                            <div class="p-4 space-y-2">
                                 <button type="submit"
                                     class="w-full bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600">
                                     Apply Filters
+                                </button>
+                                <button type="button" @click="clearFilters"
+                                    class="w-full bg-gray-500 text-white py-2 px-4 rounded hover:bg-gray-600">
+                                    Clear Filters
                                 </button>
                             </div>
                         </form>
@@ -616,6 +620,11 @@
                     api_url: ''
                 },
                 expandFilter: false,
+                expandedSections: {
+                    date: false,
+                    resolution: false,
+                    metadata: false
+                },
                 searchForm: {
                     startDate: null,
                     endDate: null,
@@ -774,6 +783,7 @@
             async performSearch(searchParams) {
                 try {
                     this.searchLoading = true;
+                    this.showSearchError = false;
     
                     // Build STAC API search parameters
                     const searchBody = {
@@ -784,14 +794,39 @@
                         limit: 50
                     };
     
-                    // Add additional parameters if provided
+                    // Add query parameters for filtering
+                    const query = {};
+                    
+                    // Add resolution filter
                     if (searchParams.resolution) {
-                        searchBody.query = {
-                            "eo:gsd": {
-                                gte: parseFloat(searchParams.resolution.min) || 0,
-                                lte: parseFloat(searchParams.resolution.max) || 100
-                            }
+                        query["eo:gsd"] = {
+                            gte: parseFloat(searchParams.resolution.min) || 0,
+                            lte: parseFloat(searchParams.resolution.max) || 100
                         };
+                    }
+                    
+                    // Add metadata filters
+                    if (this.searchForm.topic) {
+                        query["title"] = {
+                            "contains": this.searchForm.topic
+                        };
+                    }
+                    
+                    if (this.searchForm.source) {
+                        query["source"] = {
+                            "eq": this.searchForm.source
+                        };
+                    }
+                    
+                    if (this.searchForm.satellite) {
+                        query["satellite_id"] = {
+                            "eq": this.searchForm.satellite
+                        };
+                    }
+                    
+                    // Add query to search body if any filters are applied
+                    if (Object.keys(query).length > 0) {
+                        searchBody.query = query;
                     }
     
                     // Make API request
@@ -808,7 +843,7 @@
     
                     const results = await response.json();
                     this.searchLoading = false;
-                    this.searchResults = results
+                    this.searchResults = results;
                 } catch (error) {
                     console.error('Search error:', error);
                     this.showSearchError = true;
@@ -900,6 +935,31 @@
             toggleFilter() {
               this.expandFilter = !this.expandFilter  
             },
+            toggleFilterSection(section) {
+                // Close all other sections first
+                Object.keys(this.expandedSections).forEach(key => {
+                    if (key !== section.replace('-filter', '')) {
+                        this.expandedSections[key] = false;
+                    }
+                });
+                
+                // Toggle the clicked section
+                const sectionKey = section.replace('-filter', '');
+                this.expandedSections[sectionKey] = !this.expandedSections[sectionKey];
+            },
+            clearFilters() {
+                this.searchForm = {
+                    startDate: null,
+                    endDate: null,
+                    resolutionMin: 0,
+                    resolutionMax: 10000,
+                    topic: "",
+                    source: "",
+                    satellite: ""
+                };
+                // Reset search results
+                this.searchResults = { features: [] };
+            },
             closeSearchSideBar() {
                 this.openSideBar = false;
                 this.sidebarMode = 'search';
@@ -967,6 +1027,12 @@
                 xhr.send(formData);
             },
             submitSearchForm() {
+                // Check if there's a drawn area
+                if (this.drawnItems.getLayers().length === 0) {
+                    alert('Vui lòng vẽ một vùng trên bản đồ trước khi tìm kiếm');
+                    return;
+                }
+                
                 const bounds = this.drawnItems.getBounds();
                 const searchParams = {
                     bbox: {
@@ -975,10 +1041,12 @@
                       east: bounds.getEast(),
                       west: bounds.getWest()
                     },
-                    datetime: `${this.searchForm.startDate}/${this.searchForm.endDate}`,
+                    datetime: this.searchForm.startDate && this.searchForm.endDate 
+                        ? `${this.searchForm.startDate}/${this.searchForm.endDate}`
+                        : `${new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()}/${new Date().toISOString()}`,
                     resolution: {
-                      min: this.searchForm.resolutionMin,
-                      max: this.searchForm.resolutionMax
+                      min: this.searchForm.resolutionMin || 0,
+                      max: this.searchForm.resolutionMax || 10000
                     }
                 };
                 this.performSearch(searchParams);
@@ -1415,24 +1483,6 @@
     app.config.compilerOptions.delimiters = ['${', '}']
     app.mount('#app')
 
-        document.querySelectorAll('.filter-header').forEach(header => {
-            header.addEventListener('click', function () {
-                const targetId = this.getAttribute('data-target');
-                const content = document.getElementById(targetId);
-
-                // Toggle expanded class
-                content.classList.toggle('expanded');
-                this.classList.toggle('expanded');
-
-                // Close other sections
-                document.querySelectorAll('.filter-content').forEach(el => {
-                    if (el.id !== targetId) {
-                        el.classList.remove('expanded');
-                        el.previousElementSibling.classList.remove('expanded');
-                    }
-                });
-            });
-        });
 
         // Login Modal Functionality
         const loginModal = document.getElementById('loginModal');

@@ -52,7 +52,38 @@
                 rotationAngle: angleDeg
             };
         },
-    
+
+        measureTextMetrics: function (text, fontSize = 16, fontFamily = "Arial") {
+            // Tạo canvas tạm
+            const canvas = document.createElement("canvas");
+            const ctx = canvas.getContext("2d");
+            
+            // Gán font
+            ctx.font = `${fontSize}px ${fontFamily}`;
+            
+            // Đo
+            const metrics = ctx.measureText(text);
+            
+            // Chiều rộng
+            const width = metrics.width;
+            
+            // Chiều cao (nếu trình duyệt hỗ trợ)
+            const actualHeight =
+                (metrics.actualBoundingBoxAscent || fontSize * 0.8) +
+                (metrics.actualBoundingBoxDescent || fontSize * 0.2);
+            
+            const avgCharWidth = width / text.length;
+            
+            // Xóa canvas khỏi DOM (trường hợp có lỡ gắn vào DOM, ở đây thường không cần append)
+            canvas.remove();
+            
+            return {
+                width,
+                height: actualHeight,
+                avgCharWidth
+            };
+        },   
+       
         setText: function (text, options) {
             this._text = text;
             this._textOptions = options;
@@ -110,14 +141,28 @@
             var rect_info = this.calculateRectangleRotationAngle(northWestPoint, northEastPoint, southWestPoint, southEastPoint)
 
             var width = southEastPoint.x - northWestPoint.x;
-            textNode.setAttribute('x', northWestPoint.x + width/10);
+
+            var nw = 10
+            
+            var twoToPowerOfOffset = width/nw
+
+            var new_width = width - 2*width/nw
+
+            var metrics = this.measureTextMetrics(text, twoToPowerOfOffset, this.options.textOptions?.font || "arial")
+
+            while((metrics.width/new_width)*metrics.height*1.5 > (southEastPoint.y - northWestPoint.y)) {
+                nw += 2
+                twoToPowerOfOffset = width/nw
+                new_width = width - 2*width/nw
+                metrics = this.measureTextMetrics(text, twoToPowerOfOffset, this.options.textOptions?.font || "arial")
+            }
+
+            textNode.setAttribute('x', northWestPoint.x + width/nw);
             textNode.setAttribute('y', northWestPoint.y);
             textNode.setAttribute('transform', `rotate(${rect_info.rotationAngle} ${rect_info.center.x} ${rect_info.center.y})`);
+            
+            width = new_width
 
-            twoToPowerOfOffset = width/10
-
-            width = width - width/5
-    
             // Create the the inner spans
             var words = text.split(/\s+/).reverse(),
                 word,
