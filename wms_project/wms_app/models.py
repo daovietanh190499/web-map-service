@@ -64,16 +64,10 @@ class ArcGISConfig(models.Model):
         verbose_name_plural = "ArcGIS Configurations"
 
 class Topic(models.Model):
-    TOPIC_TYPE_CHOICES = [
-        ('BC_tin', 'BC tin'),
-        ('Thong_tin_DTCB', 'Thông tin ĐTCB'),
-        ('Chua_xac_dinh', 'Chưa xác định'),
-    ]
-    
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     topic_name = models.CharField(max_length=255, verbose_name="Topic Name")
     created_date = models.DateTimeField(default=datetime.now, verbose_name="Created Date")
-    type = models.CharField(max_length=20, choices=TOPIC_TYPE_CHOICES, default='Chua_xac_dinh', verbose_name="Type")
+    type = models.CharField(max_length=255, verbose_name="Type")
     content = models.TextField(verbose_name="Content")
     area = models.CharField(max_length=255, verbose_name="Area")
     subject = models.CharField(max_length=255, verbose_name="Subject")

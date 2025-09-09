@@ -115,15 +115,7 @@
             font-weight: 500;
         }
         
-        .type-bc-tin { 
-            background: rgba(37, 99, 235, 0.1); 
-            color: rgb(37, 99, 235); 
-        }
-        .type-dtcb { 
-            background: rgba(37, 99, 235, 0.1); 
-            color: rgb(37, 99, 235); 
-        }
-        .type-unknown { 
+        .topic-type-badge {
             background: rgba(37, 99, 235, 0.1); 
             color: rgb(37, 99, 235); 
         }
@@ -824,14 +816,14 @@
             </div>
             <div class="col-md-3">
                 <div class="stats-card">
-                    <div class="stats-number" id="bcTinCount">0</div>
-                    <div>BC tin</div>
+                    <div class="stats-number" id="typeCount">0</div>
+                    <div>Types</div>
                 </div>
             </div>
             <div class="col-md-3">
                 <div class="stats-card">
-                    <div class="stats-number" id="dtcbCount">0</div>
-                    <div>Thông tin ĐTCB</div>
+                    <div class="stats-number" id="subjectCount">0</div>
+                    <div>Subjects</div>
                 </div>
             </div>
         </div>
@@ -1000,12 +992,12 @@
         // Initialize autocomplete functionality
         function initializeAutocomplete() {
             // Search form autocomplete
-            setupAutocomplete('searchType', 'searchTypeDropdown', fieldValues.types, 'label');
+            setupAutocomplete('searchType', 'searchTypeDropdown', fieldValues.types, 'value');
             setupAutocomplete('searchSubject', 'searchSubjectDropdown', fieldValues.subjects, 'value');
             setupAutocomplete('searchArea', 'searchAreaDropdown', fieldValues.areas, 'value');
             
             // Topic form autocomplete
-            setupAutocomplete('topicType', 'topicTypeDropdown', fieldValues.types, 'label');
+            setupAutocomplete('topicType', 'topicTypeDropdown', fieldValues.types, 'value');
             setupAutocomplete('topicSubject', 'topicSubjectDropdown', fieldValues.subjects, 'value');
             setupAutocomplete('topicArea', 'topicAreaDropdown', fieldValues.areas, 'value');
         }
@@ -1185,14 +1177,10 @@
             const name = document.getElementById('searchName').value;
             const dateFrom = document.getElementById('searchDateFrom').value;
             const dateTo = document.getElementById('searchDateTo').value;
-            const typeDisplayValue = document.getElementById('searchType').value;
+            const type = document.getElementById('searchType').value;
             const subject = document.getElementById('searchSubject').value;
             const area = document.getElementById('searchArea').value;
             const content = document.getElementById('searchContent').value;
-
-            // Convert display label back to value for type field
-            const typeItem = fieldValues.types.find(item => item.label === typeDisplayValue);
-            const type = typeItem ? typeItem.value : typeDisplayValue;
 
             if (name) searchParams.append('name', name);
             if (dateFrom) searchParams.append('created_date_from', dateFrom);
@@ -1235,7 +1223,7 @@
                             <div class="col-md-8">
                                 <h5 class="card-title mb-2">${topic.topic_name}</h5>
                                 <div class="d-flex flex-wrap gap-2 mb-2">
-                                    <span class="topic-type-badge type-${getTypeClass(topic.type)}">${getTypeLabel(topic.type)}</span>
+                                    <span class="topic-type-badge type-${getTypeClass(topic.type)}">${topic.type}</span>
                                     <span class="badge bg-secondary">${topic.subject}</span>
                                     <span class="badge bg-info">${topic.area}</span>
                                 </div>
@@ -1265,22 +1253,14 @@
 
         // Get type class for styling
         function getTypeClass(type) {
-            switch(type) {
-                case 'BC_tin': return 'bc-tin';
-                case 'Thong_tin_DTCB': return 'dtcb';
-                case 'Chua_xac_dinh': return 'unknown';
-                default: return 'unknown';
-            }
+            if (!type) return 'unknown';
+            // Convert type to a valid CSS class name
+            return type.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
         }
 
-        // Get type label
+        // Get type label (now just returns the type value directly)
         function getTypeLabel(type) {
-            switch(type) {
-                case 'BC_tin': return 'BC tin';
-                case 'Thong_tin_DTCB': return 'Thông tin ĐTCB';
-                case 'Chua_xac_dinh': return 'Chưa xác định';
-                default: return type;
-            }
+            return type;
         }
 
         // Format date
@@ -1305,18 +1285,18 @@
                 document.getElementById('totalTopics').textContent = topics.length;
                 
                 let totalAttachments = 0;
-                let bcTinCount = 0;
-                let dtcbCount = 0;
+                const uniqueTypes = new Set();
+                const uniqueSubjects = new Set();
                 
                 topics.forEach(topic => {
                     totalAttachments += topic.attachments ? topic.attachments.length : 0;
-                    if (topic.type === 'BC_tin') bcTinCount++;
-                    if (topic.type === 'Thong_tin_DTCB') dtcbCount++;
+                    if (topic.type) uniqueTypes.add(topic.type);
+                    if (topic.subject) uniqueSubjects.add(topic.subject);
                 });
                 
                 document.getElementById('totalAttachments').textContent = totalAttachments;
-                document.getElementById('bcTinCount').textContent = bcTinCount;
-                document.getElementById('dtcbCount').textContent = dtcbCount;
+                document.getElementById('typeCount').textContent = uniqueTypes.size;
+                document.getElementById('subjectCount').textContent = uniqueSubjects.size;
             } catch (error) {
                 console.error('Error loading stats:', error);
             }
@@ -1343,9 +1323,8 @@
                 document.getElementById('topicId').value = topic.id;
                 document.getElementById('topicName').value = topic.topic_name;
                 
-                // Set values for autocomplete fields using display labels
-                const typeItem = fieldValues.types.find(item => item.value === topic.type);
-                document.getElementById('topicType').value = typeItem ? typeItem.label : topic.type;
+                // Set values for autocomplete fields
+                document.getElementById('topicType').value = topic.type;
                 
                 document.getElementById('topicArea').value = topic.area;
                 document.getElementById('topicSubject').value = topic.subject;
@@ -1381,7 +1360,7 @@
                             <p class="mb-3">${topic.topic_name}</p>
                             
                             <h6>Type</h6>
-                            <p class="mb-3"><span class="topic-type-badge type-${getTypeClass(topic.type)}">${getTypeLabel(topic.type)}</span></p>
+                            <p class="mb-3"><span class="topic-type-badge type-${getTypeClass(topic.type)}">${topic.type}</span></p>
                             
                             <h6>Area</h6>
                             <p class="mb-3">${topic.area}</p>
@@ -1769,10 +1748,8 @@
                 return;
             }
 
-            // Convert display label back to value for type field
-            const typeDisplayValue = document.getElementById('topicType').value;
-            const typeItem = fieldValues.types.find(item => item.label === typeDisplayValue);
-            const typeValue = typeItem ? typeItem.value : typeDisplayValue;
+            // Get type value directly
+            const typeValue = document.getElementById('topicType').value;
 
             const formData = new FormData();
             formData.append('topic_name', document.getElementById('topicName').value);

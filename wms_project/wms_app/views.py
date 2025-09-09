@@ -953,8 +953,7 @@ class TopicViewSet(viewsets.ModelViewSet):
                 'types': [
                     {
                         'value': item['type'],
-                        'count': item['count'],
-                        'label': self._get_type_label(item['type'])
+                        'count': item['count']
                     }
                     for item in type_values if item['type']
                 ],
@@ -982,11 +981,3 @@ class TopicViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
     
-    def _get_type_label(self, type_value):
-        """Get display label for type value"""
-        type_labels = {
-            'BC_tin': 'BC tin',
-            'Thong_tin_DTCB': 'Thông tin ĐTCB',
-            'Chua_xac_dinh': 'Chưa xác định'
-        }
-        return type_labels.get(type_value, type_value)
