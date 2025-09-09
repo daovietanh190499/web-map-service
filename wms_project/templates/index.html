@@ -288,6 +288,10 @@
                                     class="w-full bg-gray-500 text-white py-2 px-4 rounded hover:bg-gray-600">
                                     Clear Filters
                                 </button>
+                                <button type="button" @click="performSearch"
+                                    class="w-full bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600">
+                                    Search All Images
+                                </button>
                             </div>
                         </form>
                     </div>
@@ -303,17 +307,17 @@
                                 <div class="text-center text-red-500 py-4" v-if="showSearchError">
                                     Error performing search. Please try again.
                                 </div>
-                                <div class="text-center text-gray-500 py-4" v-if="!searchLoading && !showSearchError && searchResults.features.length === 0">
+                                <div class="text-center text-gray-500 py-4" v-if="!searchLoading && !showSearchError && (!searchResults.features || searchResults.features.length === 0)">
                                     No results found
                                 </div>
-                                <div class="bg-white border rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 mb-3" v-for="(feature, index) in searchResults.features" :key="feature.id">
-                                    <div class="flex p-3">
+                                <div class="bg-white border rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 mb-3" v-for="(feature, index) in (searchResults.features || [])" :key="feature.id">
+                                    <div class="flex p-3" v-if="feature && feature.properties">
                                         <div class="flex-auto w-4/5">
-                                            <div class="font-semibold text-gray-800">${ feature.properties.name || feature.properties.filename }</div>
+                                            <div class="font-semibold text-gray-800">${ feature.properties.name || feature.properties.filename || 'Unnamed Image' }</div>
                                             <div class="text-sm text-gray-600 mt-1">
                                                 <div class="flex items-center gap-2">
                                                     <i class="far fa-calendar-alt w-4"></i>
-                                                    ${ new Date(feature.properties.datetime).toLocaleDateString() } 
+                                                    ${ new Date(feature.properties.datetime).toLocaleDateString() }
                                                 </div>
                                                 <div class="flex items-center gap-2">
                                                     <i class="fas fa-ruler w-4"></i>
@@ -329,19 +333,19 @@
                                             <i :key="feature.id + '-action'"
                                                 class="fas w-8 h-8 text-xl cursor-pointer text-blue-600 hover:text-blue-800 flex items-center justify-center"
                                                 :class="[{'fa-folder-plus': !(feature.id in listLayer), 'fa-folder-minus': (feature.id in listLayer)}]"
-                                                @click="changeMenu(feature.id, feature.properties.name || feature.properties.filename, feature.geometry.coordinates)"
+                                                @click="changeMenu(feature.id, feature.properties.name || feature.properties.filename || 'Unnamed Image', feature.geometry.coordinates)"
                                                 title="Add/Remove from layers">
                                             </i>
                                             <i class="fas fa-download w-8 h-8 text-xl cursor-pointer text-green-600 hover:text-green-800 flex items-center justify-center"
-                                               @click="downloadImage(feature.id, feature.properties.name || feature.properties.filename)"
+                                               @click="downloadImage(feature.id, feature.properties.name || feature.properties.filename || 'Unnamed Image')"
                                                title="Download image">
                                             </i>
                                             <i class="fas fa-trash-alt w-8 h-8 text-xl cursor-pointer text-orange-600 hover:text-orange-800 flex items-center justify-center"
-                                               @click="clearTiles(feature.id, feature.properties.name || feature.properties.filename)"
+                                               @click="clearTiles(feature.id, feature.properties.name || feature.properties.filename || 'Unnamed Image')"
                                                title="Clear rendered tiles">
                                             </i>
                                             <i class="fas fa-times-circle w-8 h-8 text-xl cursor-pointer text-red-600 hover:text-red-800 flex items-center justify-center"
-                                               @click="deleteImage(feature.id, feature.properties.name || feature.properties.filename)"
+                                               @click="deleteImage(feature.id, feature.properties.name || feature.properties.filename || 'Unnamed Image')"
                                                title="Delete complete image">
                                             </i>
                                         </div>
@@ -356,10 +360,10 @@
                                 </div>
                                 
                                 <div class="bg-white border rounded-lg shadow-sm hover:shadow-md transition-shadow duration-200 mb-3" 
-                                     v-for="(layer, layerId) in listLayer" :key="layerId">
+                                     v-for="(layer, layerId) in listLayer" :key="layerId" v-if="layer">
                                     <div class="flex p-3">
                                         <div class="flex-auto w-4/5">
-                                            <div class="font-semibold text-gray-800">${ layer.name || layerId }</div>
+                                            <div class="font-semibold text-gray-800">${ layer.name || layerId || 'Unnamed Layer' }</div>
                                             <div class="text-sm text-gray-600 mt-1">
                                                 <div class="flex items-center gap-2">
                                                     <i class="fas fa-layer-group w-4"></i>
@@ -373,19 +377,19 @@
                                         </div>
                                         <div class="flex-auto w-1/5 grid grid-cols-2 gap-2">
                                             <i class="fas fa-folder-minus w-8 h-8 text-xl cursor-pointer text-orange-600 hover:text-orange-800 flex items-center justify-center"
-                                               @click="removeLayerFromMenu(layerId, layer.name)"
+                                               @click="removeLayerFromMenu(layerId, layer.name || 'Unnamed Layer')"
                                                title="Xóa khỏi menu">
                                             </i>
                                             <i class="fas fa-download w-8 h-8 text-xl cursor-pointer text-green-600 hover:text-green-800 flex items-center justify-center"
-                                               @click="downloadImage(layerId, layer.name)"
+                                               @click="downloadImage(layerId, layer.name || 'Unnamed Layer')"
                                                title="Tải xuống hình ảnh gốc">
                                             </i>
                                             <i class="fas fa-trash-alt w-8 h-8 text-xl cursor-pointer text-orange-600 hover:text-orange-800 flex items-center justify-center"
-                                               @click="clearTiles(layerId, layer.name)"
+                                               @click="clearTiles(layerId, layer.name || 'Unnamed Layer')"
                                                title="Xóa tiles đã render">
                                             </i>
                                             <i class="fas fa-times-circle w-8 h-8 text-xl cursor-pointer text-red-600 hover:text-red-800 flex items-center justify-center"
-                                               @click="deleteImage(layerId, layer.name)"
+                                               @click="deleteImage(layerId, layer.name || 'Unnamed Layer')"
                                                title="Xóa hoàn toàn hình ảnh">
                                             </i>
                                         </div>
@@ -602,6 +606,7 @@
                 searchResults: {
                     features: []
                 },
+                allSearchResults: [], // Store all results from API
                 listLayer: [],
                 openModal: false,
                 openSettingsModal: false,
@@ -770,66 +775,27 @@
                         west: bounds.getWest()
                     };
         
-                    this.performSearch({
-                        bbox: searchArea,
-                        datetime: `${new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()}/${new Date().toISOString()}`
-                    });
+                    this.performSearch();
                 });
 
                 this.getListLayer()
 
                 this.updateLayerTree()
             },
-            async performSearch(searchParams) {
+            async performSearch() {
                 try {
                     this.searchLoading = true;
                     this.showSearchError = false;
     
-                    // Build STAC API search parameters
+                    // Build search parameters for backend API - only spatial search
                     const searchBody = {
                         geometry: this.drawnItems.toGeoJSON().features[0].geometry,
-                        operation: 'intersects',
-                        datetime: searchParams.datetime,
-                        collections: ["sentinel-2-l2a"], // Default collection
-                        limit: 50
+                        operation: 'intersects'
                     };
     
-                    // Add query parameters for filtering
-                    const query = {};
-                    
-                    // Add resolution filter
-                    if (searchParams.resolution) {
-                        query["eo:gsd"] = {
-                            gte: parseFloat(searchParams.resolution.min) || 0,
-                            lte: parseFloat(searchParams.resolution.max) || 100
-                        };
-                    }
-                    
-                    // Add metadata filters
-                    if (this.searchForm.topic) {
-                        query["title"] = {
-                            "contains": this.searchForm.topic
-                        };
-                    }
-                    
-                    if (this.searchForm.source) {
-                        query["source"] = {
-                            "eq": this.searchForm.source
-                        };
-                    }
-                    
-                    if (this.searchForm.satellite) {
-                        query["satellite_id"] = {
-                            "eq": this.searchForm.satellite
-                        };
-                    }
-                    
-                    // Add query to search body if any filters are applied
-                    if (Object.keys(query).length > 0) {
-                        searchBody.query = query;
-                    }
+                    console.log('Search request:', searchBody); // Debug log
     
-                    // Make API request
+                    // Make API request to get ALL images in the area
                     const response = await fetch('/api/images/search/', {
                         method: 'POST',
                         headers: {
@@ -839,11 +805,23 @@
                         body: JSON.stringify(searchBody)
                     });
     
-                    if (!response.ok) throw new Error('Search request failed');
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        console.error('Search API error:', errorData);
+                        throw new Error(`Search request failed: ${response.status}`);
+                    }
     
                     const results = await response.json();
+                    console.log('Search results:', results); // Debug log
                     this.searchLoading = false;
-                    this.searchResults = results;
+                    
+                    // Store all results and apply filters
+                    if (results && results.features && Array.isArray(results.features)) {
+                        this.allSearchResults = results.features;
+                    } else {
+                        this.allSearchResults = [];
+                    }
+                    this.applyFilters();
                 } catch (error) {
                     console.error('Search error:', error);
                     this.showSearchError = true;
@@ -957,8 +935,12 @@
                     source: "",
                     satellite: ""
                 };
-                // Reset search results
-                this.searchResults = { features: [] };
+                // Show all results if we have them
+                if (this.allSearchResults.length > 0) {
+                    this.searchResults = { features: [...this.allSearchResults] };
+                } else {
+                    this.searchResults = { features: [] };
+                }
             },
             closeSearchSideBar() {
                 this.openSideBar = false;
@@ -1033,23 +1015,77 @@
                     return;
                 }
                 
-                const bounds = this.drawnItems.getBounds();
-                const searchParams = {
-                    bbox: {
-                      north: bounds.getNorth(),
-                      south: bounds.getSouth(),
-                      east: bounds.getEast(),
-                      west: bounds.getWest()
-                    },
-                    datetime: this.searchForm.startDate && this.searchForm.endDate 
-                        ? `${this.searchForm.startDate}/${this.searchForm.endDate}`
-                        : `${new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()}/${new Date().toISOString()}`,
-                    resolution: {
-                      min: this.searchForm.resolutionMin || 0,
-                      max: this.searchForm.resolutionMax || 10000
-                    }
-                };
-                this.performSearch(searchParams);
+                // If we already have search results, just apply filters
+                if (this.allSearchResults.length > 0) {
+                    this.applyFilters();
+                } else {
+                    // Otherwise, perform new search
+                    this.performSearch();
+                }
+            },
+            applyFilters() {
+                if (!this.allSearchResults || this.allSearchResults.length === 0) {
+                    this.searchResults = { features: [] };
+                    return;
+                }
+                
+                let filteredResults = [...this.allSearchResults];
+                
+                // Apply date filters
+                if (this.searchForm.startDate) {
+                    const startDate = new Date(this.searchForm.startDate);
+                    filteredResults = filteredResults.filter(item => {
+                        const itemDate = new Date(item.properties.datetime);
+                        return itemDate >= startDate;
+                    });
+                }
+                
+                if (this.searchForm.endDate) {
+                    const endDate = new Date(this.searchForm.endDate);
+                    filteredResults = filteredResults.filter(item => {
+                        const itemDate = new Date(item.properties.datetime);
+                        return itemDate <= endDate;
+                    });
+                }
+                
+                // Apply resolution filters
+                if (this.searchForm.resolutionMin && this.searchForm.resolutionMin > 0) {
+                    filteredResults = filteredResults.filter(item => {
+                        return item.properties.resolution*111111 >= parseFloat(this.searchForm.resolutionMin);
+                    });
+                }
+                
+                if (this.searchForm.resolutionMax && this.searchForm.resolutionMax < 10000) {
+                    filteredResults = filteredResults.filter(item => {
+                        return item.properties.resolution*111111 <= parseFloat(this.searchForm.resolutionMax);
+                    });
+                }
+                
+                // Apply metadata filters
+                if (this.searchForm.topic && this.searchForm.topic.trim()) {
+                    const topicFilter = this.searchForm.topic.trim().toLowerCase();
+                    filteredResults = filteredResults.filter(item => {
+                        return (item.properties.topic && item.properties.topic.toLowerCase().includes(topicFilter)) ||
+                               (item.properties.name && item.properties.name.toLowerCase().includes(topicFilter));
+                    });
+                }
+                
+                if (this.searchForm.source && this.searchForm.source.trim()) {
+                    const sourceFilter = this.searchForm.source.trim().toLowerCase();
+                    filteredResults = filteredResults.filter(item => {
+                        return item.properties.source && item.properties.source.toLowerCase().includes(sourceFilter);
+                    });
+                }
+                
+                if (this.searchForm.satellite && this.searchForm.satellite.trim()) {
+                    const satelliteFilter = this.searchForm.satellite.trim().toLowerCase();
+                    filteredResults = filteredResults.filter(item => {
+                        return item.properties.satellite_id && item.properties.satellite_id.toLowerCase().includes(satelliteFilter);
+                    });
+                }
+                
+                console.log('Filtered results:', filteredResults); // Debug log
+                this.searchResults = { features: filteredResults };
             },
             async submitSearchFormv2() {
                 e.preventDefault();
