@@ -109,17 +109,14 @@
 
             var rect_info = this.calculateRectangleRotationAngle(northWestPoint, northEastPoint, southWestPoint, southEastPoint)
 
-            console.log(this)
-
             var width = southEastPoint.x - northWestPoint.x;
-            textNode.setAttribute('x', northWestPoint.x);
+            textNode.setAttribute('x', northWestPoint.x + width/10);
             textNode.setAttribute('y', northWestPoint.y);
             textNode.setAttribute('transform', `rotate(${rect_info.rotationAngle} ${rect_info.center.x} ${rect_info.center.y})`);
-    
-            // Calculate the scale of the text
-            var defaultScale = 13;
-            var offsetFromDefault = this._map.getZoom() - 13 //+ parseInt((this.options.textOptions?.fontSize || 0))
-            var twoToPowerOfOffset = Math.pow(2, offsetFromDefault)
+
+            twoToPowerOfOffset = width/10
+
+            width = width - width/5
     
             // Create the the inner spans
             var words = text.split(/\s+/).reverse(),
@@ -145,7 +142,7 @@
                     line = [word];
                     // Start a new tspan
                     tspan = L.SVG.create('tspan');
-                    tspan.setAttribute('style', 'font: ' +  (this.options.textOptions?.style || "normal") + ' ' + twoToPowerOfOffset + 'em ' + (this.options.textOptions?.font || "arial"));
+                    tspan.setAttribute('style', 'font: ' +  (this.options.textOptions?.style || "normal") + ' ' + twoToPowerOfOffset + 'px ' + (this.options.textOptions?.font || "arial"));
                     tspan.setAttribute('fill', this.options.textOptions?.color || '#000000');
                     tspan.setAttribute('x', textNode.getAttribute('x'));
                     tspan.setAttribute('y', textNode.getAttribute('y'));
