@@ -5,30 +5,41 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Web Map Service</title>
-    <link href="static/css/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="static/css/tailwind.min.css">
     <link rel="stylesheet" href="static/css/leaflet.css" />
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
     <link rel="stylesheet" href="static/css/leaflet-layer-tree-control.css" />
-    <script src="static/js/tailwind.js"></script>
+    <link rel="stylesheet" href="static/css/leaflet.draw.css">
+    <link rel="stylesheet" href="static/css/leaflet.mouse-position.css" />
+    <link rel="stylesheet" href="static/css/leaflet.measure.css" />
     <link rel="stylesheet" href="static/css/easy-button.css">
+    <link rel="stylesheet" href="static/js/Leaflet.DistortableImage/dist/vendor.css">
+    <link rel="stylesheet" href="static/js/Leaflet.DistortableImage/dist/leaflet.distortableimage.css">
+    <link rel="stylesheet" href="static/css/leaflet.scalebar.css" />
     <link rel="stylesheet" href="static/css/Control.FullScreen.css">
+
+    <script src="static/js/tailwind.js"></script>
     <script src="static/js/leaflet.js"></script>
     <script src="static/js/leaflet.draw.js"></script>
-    <link rel="stylesheet" href="static/css/leaflet.draw.css">
-    </script>
+    <script src="static/js/leaflet.geometryutils.js"></script>
+    <script src="static/js/leaflet.arrowhead.js"></script>
+    <!-- <script src="static/js/leaflet.path.transform.js"></script> -->
+    <script src="static/js/leaflet.draggable.js"></script>
+    <script src="static/js/leaflet.editable.js"></script>
+    <script src="static/js/leaflet.textbox.js"></script>
     <script src="static/js/leaflet-layer-tree-control.js"></script>
     <script src="static/js/leaflet-layer-tree-control-wfs-zoom.js"></script>
     <script src="static/js/easy-button.js"></script>
     <script src="static/js/jquery.js"></script>
     <script src="static/js/togeojson.js"></script>
     <script src="static/js/leaflet.filelayer.js"></script>
-    <link rel="stylesheet" type="text/css" href="static/css/leaflet.measure.css" />
-    <script type="text/javascript" src="static/js/leaflet.measure.js"></script>
-    <link rel="stylesheet" type="text/css" href="static/css/leaflet.mouse-position.css" />
-    <script type="text/javascript" src="static/js/leaflet.mouse-position.js"></script>
-    <link rel="stylesheet" type="text/css" href="static/css/leaflet.scalebar.css" />
-    <script type="text/javascript" src="static/js/leaflet.scalebar.js"></script>
+    <script src="static/js/Leaflet.DistortableImage/dist/vendor.js"></script>
+    <script src="static/js/Leaflet.DistortableImage/dist/leaflet.distortableimage.js"></script>
+    <script src="static/js/leaflet.measure.js"></script>
+    <script src="static/js/leaflet.mouse-position.js"></script>
+    <script src="static/js/leaflet.scalebar.js"></script>
     <script src="static/js/Control.FullScreen.js"></script>
+    <script src="static/js/leaflet.rotate.new.js"></script>
     <script src="static/js/vue.js"></script>
 
     <style>
@@ -337,7 +348,7 @@
                                                 title="Add/Remove from layers">
                                             </i>
                                             <i class="fas fa-edit w-8 h-8 text-xl cursor-pointer text-purple-600 hover:text-purple-800 flex items-center justify-center"
-                                               @click="openUpdateModal(feature)"
+                                               @click="openUpdateModalFromSearch(feature)"
                                                title="Update metadata">
                                             </i>
                                             <i class="fas fa-download w-8 h-8 text-xl cursor-pointer text-green-600 hover:text-green-800 flex items-center justify-center"
@@ -686,7 +697,7 @@
 </body>
 
  <script>
-    const { createApp } = Vue
+    const { createApp, toRaw } = Vue
 
     let app = createApp({
         data() {
@@ -782,30 +793,6 @@
                     window.location.replace('arcgis')
                 }, "Go to ArcGIS", { position: "bottomright" }).addTo(this.map);
 
-                // L.Control.FileLayerLoad.LABEL = '<div class="upload_file_icon"></div>';
-
-                // L.Control.fileLayerLoad({
-                //     position: 'bottomleft',
-                //     layer: L.geoJson,
-                //     layerOptions: {
-                //         style: {
-                //             color: 'red',
-                //             opacity: 1.0,
-                //             fillOpacity: 1.0,
-                //             weight: 2,
-                //             clickable: true
-                //         },
-                //     },
-                //     addToMap: true,
-                //     fileSizeLimit: 1024,
-                //     formats: [
-                //         '.geojson',
-                //         '.json',
-                //         '.gpx',
-                //         '.kml'
-                //     ]
-                // }).addTo(this.map);
-
                 L.easyButton('fa-file-image', (btn, map) => {
                     this.openModal = true;
                 }, "Upload new Sattelite Image", { position: "bottomleft" }).addTo(this.map);
@@ -835,7 +822,7 @@
 
                 var measure = L.control.measure({
                     position: "bottomleft"
-                }).addTo(this.map);
+                }).addTo(toRaw(this.map));
 
                 this.map.addLayer(this.drawnItems);
 
@@ -951,7 +938,7 @@
                 delete list_layer[layer_id]
                 window.localStorage.setItem("layers", JSON.stringify(list_layer))
             },
-            addLayer(layer_id, name, coords) {
+            addNewLayer(layer_id, name, coords) {
                 let list_layer = this.listLayer
                 list_layer[layer_id] = {"name":name, "children": [], "coords": coords}
                 window.localStorage.setItem("layers", JSON.stringify({ ...list_layer }))
@@ -961,7 +948,7 @@
                 if (layer_id in list_layer) {
                     this.removeLayer(layer_id)
                 } else {
-                    this.addLayer(layer_id, name, coords)
+                    this.addNewLayer(layer_id, name, coords)
                 }
                 this.getListLayer()
                 this.updateLayerTree()
@@ -1058,7 +1045,7 @@
                 this.openModal = false;
                 this.progressBar = 0; // Reset progress bar when closing modal
             },
-            async openUpdateModal(feature) {
+            async openUpdateModalFromSearch(feature) {
                 this.updateModalLoading = true;
                 try {
                     // Fetch full image data from API
@@ -1907,7 +1894,5 @@
             });
 
 </script>
-
-    <!-- <script src="static/js/layer-tree.js"></script> -->
 
 </html>
