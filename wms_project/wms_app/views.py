@@ -45,14 +45,8 @@ def draw_map(request):
 def compare_map(request):
     return render(request, 'compare.html')
 
-def test_map(request):
-    return render(request, 'new-test.html')
-
 def arcgis_map(request):
     return render(request, 'arcgis.html')
-
-def arcgis_auth(request):
-    return render(request, 'arcgis-authen.html')
 
 def topic_management(request):
     return render(request, 'topic.html')
@@ -93,15 +87,15 @@ class ImageViewSet(viewsets.ModelViewSet):
             logger.warning(f"Error parsing bands_order '{bands_order}': {e}. Using default order.")
             return data
 
-    @action(detail=True, url_path='jp2/tiles/(?P<z>[0-9]+)/(?P<x>[0-9]+)/(?P<y>[0-9]+).png', methods=['GET'])
-    def generate_tile(self, request, pk, z, x, y):
+    @action(detail=True, url_path='jp2/tiles/(?P<z>[0-9]+)/(?P<x>[0-9]+)/(?P<y>[0-9]+)\.(?P<ext>png|jpg|jpeg|webp)', methods=['GET'])
+    def generate_tile(self, request, pk, z, x, y, ext):
         
         img_db = self.get_object()
 
         buffer = io.BytesIO()
 
-        if os.path.exists(f'tiles/{img_db.id}/{str(z)}/{str(x)}/{str(y)}.png'):
-            img = PIL_Image.open(f'tiles/{img_db.id}/{str(z)}/{str(x)}/{str(y)}.png')
+        if os.path.exists(f'tiles/{img_db.id}/{str(z)}/{str(x)}/{str(y)}.{str(ext)}'):
+            img = PIL_Image.open(f'tiles/{img_db.id}/{str(z)}/{str(x)}/{str(y)}.{str(ext)}')
         else:
             img = rasterio.open(img_db.filepath.replace(".jp2", "_enhanced.jp2"))
             
@@ -164,7 +158,7 @@ class ImageViewSet(viewsets.ModelViewSet):
         img.save(buffer, format="PNG")
         buffer.seek(0)
 
-        return HttpResponse(buffer, content_type="image/png")
+        return HttpResponse(buffer, content_type=f"image/{str(ext)}")
 
     @action(detail=False, methods=['post'])
     def scan_folder(self, request):
